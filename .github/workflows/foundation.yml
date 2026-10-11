@@ -4,6 +4,10 @@ on:
   pull_request:
   workflow_dispatch:
     inputs:
+      check_windows:
+        description: Also run native checks on Windows
+        type: boolean
+        default: false
       build_desktop:
         description: Build runnable desktop candidates (no installer or publication)
         type: boolean
@@ -33,7 +37,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, windows-2022]
+        os: ${{ github.event_name == 'workflow_dispatch' && (inputs.check_windows || inputs.build_desktop) && fromJSON('["ubuntu-24.04","windows-2022"]') || fromJSON('["ubuntu-24.04"]') }}
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
@@ -71,7 +75,7 @@ jobs:
       - name: Test Rust, SQLite and compile Tauri targets
         run: cargo test --manifest-path src-tauri/Cargo.toml --all-targets --locked
       - name: Preserve lock and generated permission evidence
-        if: always()
+        if: always() && github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v6
         with:
           name: native-check-evidence-${{ matrix.os }}
