@@ -1,0 +1,2950 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ai-home:p2:contracts:1",
+  "title": "AI Home P2 DTO reference",
+  "description": "Canonical DTO definitions; relational, lifecycle, authorization and command-specific rules are in the P2 specification and IPC catalog. CredentialInput is transient and never portable.",
+  "$defs": {
+    "MemoryCapacityPolicy": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "bounded"
+            },
+            "tokens": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "kind",
+            "tokens"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "unlimited"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "TokenMeasurement": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "method": {
+          "type": "string",
+          "enum": [
+            "exact",
+            "estimated"
+          ]
+        },
+        "estimatorId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "modelRouteRevision": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "value",
+        "method",
+        "estimatorId",
+        "modelRouteRevision"
+      ],
+      "additionalProperties": false
+    },
+    "SourceRef": {
+      "type": "object",
+      "properties": {
+        "profileId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "message",
+            "import",
+            "memory_version",
+            "work_rule_version",
+            "external_snapshot"
+          ]
+        },
+        "entityId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "contentSha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "snapshotBlobId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      },
+      "required": [
+        "profileId",
+        "kind",
+        "entityId",
+        "contentSha256"
+      ],
+      "additionalProperties": false
+    },
+    "Author": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "human",
+            "ai",
+            "collaboration",
+            "unknown"
+          ]
+        },
+        "label": {
+          "type": "string"
+        },
+        "assertedBy": {
+          "type": "string",
+          "enum": [
+            "importer",
+            "source_metadata",
+            "application"
+          ]
+        },
+        "verified": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "kind",
+        "label",
+        "assertedBy",
+        "verified"
+      ],
+      "additionalProperties": false
+    },
+    "MemorySettings": {
+      "type": "object",
+      "properties": {
+        "working": {
+          "$ref": "#/$defs/MemoryCapacityPolicy"
+        },
+        "episodic": {
+          "$ref": "#/$defs/MemoryCapacityPolicy"
+        },
+        "relationship": {
+          "$ref": "#/$defs/MemoryCapacityPolicy"
+        },
+        "longTerm": {
+          "$ref": "#/$defs/MemoryCapacityPolicy"
+        },
+        "intent": {
+          "$ref": "#/$defs/MemoryCapacityPolicy"
+        },
+        "workRule": {
+          "$ref": "#/$defs/MemoryCapacityPolicy"
+        }
+      },
+      "required": [
+        "working",
+        "episodic",
+        "relationship",
+        "longTerm",
+        "intent",
+        "workRule"
+      ],
+      "additionalProperties": false
+    },
+    "ContextBudgetPolicy": {
+      "type": "object",
+      "properties": {
+        "retrievalTargetTokens": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "guidanceTargetTokens": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "inputReserveTokens": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "chatOutputTokens": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "memoryOutputCeilingTokens": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "maxPhysicalCalls": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "maxElapsedMs": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "costLimit": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "const": "bounded"
+                },
+                "usd": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                }
+              },
+              "required": [
+                "kind",
+                "usd"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "const": "unconfigured"
+                }
+              },
+              "required": [
+                "kind"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        }
+      },
+      "required": [
+        "retrievalTargetTokens",
+        "guidanceTargetTokens",
+        "inputReserveTokens",
+        "chatOutputTokens",
+        "memoryOutputCeilingTokens",
+        "maxPhysicalCalls",
+        "maxElapsedMs",
+        "costLimit"
+      ],
+      "additionalProperties": false
+    },
+    "Profile": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "draft",
+            "ready",
+            "archived"
+          ]
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "standard",
+            "conscious"
+          ]
+        },
+        "scribeMode": {
+          "type": "string",
+          "enum": [
+            "automatic",
+            "disabled"
+          ]
+        },
+        "primaryRouteId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "scribeRouteId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "memorySettings": {
+          "$ref": "#/$defs/MemorySettings"
+        },
+        "contextBudget": {
+          "$ref": "#/$defs/ContextBudgetPolicy"
+        },
+        "languagePolicy": {
+          "type": "string",
+          "enum": [
+            "preserve_source",
+            "explicit_translation"
+          ]
+        },
+        "memoryLanguage": {
+          "type": "string",
+          "pattern": "^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$"
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "id",
+        "revision",
+        "createdAt",
+        "displayName",
+        "status",
+        "mode",
+        "scribeMode",
+        "memorySettings",
+        "contextBudget",
+        "languagePolicy"
+      ],
+      "additionalProperties": false
+    },
+    "ProviderConnection": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "profileId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+        },
+        "providerKind": {
+          "type": "string",
+          "enum": [
+            "openrouter",
+            "openai",
+            "google",
+            "anthropic",
+            "custom_openai"
+          ]
+        },
+        "normalizedEndpoint": {
+          "type": "string",
+          "format": "uri"
+        },
+        "credentialRef": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "credentialRevision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "unverified",
+            "verified",
+            "error"
+          ]
+        },
+        "verifiedRevision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "verifiedCredentialRevision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "testedAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "id",
+        "profileId",
+        "revision",
+        "createdAt",
+        "providerKind",
+        "normalizedEndpoint",
+        "credentialRef",
+        "credentialRevision",
+        "label",
+        "status"
+      ],
+      "additionalProperties": false
+    },
+    "ConnectionDraft": {
+      "type": "object",
+      "properties": {
+        "providerKind": {
+          "type": "string",
+          "enum": [
+            "openrouter",
+            "openai",
+            "google",
+            "anthropic",
+            "custom_openai"
+          ]
+        },
+        "endpoint": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "providerKind",
+        "endpoint",
+        "label"
+      ],
+      "additionalProperties": false
+    },
+    "CredentialInput": {
+      "type": "object",
+      "properties": {
+        "secret": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "secret"
+      ],
+      "additionalProperties": false
+    },
+    "ModelRoute": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "profileId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "primary",
+            "scribe"
+          ]
+        },
+        "connectionId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "modelId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "outputLimitTokens": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "temperature": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2
+        },
+        "reasoningValue": {
+          "type": "string",
+          "minLength": 1
+        },
+        "capabilitySnapshotId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "id",
+        "profileId",
+        "revision",
+        "createdAt",
+        "role",
+        "connectionId",
+        "modelId",
+        "outputLimitTokens"
+      ],
+      "additionalProperties": false
+    },
+    "Conversation": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "profileId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+        },
+        "title": {
+          "type": "string"
+        },
+        "language": {
+          "type": "string",
+          "pattern": "^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "open",
+            "archived"
+          ]
+        },
+        "activeSegmentId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "draftText": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "id",
+        "profileId",
+        "revision",
+        "createdAt",
+        "title",
+        "language",
+        "status",
+        "draftText"
+      ],
+      "additionalProperties": false
+    },
+    "Message": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "profileId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+        },
+        "conversationId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "human",
+            "assistant",
+            "tool"
+          ]
+        },
+        "content": {
+          "type": "string"
+        },
+        "language": {
+          "type": "string",
+          "pattern": "^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "complete",
+            "interrupted",
+            "failed"
+          ]
+        },
+        "sourceRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SourceRef"
+          }
+        },
+        "operationId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "id",
+        "profileId",
+        "revision",
+        "createdAt",
+        "conversationId",
+        "sequence",
+        "role",
+        "content",
+        "language",
+        "status",
+        "sourceRefs"
+      ],
+      "additionalProperties": false
+    },
+    "ContextSegment": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "profileId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+        },
+        "conversationId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "firstMessageSequence": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "lastMessageSequence": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "summary": {
+          "type": "string"
+        },
+        "summaryLanguage": {
+          "type": "string",
+          "pattern": "^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$"
+        },
+        "messageDigest": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "summarySources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SourceRef"
+          }
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "open",
+            "sealed"
+          ]
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "id",
+        "profileId",
+        "revision",
+        "createdAt",
+        "conversationId",
+        "firstMessageSequence",
+        "lastMessageSequence",
+        "summary",
+        "summaryLanguage",
+        "messageDigest",
+        "summarySources",
+        "state"
+      ],
+      "additionalProperties": false
+    },
+    "ImportedMaterial": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "profileId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+        },
+        "fileName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "mimeType": {
+          "type": "string",
+          "minLength": 1
+        },
+        "originalBlobId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "originalSha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "originalSizeBytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "purpose": {
+          "type": "string",
+          "enum": [
+            "conversation",
+            "knowledge",
+            "guidance",
+            "memory_import"
+          ]
+        },
+        "conversationId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "author": {
+          "$ref": "#/$defs/Author"
+        },
+        "importer": {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "human"
+            },
+            "localActorId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "required": [
+            "kind",
+            "localActorId"
+          ],
+          "additionalProperties": false
+        },
+        "importedAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+        },
+        "parseState": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "ready",
+            "unreadable",
+            "failed"
+          ]
+        },
+        "extractedBlobId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "extractedSha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "importMethod": {
+          "type": "string",
+          "minLength": 1
+        },
+        "errorCode": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "id",
+        "profileId",
+        "revision",
+        "createdAt",
+        "fileName",
+        "mimeType",
+        "originalBlobId",
+        "originalSha256",
+        "originalSizeBytes",
+        "purpose",
+        "author",
+        "importer",
+        "importedAt",
+        "parseState"
+      ],
+      "additionalProperties": false
+    },
+    "Attachment": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "profileId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+        },
+        "conversationId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "messageId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "materialId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "document",
+            "image"
+          ]
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "staged",
+            "bound",
+            "failed"
+          ]
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "id",
+        "profileId",
+        "revision",
+        "createdAt",
+        "conversationId",
+        "materialId",
+        "kind",
+        "state"
+      ],
+      "additionalProperties": false
+    },
+    "KnowledgeSource": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "profileId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+        },
+        "materialId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "indexRevision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sourceLanguage": {
+          "type": "string",
+          "pattern": "^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$"
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "id",
+        "profileId",
+        "revision",
+        "createdAt",
+        "materialId",
+        "enabled",
+        "sourceLanguage"
+      ],
+      "additionalProperties": false
+    },
+    "PersistentGuidance": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "profileId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+        },
+        "materialId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "order": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "language": {
+          "type": "string",
+          "pattern": "^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$"
+        },
+        "contentSha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "tokenMeasurement": {
+          "$ref": "#/$defs/TokenMeasurement"
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "id",
+        "profileId",
+        "revision",
+        "createdAt",
+        "materialId",
+        "enabled",
+        "order",
+        "language",
+        "contentSha256",
+        "tokenMeasurement"
+      ],
+      "additionalProperties": false
+    },
+    "MemoryKind": {
+      "type": "string",
+      "enum": [
+        "working",
+        "episodic",
+        "relationship",
+        "longTerm",
+        "intent",
+        "workRule"
+      ]
+    },
+    "MemoryProposal": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "profileId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+        },
+        "operationId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "memoryRecordId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "memoryKind": {
+          "$ref": "#/$defs/MemoryKind"
+        },
+        "baseVersionId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "proposerRole": {
+          "type": "string",
+          "enum": [
+            "scribe",
+            "primary"
+          ]
+        },
+        "proposerRouteId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "content": {
+          "type": "string",
+          "minLength": 1
+        },
+        "language": {
+          "type": "string",
+          "pattern": "^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$"
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SourceRef"
+          }
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "decided",
+            "failed"
+          ]
+        },
+        "capacityPolicySnapshot": {
+          "$ref": "#/$defs/MemoryCapacityPolicy"
+        },
+        "attemptNumber": {
+          "type": "integer",
+          "enum": [
+            1,
+            2
+          ]
+        },
+        "claimKind": {
+          "type": "string",
+          "enum": [
+            "fact",
+            "preference",
+            "inference",
+            "rule",
+            "mixed"
+          ]
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "id",
+        "profileId",
+        "revision",
+        "createdAt",
+        "operationId",
+        "memoryRecordId",
+        "memoryKind",
+        "proposerRole",
+        "proposerRouteId",
+        "content",
+        "language",
+        "sources",
+        "state",
+        "capacityPolicySnapshot",
+        "attemptNumber",
+        "claimKind"
+      ],
+      "additionalProperties": false
+    },
+    "PrimaryDecisionOutput": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "decision": {
+              "const": "accept"
+            },
+            "reason": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "decision",
+            "reason"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "decision": {
+              "const": "modify"
+            },
+            "modifiedContent": {
+              "type": "string",
+              "minLength": 1
+            },
+            "reason": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "decision",
+            "modifiedContent",
+            "reason"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "decision": {
+              "const": "reject"
+            },
+            "reason": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "decision",
+            "reason"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "MemoryDecisionReceipt": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "profileId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+        },
+        "operationId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "proposalId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "primaryRouteId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "routeRevision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "decision": {
+          "type": "string",
+          "enum": [
+            "accept",
+            "modify",
+            "reject"
+          ]
+        },
+        "candidateSha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "candidateMeasurement": {
+          "$ref": "#/$defs/TokenMeasurement"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "id",
+        "profileId",
+        "revision",
+        "createdAt",
+        "operationId",
+        "proposalId",
+        "primaryRouteId",
+        "routeRevision",
+        "decision",
+        "candidateSha256",
+        "candidateMeasurement",
+        "reason"
+      ],
+      "additionalProperties": false
+    },
+    "MemoryRecord": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "profileId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+        },
+        "kind": {
+          "$ref": "#/$defs/MemoryKind"
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "empty",
+            "active",
+            "outdated",
+            "archived"
+          ]
+        },
+        "activeVersionId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "subjectRef": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "id",
+        "profileId",
+        "revision",
+        "createdAt",
+        "kind",
+        "state"
+      ],
+      "additionalProperties": false
+    },
+    "MemoryVersion": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "profileId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+        },
+        "recordId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "versionNumber": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "content": {
+          "type": "string",
+          "minLength": 1
+        },
+        "language": {
+          "type": "string",
+          "pattern": "^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$"
+        },
+        "contentSha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "measurement": {
+          "$ref": "#/$defs/TokenMeasurement"
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SourceRef"
+          }
+        },
+        "origin": {
+          "type": "string",
+          "enum": [
+            "agent_decision",
+            "restore"
+          ]
+        },
+        "decisionReceiptId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "previousVersionId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "restoredFromVersionId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "claimKind": {
+          "type": "string",
+          "enum": [
+            "fact",
+            "preference",
+            "inference",
+            "rule",
+            "mixed"
+          ]
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "id",
+        "profileId",
+        "revision",
+        "createdAt",
+        "recordId",
+        "versionNumber",
+        "content",
+        "language",
+        "contentSha256",
+        "measurement",
+        "sources",
+        "origin",
+        "decisionReceiptId",
+        "claimKind"
+      ],
+      "additionalProperties": false
+    },
+    "MemoryWriteAttempt": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "profileId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+        },
+        "operationId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "proposalId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "attemptNumber": {
+          "type": "integer",
+          "enum": [
+            1,
+            2
+          ]
+        },
+        "capacityPolicySnapshot": {
+          "$ref": "#/$defs/MemoryCapacityPolicy"
+        },
+        "candidateSha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "candidateMeasurement": {
+          "$ref": "#/$defs/TokenMeasurement"
+        },
+        "result": {
+          "type": "string",
+          "enum": [
+            "capacity_rejected",
+            "schema_rejected",
+            "primary_rejected",
+            "accepted",
+            "failed_provider",
+            "no_change"
+          ]
+        },
+        "failureCode": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "id",
+        "profileId",
+        "revision",
+        "createdAt",
+        "operationId",
+        "proposalId",
+        "attemptNumber",
+        "capacityPolicySnapshot",
+        "candidateSha256",
+        "candidateMeasurement",
+        "result"
+      ],
+      "additionalProperties": false
+    },
+    "WorkRule": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "profileId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+        },
+        "memoryRecordId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "sourceCorrectionRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SourceRef"
+          }
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "id",
+        "profileId",
+        "revision",
+        "createdAt",
+        "memoryRecordId",
+        "enabled",
+        "sourceCorrectionRefs"
+      ],
+      "additionalProperties": false
+    },
+    "Intent": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "profileId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+        },
+        "memoryRecordId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "open",
+            "completed",
+            "expired",
+            "abandoned"
+          ]
+        },
+        "trigger": {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "manual",
+                "time",
+                "event"
+              ]
+            },
+            "value": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        "importance": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "id",
+        "profileId",
+        "revision",
+        "createdAt",
+        "memoryRecordId",
+        "status",
+        "trigger",
+        "importance"
+      ],
+      "additionalProperties": false
+    },
+    "Activity": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "profileId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+        },
+        "operationId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "running",
+            "success",
+            "error",
+            "cancelled",
+            "no_action"
+          ]
+        },
+        "metadata": {
+          "type": "object",
+          "properties": {
+            "attemptNumber": {
+              "type": "integer",
+              "enum": [
+                1,
+                2
+              ]
+            },
+            "measuredTokens": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "capacityTokens": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "errorCode": {
+              "type": "string",
+              "minLength": 1
+            },
+            "recordId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "id",
+        "profileId",
+        "revision",
+        "createdAt",
+        "operationId",
+        "sequence",
+        "code",
+        "status",
+        "metadata"
+      ],
+      "additionalProperties": false
+    },
+    "Operation": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "profileId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "chat",
+            "memory_update",
+            "import",
+            "restore",
+            "connection_test",
+            "connector_action"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "queued",
+            "running",
+            "succeeded",
+            "failed",
+            "cancelled",
+            "interrupted"
+          ]
+        },
+        "capacityAttemptCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2
+        },
+        "physicalCallCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "expectedRecordRevision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "limits": {
+          "type": "object",
+          "properties": {
+            "maxPhysicalCalls": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "maxElapsedMs": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "maxPhysicalCalls",
+            "maxElapsedMs"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "id",
+        "profileId",
+        "revision",
+        "createdAt",
+        "kind",
+        "status",
+        "capacityAttemptCount",
+        "physicalCallCount",
+        "limits"
+      ],
+      "additionalProperties": false
+    },
+    "ContextManifest": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "profileId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+        },
+        "operationId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "routeId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "routeRevision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "connectionRevision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "modelContextTokens": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "inputTokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "outputReservationTokens": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "safetyReservationTokens": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "measurementMethod": {
+          "type": "string",
+          "enum": [
+            "exact",
+            "estimated"
+          ]
+        },
+        "estimatorId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "includedSources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SourceRef"
+          }
+        },
+        "excludedSources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "source": {
+                "$ref": "#/$defs/SourceRef"
+              },
+              "reason": {
+                "type": "string",
+                "enum": [
+                  "disabled",
+                  "outdated",
+                  "irrelevant",
+                  "retrieval_budget",
+                  "superseded"
+                ]
+              }
+            },
+            "required": [
+              "source",
+              "reason"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "activeGuidanceIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "id",
+        "profileId",
+        "revision",
+        "createdAt",
+        "operationId",
+        "routeId",
+        "routeRevision",
+        "connectionRevision",
+        "modelContextTokens",
+        "inputTokens",
+        "outputReservationTokens",
+        "safetyReservationTokens",
+        "measurementMethod",
+        "estimatorId",
+        "includedSources",
+        "excludedSources",
+        "activeGuidanceIds"
+      ],
+      "additionalProperties": false
+    },
+    "ConnectorBinding": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "profileId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "community_4a",
+            "a2a",
+            "messenger"
+          ]
+        },
+        "baseUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "remoteAgentId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "protocolVersion": {
+          "type": "string",
+          "minLength": 1
+        },
+        "credentialRef": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "operationalKeyRef": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "recoveryKeyRef": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "disabled",
+            "disconnected",
+            "ready",
+            "resync_required"
+          ]
+        },
+        "feedCursor": {
+          "type": "string"
+        },
+        "feedEpoch": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "id",
+        "profileId",
+        "revision",
+        "createdAt",
+        "kind",
+        "baseUrl",
+        "capabilities",
+        "state"
+      ],
+      "additionalProperties": false
+    },
+    "ToolPolicy": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "profileId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+        },
+        "toolId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "effectLevel": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3
+        },
+        "rule": {
+          "type": "string",
+          "enum": [
+            "deny",
+            "allow",
+            "ask"
+          ]
+        },
+        "maxCalls": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "id",
+        "profileId",
+        "revision",
+        "createdAt",
+        "toolId",
+        "effectLevel",
+        "rule",
+        "maxCalls"
+      ],
+      "additionalProperties": false
+    },
+    "LocalePack": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "packVersion": {
+          "type": "string",
+          "minLength": 1
+        },
+        "locale": {
+          "type": "string",
+          "pattern": "^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$"
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "strings": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "packVersion",
+        "locale",
+        "displayName",
+        "strings"
+      ],
+      "additionalProperties": false
+    },
+    "ThemePack": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "packVersion": {
+          "type": "string",
+          "minLength": 1
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "variants": {
+          "type": "object",
+          "properties": {
+            "light": {
+              "type": "object",
+              "properties": {
+                "background": {
+                  "type": "string",
+                  "pattern": "^#[a-fA-F0-9]{6}$"
+                },
+                "surface": {
+                  "type": "string",
+                  "pattern": "^#[a-fA-F0-9]{6}$"
+                },
+                "text": {
+                  "type": "string",
+                  "pattern": "^#[a-fA-F0-9]{6}$"
+                },
+                "muted": {
+                  "type": "string",
+                  "pattern": "^#[a-fA-F0-9]{6}$"
+                },
+                "accent": {
+                  "type": "string",
+                  "pattern": "^#[a-fA-F0-9]{6}$"
+                },
+                "border": {
+                  "type": "string",
+                  "pattern": "^#[a-fA-F0-9]{6}$"
+                },
+                "error": {
+                  "type": "string",
+                  "pattern": "^#[a-fA-F0-9]{6}$"
+                },
+                "success": {
+                  "type": "string",
+                  "pattern": "^#[a-fA-F0-9]{6}$"
+                }
+              },
+              "required": [
+                "background",
+                "surface",
+                "text",
+                "muted",
+                "accent",
+                "border",
+                "error",
+                "success"
+              ],
+              "additionalProperties": false
+            },
+            "dark": {
+              "type": "object",
+              "properties": {
+                "background": {
+                  "type": "string",
+                  "pattern": "^#[a-fA-F0-9]{6}$"
+                },
+                "surface": {
+                  "type": "string",
+                  "pattern": "^#[a-fA-F0-9]{6}$"
+                },
+                "text": {
+                  "type": "string",
+                  "pattern": "^#[a-fA-F0-9]{6}$"
+                },
+                "muted": {
+                  "type": "string",
+                  "pattern": "^#[a-fA-F0-9]{6}$"
+                },
+                "accent": {
+                  "type": "string",
+                  "pattern": "^#[a-fA-F0-9]{6}$"
+                },
+                "border": {
+                  "type": "string",
+                  "pattern": "^#[a-fA-F0-9]{6}$"
+                },
+                "error": {
+                  "type": "string",
+                  "pattern": "^#[a-fA-F0-9]{6}$"
+                },
+                "success": {
+                  "type": "string",
+                  "pattern": "^#[a-fA-F0-9]{6}$"
+                }
+              },
+              "required": [
+                "background",
+                "surface",
+                "text",
+                "muted",
+                "accent",
+                "border",
+                "error",
+                "success"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "light",
+            "dark"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "packVersion",
+        "id",
+        "displayName",
+        "variants"
+      ],
+      "additionalProperties": false
+    },
+    "AppPreferences": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "locale": {
+          "type": "string",
+          "pattern": "^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$"
+        },
+        "themeId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "themeVariant": {
+          "type": "string",
+          "enum": [
+            "light",
+            "dark",
+            "system"
+          ]
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "revision",
+        "locale",
+        "themeId",
+        "themeVariant"
+      ],
+      "additionalProperties": false
+    },
+    "Error": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "enum": [
+            "VALIDATION_ERROR",
+            "UNSUPPORTED_CONTRACT_VERSION",
+            "UNKNOWN_COMMAND",
+            "NOT_FOUND",
+            "PROFILE_SCOPE_MISMATCH",
+            "REVISION_CONFLICT",
+            "IDEMPOTENCY_CONFLICT",
+            "CONNECTION_UNVERIFIED",
+            "CREDENTIAL_UNAVAILABLE",
+            "STALE_CONNECTION_TEST",
+            "MODEL_CAPABILITY_UNKNOWN",
+            "VISION_UNSUPPORTED",
+            "IMPORT_BATCH_TOO_LARGE",
+            "IMPORT_TOO_LARGE",
+            "IMPORT_UNREADABLE",
+            "MEMORY_CAPACITY_EXCEEDED",
+            "MEMORY_PRIMARY_REJECTED",
+            "MEMORY_FORMAT_INVALID",
+            "CONTEXT_BUDGET_EXCEEDED",
+            "GUIDANCE_BUDGET_EXCEEDED",
+            "OUTPUT_BUDGET_INSUFFICIENT",
+            "COST_ESTIMATE_UNKNOWN",
+            "OPERATION_BUDGET_EXCEEDED",
+            "OPERATION_CANCELLED",
+            "OPERATION_INTERRUPTED",
+            "PROVIDER_ERROR",
+            "POLICY_DENIED",
+            "MODE_UNAVAILABLE",
+            "EVENT_GAP",
+            "PACK_INVALID",
+            "MIGRATION_FAILED",
+            "STORAGE_ERROR",
+            "CONNECTION_INVALID",
+            "PROVIDER_OUTPUT_INCOMPLETE"
+          ]
+        },
+        "messageKey": {
+          "type": "string",
+          "minLength": 1
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "operationId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "field": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "messageKey",
+        "retryable"
+      ],
+      "additionalProperties": false
+    },
+    "CommandEnvelope": {
+      "type": "object",
+      "properties": {
+        "contractVersion": {
+          "const": 1
+        },
+        "requestId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "command": {
+          "type": "string",
+          "minLength": 1
+        },
+        "profileId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "payload": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "contractVersion",
+        "requestId",
+        "command",
+        "payload"
+      ],
+      "additionalProperties": false
+    },
+    "ResultEnvelope": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "contractVersion": {
+              "const": 1
+            },
+            "requestId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "ok": {
+              "const": true
+            },
+            "result": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "contractVersion",
+            "requestId",
+            "ok",
+            "result"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "contractVersion": {
+              "const": 1
+            },
+            "requestId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "ok": {
+              "const": false
+            },
+            "error": {
+              "$ref": "#/$defs/Error"
+            }
+          },
+          "required": [
+            "contractVersion",
+            "requestId",
+            "ok",
+            "error"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "EventEnvelope": {
+      "type": "object",
+      "properties": {
+        "contractVersion": {
+          "const": 1
+        },
+        "eventId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "profileId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "operationId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "eventType": {
+          "type": "string",
+          "minLength": 1
+        },
+        "occurredAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+        },
+        "payload": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "contractVersion",
+        "eventId",
+        "profileId",
+        "sequence",
+        "eventType",
+        "occurredAt",
+        "payload"
+      ],
+      "additionalProperties": false
+    },
+    "RelationshipMetadata": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "profileId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+        },
+        "memoryRecordId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "peerRef": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "lastContactAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+        },
+        "contactCount": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "id",
+        "profileId",
+        "revision",
+        "createdAt",
+        "memoryRecordId",
+        "peerRef",
+        "lastContactAt",
+        "contactCount"
+      ],
+      "additionalProperties": false
+    },
+    "InternalState": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "profileId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "null",
+            "conscious_core"
+          ]
+        },
+        "engineVersion": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stateBlobId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "id",
+        "profileId",
+        "revision",
+        "createdAt",
+        "kind"
+      ],
+      "additionalProperties": false
+    },
+    "ProfileDraft": {
+      "type": "object",
+      "properties": {
+        "displayName": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "displayName"
+      ],
+      "additionalProperties": false
+    },
+    "ProfilePatch": {
+      "type": "object",
+      "properties": {
+        "displayName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "memorySettings": {
+          "$ref": "#/$defs/MemorySettings"
+        },
+        "contextBudget": {
+          "$ref": "#/$defs/ContextBudgetPolicy"
+        },
+        "scribeMode": {
+          "type": "string",
+          "enum": [
+            "automatic",
+            "disabled"
+          ]
+        },
+        "languagePolicy": {
+          "type": "string",
+          "enum": [
+            "preserve_source",
+            "explicit_translation"
+          ]
+        },
+        "memoryLanguage": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [],
+      "additionalProperties": false,
+      "minProperties": 1
+    },
+    "RouteDraft": {
+      "type": "object",
+      "properties": {
+        "role": {
+          "type": "string",
+          "enum": [
+            "primary",
+            "scribe"
+          ]
+        },
+        "connectionId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "modelId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "outputLimitTokens": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "temperature": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2
+        },
+        "reasoningValue": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "role",
+        "connectionId",
+        "modelId",
+        "outputLimitTokens"
+      ],
+      "additionalProperties": false
+    },
+    "PageRequest": {
+      "type": "object",
+      "properties": {
+        "cursor": {
+          "type": "string",
+          "minLength": 1
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      "required": [
+        "limit"
+      ],
+      "additionalProperties": false
+    },
+    "ImportRequest": {
+      "type": "object",
+      "properties": {
+        "selectionToken": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "purpose": {
+          "type": "string",
+          "enum": [
+            "conversation",
+            "knowledge",
+            "guidance",
+            "memory_import"
+          ]
+        },
+        "conversationId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "author": {
+          "$ref": "#/$defs/Author"
+        }
+      },
+      "required": [
+        "selectionToken",
+        "purpose",
+        "author"
+      ],
+      "additionalProperties": false
+    },
+    "Accepted": {
+      "type": "object",
+      "properties": {
+        "operation": {
+          "$ref": "#/$defs/Operation"
+        }
+      },
+      "required": [
+        "operation"
+      ],
+      "additionalProperties": false
+    },
+    "Ack": {
+      "type": "object",
+      "properties": {
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "revision"
+      ],
+      "additionalProperties": false
+    },
+    "StateSnapshot": {
+      "type": "object",
+      "properties": {
+        "profile": {
+          "$ref": "#/$defs/Profile"
+        },
+        "connections": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ProviderConnection"
+          }
+        },
+        "routes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ModelRoute"
+          }
+        },
+        "memoryRecords": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/MemoryRecord"
+          }
+        },
+        "lastEventSequence": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "profile",
+        "connections",
+        "routes",
+        "memoryRecords",
+        "lastEventSequence"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

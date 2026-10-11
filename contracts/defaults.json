@@ -1,0 +1,65 @@
+{
+  "contractVersion": 1,
+  "appPreferences": {
+    "schemaVersion": 1,
+    "revision": 1,
+    "locale": "en",
+    "themeId": "orbital",
+    "themeVariant": "light"
+  },
+  "memorySettings": {
+    "working": {
+      "kind": "bounded",
+      "tokens": 300
+    },
+    "episodic": {
+      "kind": "bounded",
+      "tokens": 300
+    },
+    "relationship": {
+      "kind": "bounded",
+      "tokens": 300
+    },
+    "longTerm": {
+      "kind": "bounded",
+      "tokens": 500
+    },
+    "intent": {
+      "kind": "bounded",
+      "tokens": 300
+    },
+    "workRule": {
+      "kind": "bounded",
+      "tokens": 300
+    }
+  },
+  "contextBudget": {
+    "retrievalTargetTokens": 1200,
+    "guidanceTargetTokens": 800,
+    "inputReserveTokens": 512,
+    "chatOutputTokens": 1024,
+    "memoryOutputCeilingTokens": 4096,
+    "maxPhysicalCalls": 4,
+    "maxElapsedMs": 180000,
+    "costLimit": {
+      "kind": "unconfigured"
+    }
+  },
+  "memoryFormatRepairLimit": 1,
+  "transportRetriesPerPhysicalStage": 1,
+  "capacityProposalLimit": 2,
+  "otherLimitPresets": [
+    300,
+    500,
+    800,
+    1000
+  ],
+  "importLimits": {
+    "maxBatchFiles": 12,
+    "maxDocumentBytes": 15728640,
+    "maxExtractedTextBytes": 2097152,
+    "maxImageBytes": 10485760
+  },
+  "snapshotHistoryRetention": "until_explicit_purge",
+  "diagnosticsContentIncludedByDefault": false
+}

@@ -1,0 +1,184 @@
+[
+  {
+    "name": "new-profile",
+    "dto": "Profile",
+    "value": {
+      "schemaVersion": 1,
+      "id": "profile-1",
+      "revision": 1,
+      "createdAt": "2026-10-11T12:00:00Z",
+      "displayName": "Orbit",
+      "status": "draft",
+      "mode": "standard",
+      "scribeMode": "automatic",
+      "memorySettings": {
+        "working": {
+          "kind": "bounded",
+          "tokens": 300
+        },
+        "episodic": {
+          "kind": "bounded",
+          "tokens": 300
+        },
+        "relationship": {
+          "kind": "bounded",
+          "tokens": 300
+        },
+        "longTerm": {
+          "kind": "bounded",
+          "tokens": 500
+        },
+        "intent": {
+          "kind": "bounded",
+          "tokens": 300
+        },
+        "workRule": {
+          "kind": "bounded",
+          "tokens": 300
+        }
+      },
+      "contextBudget": {
+        "retrievalTargetTokens": 1200,
+        "guidanceTargetTokens": 800,
+        "inputReserveTokens": 512,
+        "chatOutputTokens": 1024,
+        "memoryOutputCeilingTokens": 4096,
+        "maxPhysicalCalls": 4,
+        "maxElapsedMs": 180000,
+        "costLimit": {
+          "kind": "unconfigured"
+        }
+      },
+      "languagePolicy": "preserve_source"
+    }
+  },
+  {
+    "name": "human-import-ai-author",
+    "dto": "ImportedMaterial",
+    "value": {
+      "schemaVersion": 1,
+      "id": "material-1",
+      "profileId": "profile-1",
+      "revision": 1,
+      "createdAt": "2026-10-11T12:00:00Z",
+      "fileName": "viewer-notes.md",
+      "mimeType": "text/markdown",
+      "originalBlobId": "blob-original-1",
+      "originalSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "originalSizeBytes": 120,
+      "purpose": "knowledge",
+      "author": {
+        "kind": "ai",
+        "label": "Source assistant",
+        "assertedBy": "importer",
+        "verified": false
+      },
+      "importer": {
+        "kind": "human",
+        "localActorId": "owner-1"
+      },
+      "importedAt": "2026-10-11T12:00:00Z",
+      "parseState": "ready",
+      "extractedBlobId": "blob-text-1",
+      "extractedSha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "importMethod": "text-utf8/1"
+    }
+  },
+  {
+    "name": "source-provenance",
+    "dto": "SourceRef",
+    "value": {
+      "profileId": "profile-1",
+      "kind": "import",
+      "entityId": "material-1",
+      "contentSha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "snapshotBlobId": "blob-text-1"
+    }
+  },
+  {
+    "name": "theme-pack",
+    "dto": "ThemePack",
+    "value": {
+      "schemaVersion": 1,
+      "packVersion": "1.0",
+      "id": "orbital",
+      "displayName": "Orbital",
+      "variants": {
+        "light": {
+          "background": "#eef1fa",
+          "surface": "#ffffff",
+          "text": "#252a43",
+          "muted": "#626b86",
+          "accent": "#6356d8",
+          "border": "#dde2f0",
+          "error": "#a7354d",
+          "success": "#187450"
+        },
+        "dark": {
+          "background": "#111525",
+          "surface": "#1b2035",
+          "text": "#eff1ff",
+          "muted": "#626b86",
+          "accent": "#6356d8",
+          "border": "#dde2f0",
+          "error": "#a7354d",
+          "success": "#187450"
+        }
+      }
+    }
+  },
+  {
+    "name": "locale-pack",
+    "dto": "LocalePack",
+    "value": {
+      "schemaVersion": 1,
+      "packVersion": "1.0",
+      "locale": "pl",
+      "displayName": "Polski",
+      "strings": {
+        "app.title": "AI Home"
+      }
+    }
+  },
+  {
+    "name": "empty-memory",
+    "dto": "MemoryRecord",
+    "value": {
+      "schemaVersion": 1,
+      "id": "working-1",
+      "profileId": "profile-1",
+      "revision": 1,
+      "createdAt": "2026-10-11T12:00:00Z",
+      "kind": "working",
+      "state": "empty"
+    }
+  },
+  {
+    "name": "error",
+    "dto": "Error",
+    "value": {
+      "code": "MEMORY_CAPACITY_EXCEEDED",
+      "messageKey": "error.memory_capacity_exceeded",
+      "retryable": false
+    }
+  },
+  {
+    "name": "queued-operation",
+    "dto": "Operation",
+    "value": {
+      "schemaVersion": 1,
+      "id": "op-1",
+      "profileId": "profile-1",
+      "revision": 1,
+      "createdAt": "2026-10-11T12:00:00Z",
+      "kind": "memory_update",
+      "status": "queued",
+      "capacityAttemptCount": 0,
+      "physicalCallCount": 0,
+      "limits": {
+        "maxPhysicalCalls": 4,
+        "maxElapsedMs": 180000
+      }
+    }
+  }
+]
