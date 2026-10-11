@@ -32,13 +32,13 @@ npm run tauri dev
 npm run tauri build -- --no-bundle
 ```
 
-The first Cargo run resolves transitive dependencies and generates `src-tauri/Cargo.lock`. Direct versions come from the audited Harness snapshot; **the Rust lockfile could not be resolved in the preparation environment**. Preserve and commit the generated lockfile after a successful native run, then switch CI to `--locked`. The npm lockfile is included and was used in the verified build.
+Run the manual **Prepare Cargo lockfile** workflow first, review its artifact, and commit `src-tauri/Cargo.lock`. Routine CI requires this file and uses `--locked`. See `docs/CI_PL.md`. The first local Cargo run can also resolve dependencies and generate `src-tauri/Cargo.lock`. Direct versions come from the audited Harness snapshot; **the Rust lockfile could not be resolved in the preparation environment**. Preserve and commit the generated lockfile after a successful native run, CI already requires `--locked`. The npm lockfile is included and was used in the verified build.
 
 The native candidate stores `foundation.sqlite3` in Tauri's application data directory. A SQLite transaction saves preferences, idempotency receipt and journal event together. Desktop errors do not cause fallback to browser storage. No API credentials are accepted in this stage.
 
 ## Check before closing 4B-0
 
-The provided GitHub Actions workflow tests the frontend, runs headless Rust tests, and compiles the desktop candidate on Windows and Linux. It has not been run yet. This directory can become a GitHub repository now; no repository was remotely created or published during preparation.
+The provided GitHub Actions workflow tests the frontend, runs full-feature Rust/SQLite tests and compiles Tauri targets on Windows and Linux, without creating a product release. An optional manual build_desktop input builds runnable candidates. The updated workflow has not been run yet. This directory can become a GitHub repository now; no repository was remotely created or published during preparation.
 
 Complete the checklist in `docs/ACCEPTANCE_PL.md`, retain the CI logs and Rust lockfile, and audit the resulting code. Native compilation alone does not confirm rendering, keyboard behavior or persistence in the actual WebView.
 

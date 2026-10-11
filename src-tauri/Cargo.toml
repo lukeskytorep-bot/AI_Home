@@ -12,11 +12,18 @@ path = "src/main.rs"
 required-features = ["desktop"]
 [features]
 default = ["desktop"]
-desktop = ["dep:tauri"]
+desktop = ["dep:tauri", "dep:tauri-runtime", "dep:tauri-runtime-wry", "dep:tauri-macros"]
 [build-dependencies]
 tauri-build = { version = "=2.6.3", features = [] }
+# Keep Tauri's generated-code/build family on the audited compatible graph.
+tauri-utils = "=2.9.3"
+tauri-codegen = "=2.6.3"
 [dependencies]
 tauri = { version = "=2.11.5", features = [], optional = true }
+# Avoid selecting the newer runtime family before the first committed Cargo.lock.
+tauri-macros = { version = "=2.6.3", optional = true }
+tauri-runtime = { version = "=2.11.3", optional = true }
+tauri-runtime-wry = { version = "=2.11.4", optional = true }
 serde_json = "=1.0.151"
 chrono = { version = "=0.4.45", default-features = false, features = ["clock", "std"] }
 regex = "=1.13.1"

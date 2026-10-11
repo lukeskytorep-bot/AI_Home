@@ -1,8 +1,12 @@
 # AI Home 4B-0 — raport fundamentu
 
-Wersja treści 1.1 · 11 października 2026
+Wersja treści 1.2 · 11 października 2026
 
 **Status: kandydat źródłowy do audytu. Frontend sprawdzony. Brak PASS CLOSED dla 4B-0: kompilacja natywna i rzeczywisty WebView pozostają do wykonania.**
+
+## Uzupełnienie po pierwszym CI
+
+Edward przekazał zielony frontend oraz załączone logi nieudanej kompilacji natywnej Ubuntu/Windows. Poprzedni NOT RUN opisuje wykonanie lokalne; natywne CI zostało już uruchomione przez Edwarda i nie przeszło. Przygotowano korektę zgodności zależności Tauri oraz nowy podział CI, opisane w AI_HOME_CI_KOREKTA_RAPORT_PL.md i docs/CI_PL.md. To kandydat oczekujący ponownego CI. Nie nadano PASS natywnemu runtime. Na zwykłych push/PR działają frontend i pełne testy Rust/SQLite/Tauri z --locked; optymalizowana kompilacja do ręcznych prób jest osobna, domyślnie wyłączona. Generacja lockfile odbywa się osobno, a wynik wymaga zachowania w repozytorium.
 
 ## Korekta po audycie 4B-0
 
@@ -14,7 +18,7 @@ W workflow dodano archiwizowanie wygenerowanych schematów/uprawnień razem z bi
 
 ## Podstawa decyzji
 
-Edward potwierdził pozytywny odbiór audytora dla skorygowanego P2 i upoważnił kolejny krok. Jest to przyjęcie przekazane przez użytkownika, nie nowy audyt wykonany w tym raporcie. Wykorzystano P2 1.1, plan zaktualizowano do 1.7. Cztery kontrakty P2 pozostają identyczne bajtowo; ich sumy kontroluje skrypt granic modułów.
+Edward potwierdził pozytywny odbiór audytora dla skorygowanego P2 i upoważnił kolejny krok. Jest to przyjęcie przekazane przez użytkownika, nie nowy audyt wykonany w tym raporcie. Wykorzystano P2 1.1, plan zaktualizowano do 1.8. Cztery kontrakty P2 pozostają identyczne bajtowo; ich sumy kontroluje skrypt granic modułów.
 
 ## Co wykonano
 
@@ -41,7 +45,7 @@ Edward potwierdził pozytywny odbiór audytora dla skorygowanego P2 i upoważni�
 | Kontrast kolorów | PASS w testach dla obu wariantów obu skórek; nie zastępuje oceny wizualnej |
 | HTTP smoke produkcyjnego preview | PASS: serwer i HTML/CSS/JS zwracają HTTP 200; bez wykonania JS w przeglądarce |
 | Testy Rust i SQLite | NOT RUN — brak cargo/rustc; 8 testów dostarczonych, bez deklaracji zaliczenia |
-| Kompilacja Tauri/Windows/Linux | NOT RUN; workflow przygotowany, nie uruchomiony |
+| Kompilacja Tauri/Windows/Linux | FAIL według logów pierwszego CI przekazanych przez Edwarda; nowa korekta czeka na ponowne CI |
 | Rzeczywista przeglądarka/WebView | NOT RUN — brak silnika Chromium/WebView |
 | Keyring i rzeczywiste API | Poza zakresem 4B-0; nie były testowane |
 
@@ -61,6 +65,6 @@ Do odbioru: uruchomienie CI, utworzenie lockfile Rust, start i restart aplikacji
 
 ## Identyfikacja przekazania
 
-AI_HOME_4B0_SOURCE.zip zawiera kod, README, plan 1.7, ten raport, bazowy raport P2 1.1, logi i manifest wszystkich plików poza samym manifestem. Archiwum nie zawiera node_modules, dist, target ani metadanych Git. Zewnętrzny plik SHA256 identyfikuje całe archiwum. Weryfikator akceptuje archiwum niezależnie od jego nazwy (np. dopisek pobrania „(1)”). Osobne pliki raportu i planu są identyczne bajtowo z ich kopiami w ZIP-ie.
+AI_HOME_4B0_SOURCE.zip zawiera kod, README, plan 1.8, ten raport, bazowy raport P2 1.1, logi i manifest wszystkich plików poza samym manifestem. Archiwum nie zawiera node_modules, dist, target ani metadanych Git. Zewnętrzny plik SHA256 identyfikuje całe archiwum. Weryfikator akceptuje archiwum niezależnie od jego nazwy (np. dopisek pobrania „(1)”). Osobne pliki raportu i planu są identyczne bajtowo z ich kopiami w ZIP-ie.
 
 Źródła techniczne sprawdzone podczas przygotowania: https://v2.tauri.app/security/capabilities/ oraz https://v2.tauri.app/reference/config/ . Konfiguracja deklaruje AppManifest.commands i capability main; skuteczność wygenerowanej konfiguracji wymaga native build.

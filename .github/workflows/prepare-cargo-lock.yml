@@ -1,0 +1,25 @@
+name: Prepare Cargo lockfile
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Resolve compatible dependency graph
+        run: cargo generate-lockfile --manifest-path src-tauri/Cargo.toml
+      - name: Verify locked Rust and SQLite tests without WebView
+        run: cargo test --manifest-path src-tauri/Cargo.toml --no-default-features --locked
+      - name: Preserve lock even when tests fail
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: AI-Home-Cargo-lock-review
+          path: src-tauri/Cargo.lock
+          if-no-files-found: error
+          retention-days: 14

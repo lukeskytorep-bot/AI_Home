@@ -7,7 +7,7 @@ Stan: kandydat źródłowy; frontend sprawdzony, natywna podstawa nieodebrana.
 - [x] Testy logiki i React w jsdom, kontrola zamrożonych P2 i granic modułów.
 - [ ] Rust: uruchomić dostarczone testy (m.in. restart SQLite, CAS, idempotencja, rollback po błędzie receipts, równoległy konflikt, uszkodzony zapis).
 - [ ] Windows/Linux: kompilacja Tauri z ograniczoną komendą, zatwierdzenie wygenerowanych capability.
-- [ ] Zachować Cargo.lock i wyniki CI; przełączyć natywne polecenia CI na --locked.
+- [ ] Zachować Cargo.lock i wyniki CI; nowe CI już używa --locked, a zachowanie lockfile pozostaje do wykonania.
 - [ ] W rzeczywistym WebView: EN na czystym starcie, zapis PL po restarcie, oba wyglądy light/dark/system, klawiatura, 360/700/1280 px, czytelność błędów.
 - [ ] Zapis natywny po restarcie: stan, receipts i odtwarzanie journal; sprawdzić, że nie ma fallbacku do preview.
 - [ ] Potwierdzić natywny startup i zamknięcie; błąd otwarcia bazy nie uruchamia pozornie działającego kernela.

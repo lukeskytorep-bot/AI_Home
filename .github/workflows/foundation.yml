@@ -1,13 +1,26 @@
-name: AI Home foundation
-on: [push, pull_request, workflow_dispatch]
+name: AI Home checks
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      build_desktop:
+        description: Build runnable desktop candidates (no installer or publication)
+        type: boolean
+        default: false
 permissions:
   contents: read
+concurrency:
+  group: ai-home-checks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   frontend:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: npm
@@ -16,32 +29,99 @@ jobs:
       - run: npm test
       - run: npm run build
   native:
+    name: Rust, SQLite and Tauri (${{ matrix.os }})
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, windows-latest]
+        os: [ubuntu-24.04, windows-2022]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: npm
       - uses: dtolnay/rust-toolchain@stable
+      - name: Identify Rust compiler for cache
+        id: rust_version
+        shell: bash
+        run: echo "version=$(rustc --version)" >> "$GITHUB_OUTPUT"
+      - name: Cache Rust dependencies and build artifacts
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: ${{ runner.os }}-${{ github.job }}-${{ steps.rust_version.outputs.version }}-${{ hashFiles('src-tauri/Cargo.lock', 'src-tauri/Cargo.toml') }}
       - name: Linux dependencies
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+        run: sudo apt-get update && sudo apt-get install -y build-essential libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+      - name: Require reviewed Cargo.lock
+        shell: bash
+        run: |
+          if [ ! -f src-tauri/Cargo.lock ]; then
+            echo "::error::Run Prepare Cargo lockfile, download its artifact, and commit src-tauri/Cargo.lock first."
+            exit 1
+          fi
       - run: npm ci
-      - name: Rust tests and initial lock resolution
-        run: cargo test --manifest-path src-tauri/Cargo.toml --no-default-features
-      - run: npm run tauri build -- --no-bundle
-      - uses: actions/upload-artifact@v4
+      - run: npm run build
+      - name: Test Rust, SQLite and compile Tauri targets
+        run: cargo test --manifest-path src-tauri/Cargo.toml --all-targets --locked
+      - name: Preserve lock and generated permission evidence
+        if: always()
+        uses: actions/upload-artifact@v6
         with:
-          name: native-foundation-${{ matrix.os }}
+          name: native-check-evidence-${{ matrix.os }}
           path: |
             src-tauri/Cargo.lock
             src-tauri/gen/
-            src-tauri/target/release/build/ai-home-*/out/
+            src-tauri/target/debug/build/ai-home-*/out/
+          if-no-files-found: warn
+          retention-days: 14
+  desktop_candidate:
+    name: Manual desktop candidate (${{ matrix.os }})
+    if: github.event_name == 'workflow_dispatch' && inputs.build_desktop
+    needs: [frontend, native]
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Identify Rust compiler for cache
+        id: rust_version
+        shell: bash
+        run: echo "version=$(rustc --version)" >> "$GITHUB_OUTPUT"
+      - name: Cache Rust dependencies and build artifacts
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: ${{ runner.os }}-${{ github.job }}-${{ steps.rust_version.outputs.version }}-${{ hashFiles('src-tauri/Cargo.lock', 'src-tauri/Cargo.toml') }}
+      - name: Linux dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y build-essential libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+      - run: npm ci
+      - name: Build executable without installer
+        run: npm run tauri build -- --no-bundle -- --locked
+      - uses: actions/upload-artifact@v6
+        with:
+          name: desktop-candidate-${{ matrix.os }}
+          path: |
             src-tauri/target/release/ai-home
             src-tauri/target/release/ai-home.exe
           if-no-files-found: error
+          retention-days: 14

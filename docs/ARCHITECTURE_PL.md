@@ -38,3 +38,7 @@ Własne walidatory TS/Rust obsługują podzbiór JSON Schema występujący w zam
 Wykorzystano sprawdzony w P1 wybór stosu, rzeczywiste wersje zależności frontendowych oraz wzorzec Tauri/React. npm lockfile dostosowano do mniejszej listy zależności AI Home i sprawdzono przez `npm ci`. Wersje bezpośrednich crate'ów Rust pochodzą z lockfile migawki Harness. Nie przeniesiono repozytorium, migracji, danych RV, sekretów ani jego domenowych ustawień. Nowa domena kernel/ustawienia powstała dla AI Home.
 
 Plan przeniesienia gotowych providerów, retry/continuation, sekretów, importerów i mechanizmów notatek zachowuje P1. Faktyczna adaptacja providerów należy do 4B-1, importerów do 4B-2A, pamięci do 4B-3/4. Nie deklarujemy wykonania tych przenosin w tym pakiecie.
+
+## Korekta CI po pierwszej kompilacji
+
+Logi Edwarda ujawniły niezgodną rodzinę zależności Tauri. Przypięto runtime/makra/build na zestaw migawki Harness; poprawka czeka na CI. `docs/CI_PL.md` opisuje generację i zachowanie Cargo.lock, zwykłe testy pełnego desktop feature oraz oddzielną ręczną kompilację kandydata. Nie ma publikacji wydania po każdym etapie.
