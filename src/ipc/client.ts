@@ -1,0 +1,2 @@
+import type {Transport,Request,Response} from '../domain/types';
+export class Client {constructor(readonly transport:Transport){} async call<T>(command:string,payload:Record<string,unknown>={},expectedRevision?:number):Promise<Response<T>>{const r:Request={contractVersion:1,requestId:crypto.randomUUID(),command,payload};if(expectedRevision!==undefined)r.expectedRevision=expectedRevision;return this.transport.dispatch<T>(r);}}

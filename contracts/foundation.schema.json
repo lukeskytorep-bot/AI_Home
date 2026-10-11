@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "KernelStatus": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "lifecycle": {
+          "const": "ready"
+        },
+        "mode": {
+          "const": "standard"
+        },
+        "stateProvider": {
+          "const": "null"
+        },
+        "stage": {
+          "const": "4B-0"
+        },
+        "services": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "lastEventSequence": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "lifecycle",
+        "mode",
+        "stateProvider",
+        "stage",
+        "services",
+        "lastEventSequence"
+      ],
+      "additionalProperties": false
+    },
+    "AppEvent": {
+      "type": "object",
+      "properties": {
+        "contractVersion": {
+          "const": 1
+        },
+        "eventId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "eventType": {
+          "const": "app.preferences.changed"
+        },
+        "occurredAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "payload": {
+          "$ref": "#/$defs/AppPreferences"
+        }
+      },
+      "required": [
+        "contractVersion",
+        "eventId",
+        "sequence",
+        "eventType",
+        "occurredAt",
+        "payload"
+      ],
+      "additionalProperties": false
+    },
+    "EventPage": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/AppEvent"
+          }
+        },
+        "lastSequence": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "hasMore": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "items",
+        "lastSequence",
+        "hasMore"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

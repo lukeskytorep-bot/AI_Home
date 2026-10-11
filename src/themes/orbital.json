@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "packVersion": "1.0",
+  "id": "orbital",
+  "displayName": "Orbital",
+  "variants": {
+    "light": {
+      "background": "#eef1fa",
+      "surface": "#ffffff",
+      "text": "#252a43",
+      "muted": "#59627c",
+      "accent": "#6356d8",
+      "border": "#dde2f0",
+      "error": "#a7354d",
+      "success": "#187450"
+    },
+    "dark": {
+      "background": "#111525",
+      "surface": "#1b2035",
+      "text": "#eff1ff",
+      "muted": "#b0b9d4",
+      "accent": "#b7aaff",
+      "border": "#343c59",
+      "error": "#ff9db2",
+      "success": "#86dfb5"
+    }
+  }
+}

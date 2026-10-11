@@ -55,6 +55,11 @@
           "type": "string",
           "minLength": 1
         },
+        "modelRouteId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
         "modelRouteRevision": {
           "type": "integer",
           "minimum": 1
@@ -64,6 +69,7 @@
         "value",
         "method",
         "estimatorId",
+        "modelRouteId",
         "modelRouteRevision"
       ],
       "additionalProperties": false
@@ -772,136 +778,749 @@
       "additionalProperties": false
     },
     "ImportedMaterial": {
-      "type": "object",
-      "properties": {
-        "schemaVersion": {
-          "const": 1
-        },
-        "id": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 128
-        },
-        "profileId": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 128
-        },
-        "revision": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time",
-          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
-        },
-        "fileName": {
-          "type": "string",
-          "minLength": 1
-        },
-        "mimeType": {
-          "type": "string",
-          "minLength": 1
-        },
-        "originalBlobId": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 128
-        },
-        "originalSha256": {
-          "type": "string",
-          "pattern": "^[a-f0-9]{64}$"
-        },
-        "originalSizeBytes": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "purpose": {
-          "type": "string",
-          "enum": [
-            "conversation",
-            "knowledge",
-            "guidance",
-            "memory_import"
-          ]
-        },
-        "conversationId": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 128
-        },
-        "author": {
-          "$ref": "#/$defs/Author"
-        },
-        "importer": {
+      "oneOf": [
+        {
           "type": "object",
           "properties": {
-            "kind": {
-              "const": "human"
+            "schemaVersion": {
+              "const": 1
             },
-            "localActorId": {
+            "id": {
               "type": "string",
               "minLength": 1,
               "maxLength": 128
+            },
+            "profileId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "revision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+            },
+            "fileName": {
+              "type": "string",
+              "minLength": 1
+            },
+            "mimeType": {
+              "type": "string",
+              "minLength": 1
+            },
+            "originalBlobId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "originalSha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "originalSizeBytes": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "purpose": {
+              "type": "string",
+              "enum": [
+                "conversation",
+                "knowledge",
+                "guidance",
+                "memory_import"
+              ]
+            },
+            "conversationId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "author": {
+              "$ref": "#/$defs/Author"
+            },
+            "importer": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "const": "human"
+                },
+                "localActorId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                }
+              },
+              "required": [
+                "kind",
+                "localActorId"
+              ],
+              "additionalProperties": false
+            },
+            "importedAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+            },
+            "mediaKind": {
+              "const": "document"
+            },
+            "parseState": {
+              "const": "ready"
+            },
+            "extractedBlobId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "extractedSha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "importMethod": {
+              "type": "string",
+              "minLength": 1
             }
           },
           "required": [
-            "kind",
-            "localActorId"
+            "schemaVersion",
+            "id",
+            "profileId",
+            "revision",
+            "createdAt",
+            "fileName",
+            "mimeType",
+            "originalBlobId",
+            "originalSha256",
+            "originalSizeBytes",
+            "purpose",
+            "author",
+            "importer",
+            "importedAt",
+            "mediaKind",
+            "parseState",
+            "extractedBlobId",
+            "extractedSha256",
+            "importMethod"
           ],
           "additionalProperties": false
         },
-        "importedAt": {
-          "type": "string",
-          "format": "date-time",
-          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+        {
+          "type": "object",
+          "properties": {
+            "schemaVersion": {
+              "const": 1
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "profileId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "revision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+            },
+            "fileName": {
+              "type": "string",
+              "minLength": 1
+            },
+            "mimeType": {
+              "type": "string",
+              "minLength": 1
+            },
+            "originalBlobId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "originalSha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "originalSizeBytes": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "purpose": {
+              "type": "string",
+              "enum": [
+                "conversation",
+                "knowledge",
+                "guidance",
+                "memory_import"
+              ]
+            },
+            "conversationId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "author": {
+              "$ref": "#/$defs/Author"
+            },
+            "importer": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "const": "human"
+                },
+                "localActorId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                }
+              },
+              "required": [
+                "kind",
+                "localActorId"
+              ],
+              "additionalProperties": false
+            },
+            "importedAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+            },
+            "mediaKind": {
+              "const": "document"
+            },
+            "parseState": {
+              "const": "pending"
+            }
+          },
+          "required": [
+            "schemaVersion",
+            "id",
+            "profileId",
+            "revision",
+            "createdAt",
+            "fileName",
+            "mimeType",
+            "originalBlobId",
+            "originalSha256",
+            "originalSizeBytes",
+            "purpose",
+            "author",
+            "importer",
+            "importedAt",
+            "mediaKind",
+            "parseState"
+          ],
+          "additionalProperties": false
         },
-        "parseState": {
-          "type": "string",
-          "enum": [
-            "pending",
-            "ready",
-            "unreadable",
-            "failed"
-          ]
+        {
+          "type": "object",
+          "properties": {
+            "schemaVersion": {
+              "const": 1
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "profileId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "revision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+            },
+            "fileName": {
+              "type": "string",
+              "minLength": 1
+            },
+            "mimeType": {
+              "type": "string",
+              "minLength": 1
+            },
+            "originalBlobId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "originalSha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "originalSizeBytes": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "purpose": {
+              "type": "string",
+              "enum": [
+                "conversation",
+                "knowledge",
+                "guidance",
+                "memory_import"
+              ]
+            },
+            "conversationId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "author": {
+              "$ref": "#/$defs/Author"
+            },
+            "importer": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "const": "human"
+                },
+                "localActorId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                }
+              },
+              "required": [
+                "kind",
+                "localActorId"
+              ],
+              "additionalProperties": false
+            },
+            "importedAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+            },
+            "mediaKind": {
+              "const": "document"
+            },
+            "parseState": {
+              "type": "string",
+              "enum": [
+                "unreadable",
+                "failed"
+              ]
+            },
+            "errorCode": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "schemaVersion",
+            "id",
+            "profileId",
+            "revision",
+            "createdAt",
+            "fileName",
+            "mimeType",
+            "originalBlobId",
+            "originalSha256",
+            "originalSizeBytes",
+            "purpose",
+            "author",
+            "importer",
+            "importedAt",
+            "mediaKind",
+            "parseState",
+            "errorCode"
+          ],
+          "additionalProperties": false
         },
-        "extractedBlobId": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 128
+        {
+          "type": "object",
+          "properties": {
+            "schemaVersion": {
+              "const": 1
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "profileId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "revision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+            },
+            "fileName": {
+              "type": "string",
+              "minLength": 1
+            },
+            "mimeType": {
+              "type": "string",
+              "minLength": 1
+            },
+            "originalBlobId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "originalSha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "originalSizeBytes": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "purpose": {
+              "type": "string",
+              "enum": [
+                "conversation",
+                "knowledge",
+                "guidance",
+                "memory_import"
+              ]
+            },
+            "conversationId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "author": {
+              "$ref": "#/$defs/Author"
+            },
+            "importer": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "const": "human"
+                },
+                "localActorId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                }
+              },
+              "required": [
+                "kind",
+                "localActorId"
+              ],
+              "additionalProperties": false
+            },
+            "importedAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+            },
+            "mediaKind": {
+              "const": "image"
+            },
+            "parseState": {
+              "const": "ready"
+            },
+            "imageMetadata": {
+              "type": "object",
+              "properties": {
+                "format": {
+                  "type": "string",
+                  "enum": [
+                    "png",
+                    "jpeg",
+                    "webp",
+                    "gif"
+                  ]
+                },
+                "width": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "height": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "required": [
+                "format",
+                "width",
+                "height"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "schemaVersion",
+            "id",
+            "profileId",
+            "revision",
+            "createdAt",
+            "fileName",
+            "mimeType",
+            "originalBlobId",
+            "originalSha256",
+            "originalSizeBytes",
+            "purpose",
+            "author",
+            "importer",
+            "importedAt",
+            "mediaKind",
+            "parseState",
+            "imageMetadata"
+          ],
+          "additionalProperties": false
         },
-        "extractedSha256": {
-          "type": "string",
-          "pattern": "^[a-f0-9]{64}$"
+        {
+          "type": "object",
+          "properties": {
+            "schemaVersion": {
+              "const": 1
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "profileId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "revision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+            },
+            "fileName": {
+              "type": "string",
+              "minLength": 1
+            },
+            "mimeType": {
+              "type": "string",
+              "minLength": 1
+            },
+            "originalBlobId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "originalSha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "originalSizeBytes": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "purpose": {
+              "type": "string",
+              "enum": [
+                "conversation",
+                "knowledge",
+                "guidance",
+                "memory_import"
+              ]
+            },
+            "conversationId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "author": {
+              "$ref": "#/$defs/Author"
+            },
+            "importer": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "const": "human"
+                },
+                "localActorId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                }
+              },
+              "required": [
+                "kind",
+                "localActorId"
+              ],
+              "additionalProperties": false
+            },
+            "importedAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+            },
+            "mediaKind": {
+              "const": "image"
+            },
+            "parseState": {
+              "const": "pending"
+            }
+          },
+          "required": [
+            "schemaVersion",
+            "id",
+            "profileId",
+            "revision",
+            "createdAt",
+            "fileName",
+            "mimeType",
+            "originalBlobId",
+            "originalSha256",
+            "originalSizeBytes",
+            "purpose",
+            "author",
+            "importer",
+            "importedAt",
+            "mediaKind",
+            "parseState"
+          ],
+          "additionalProperties": false
         },
-        "importMethod": {
-          "type": "string",
-          "minLength": 1
-        },
-        "errorCode": {
-          "type": "string",
-          "minLength": 1
+        {
+          "type": "object",
+          "properties": {
+            "schemaVersion": {
+              "const": 1
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "profileId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "revision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+            },
+            "fileName": {
+              "type": "string",
+              "minLength": 1
+            },
+            "mimeType": {
+              "type": "string",
+              "minLength": 1
+            },
+            "originalBlobId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "originalSha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "originalSizeBytes": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "purpose": {
+              "type": "string",
+              "enum": [
+                "conversation",
+                "knowledge",
+                "guidance",
+                "memory_import"
+              ]
+            },
+            "conversationId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "author": {
+              "$ref": "#/$defs/Author"
+            },
+            "importer": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "const": "human"
+                },
+                "localActorId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                }
+              },
+              "required": [
+                "kind",
+                "localActorId"
+              ],
+              "additionalProperties": false
+            },
+            "importedAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+            },
+            "mediaKind": {
+              "const": "image"
+            },
+            "parseState": {
+              "type": "string",
+              "enum": [
+                "unreadable",
+                "failed"
+              ]
+            },
+            "errorCode": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "schemaVersion",
+            "id",
+            "profileId",
+            "revision",
+            "createdAt",
+            "fileName",
+            "mimeType",
+            "originalBlobId",
+            "originalSha256",
+            "originalSizeBytes",
+            "purpose",
+            "author",
+            "importer",
+            "importedAt",
+            "mediaKind",
+            "parseState",
+            "errorCode"
+          ],
+          "additionalProperties": false
         }
-      },
-      "required": [
-        "schemaVersion",
-        "id",
-        "profileId",
-        "revision",
-        "createdAt",
-        "fileName",
-        "mimeType",
-        "originalBlobId",
-        "originalSha256",
-        "originalSizeBytes",
-        "purpose",
-        "author",
-        "importer",
-        "importedAt",
-        "parseState"
-      ],
-      "additionalProperties": false
+      ]
     },
     "Attachment": {
       "type": "object",
@@ -1837,98 +2456,2029 @@
       ],
       "additionalProperties": false
     },
-    "Operation": {
+    "ScopedRecordRef": {
       "type": "object",
       "properties": {
-        "schemaVersion": {
-          "const": 1
-        },
-        "id": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 128
-        },
         "profileId": {
           "type": "string",
           "minLength": 1,
           "maxLength": 128
         },
-        "revision": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "createdAt": {
+        "recordKind": {
           "type": "string",
-          "format": "date-time",
-          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+          "enum": [
+            "conversation",
+            "message",
+            "material",
+            "attachment",
+            "knowledge_source",
+            "guidance",
+            "memory_record",
+            "memory_version",
+            "connection",
+            "connector_binding"
+          ]
         },
+        "recordId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      },
+      "required": [
+        "profileId",
+        "recordKind",
+        "recordId"
+      ],
+      "additionalProperties": false
+    },
+    "ChatOperationResult": {
+      "type": "object",
+      "properties": {
         "kind": {
+          "const": "chat"
+        },
+        "conversationId": {
           "type": "string",
-          "enum": [
-            "chat",
-            "memory_update",
-            "import",
-            "restore",
-            "connection_test",
-            "connector_action"
-          ]
+          "minLength": 1,
+          "maxLength": 128
         },
-        "status": {
+        "userMessageId": {
           "type": "string",
-          "enum": [
-            "queued",
-            "running",
-            "succeeded",
-            "failed",
-            "cancelled",
-            "interrupted"
-          ]
+          "minLength": 1,
+          "maxLength": 128
         },
-        "capacityAttemptCount": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 2
-        },
-        "physicalCallCount": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "expectedRecordRevision": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "limits": {
+        "assistantMessageId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      },
+      "required": [
+        "kind",
+        "conversationId",
+        "userMessageId",
+        "assistantMessageId"
+      ],
+      "additionalProperties": false
+    },
+    "MemoryUpdateOperationResult": {
+      "oneOf": [
+        {
           "type": "object",
           "properties": {
-            "maxPhysicalCalls": {
-              "type": "integer",
-              "minimum": 1
+            "kind": {
+              "const": "memory_update"
             },
-            "maxElapsedMs": {
+            "outcome": {
+              "const": "committed"
+            },
+            "recordId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "versionId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "recordRevision": {
               "type": "integer",
               "minimum": 1
             }
           },
           "required": [
-            "maxPhysicalCalls",
-            "maxElapsedMs"
+            "kind",
+            "outcome",
+            "recordId",
+            "versionId",
+            "recordRevision"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "memory_update"
+            },
+            "outcome": {
+              "const": "no_change"
+            },
+            "recordId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "activeVersionId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "required": [
+            "kind",
+            "outcome",
+            "recordId"
           ],
           "additionalProperties": false
         }
+      ]
+    },
+    "ImportOperationResult": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "import"
+        },
+        "materialIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "uniqueItems": true,
+          "minItems": 1
+        },
+        "attachmentIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "uniqueItems": true
+        },
+        "knowledgeSourceIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "uniqueItems": true
+        },
+        "guidanceIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "uniqueItems": true
+        },
+        "proposalIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "uniqueItems": true
+        }
       },
       "required": [
-        "schemaVersion",
-        "id",
-        "profileId",
-        "revision",
-        "createdAt",
         "kind",
-        "status",
-        "capacityAttemptCount",
-        "physicalCallCount",
-        "limits"
+        "materialIds",
+        "attachmentIds",
+        "knowledgeSourceIds",
+        "guidanceIds",
+        "proposalIds"
       ],
       "additionalProperties": false
+    },
+    "RestoreOperationResult": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "restore"
+        },
+        "recordId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "versionId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "restoredFromVersionId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "recordRevision": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "kind",
+        "recordId",
+        "versionId",
+        "restoredFromVersionId",
+        "recordRevision"
+      ],
+      "additionalProperties": false
+    },
+    "ConnectionTestOperationResult": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "connection_test"
+        },
+        "connectionId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "connectionRevision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "credentialRevision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "testedAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+        },
+        "outcome": {
+          "const": "verified"
+        }
+      },
+      "required": [
+        "kind",
+        "connectionId",
+        "connectionRevision",
+        "credentialRevision",
+        "testedAt",
+        "outcome"
+      ],
+      "additionalProperties": false
+    },
+    "ConnectorActionOperationResult": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "connector_action"
+        },
+        "bindingId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "action": {
+          "type": "string",
+          "enum": [
+            "register_or_bind",
+            "read_thread",
+            "read_feed",
+            "create_thread",
+            "reply",
+            "recover_identity"
+          ]
+        },
+        "remoteEntityIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "uniqueItems": true
+        },
+        "feedCursor": {
+          "type": "string"
+        },
+        "feedEpoch": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "bindingId",
+        "action",
+        "remoteEntityIds"
+      ],
+      "additionalProperties": false
+    },
+    "OperationResult": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/ChatOperationResult"
+        },
+        {
+          "$ref": "#/$defs/MemoryUpdateOperationResult"
+        },
+        {
+          "$ref": "#/$defs/ImportOperationResult"
+        },
+        {
+          "$ref": "#/$defs/RestoreOperationResult"
+        },
+        {
+          "$ref": "#/$defs/ConnectionTestOperationResult"
+        },
+        {
+          "$ref": "#/$defs/ConnectorActionOperationResult"
+        }
+      ]
+    },
+    "Operation": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "schemaVersion": {
+              "const": 1
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "profileId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "revision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+            },
+            "kind": {
+              "const": "chat"
+            },
+            "capacityAttemptCount": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 2
+            },
+            "physicalCallCount": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "expectedRecordRevision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "limits": {
+              "type": "object",
+              "properties": {
+                "maxPhysicalCalls": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "maxElapsedMs": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "required": [
+                "maxPhysicalCalls",
+                "maxElapsedMs"
+              ],
+              "additionalProperties": false
+            },
+            "recordRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ScopedRecordRef"
+              }
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "queued",
+                "running"
+              ]
+            }
+          },
+          "required": [
+            "schemaVersion",
+            "id",
+            "profileId",
+            "revision",
+            "createdAt",
+            "kind",
+            "capacityAttemptCount",
+            "physicalCallCount",
+            "limits",
+            "recordRefs",
+            "status"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "schemaVersion": {
+              "const": 1
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "profileId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "revision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+            },
+            "kind": {
+              "const": "chat"
+            },
+            "capacityAttemptCount": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 2
+            },
+            "physicalCallCount": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "expectedRecordRevision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "limits": {
+              "type": "object",
+              "properties": {
+                "maxPhysicalCalls": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "maxElapsedMs": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "required": [
+                "maxPhysicalCalls",
+                "maxElapsedMs"
+              ],
+              "additionalProperties": false
+            },
+            "recordRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ScopedRecordRef"
+              }
+            },
+            "status": {
+              "const": "succeeded"
+            },
+            "finishedAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+            },
+            "result": {
+              "$ref": "#/$defs/ChatOperationResult"
+            }
+          },
+          "required": [
+            "schemaVersion",
+            "id",
+            "profileId",
+            "revision",
+            "createdAt",
+            "kind",
+            "capacityAttemptCount",
+            "physicalCallCount",
+            "limits",
+            "recordRefs",
+            "status",
+            "finishedAt",
+            "result"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "schemaVersion": {
+              "const": 1
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "profileId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "revision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+            },
+            "kind": {
+              "const": "chat"
+            },
+            "capacityAttemptCount": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 2
+            },
+            "physicalCallCount": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "expectedRecordRevision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "limits": {
+              "type": "object",
+              "properties": {
+                "maxPhysicalCalls": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "maxElapsedMs": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "required": [
+                "maxPhysicalCalls",
+                "maxElapsedMs"
+              ],
+              "additionalProperties": false
+            },
+            "recordRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ScopedRecordRef"
+              }
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "failed",
+                "cancelled",
+                "interrupted"
+              ]
+            },
+            "finishedAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+            },
+            "error": {
+              "$ref": "#/$defs/Error"
+            }
+          },
+          "required": [
+            "schemaVersion",
+            "id",
+            "profileId",
+            "revision",
+            "createdAt",
+            "kind",
+            "capacityAttemptCount",
+            "physicalCallCount",
+            "limits",
+            "recordRefs",
+            "status",
+            "finishedAt",
+            "error"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "schemaVersion": {
+              "const": 1
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "profileId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "revision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+            },
+            "kind": {
+              "const": "memory_update"
+            },
+            "capacityAttemptCount": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 2
+            },
+            "physicalCallCount": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "expectedRecordRevision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "limits": {
+              "type": "object",
+              "properties": {
+                "maxPhysicalCalls": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "maxElapsedMs": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "required": [
+                "maxPhysicalCalls",
+                "maxElapsedMs"
+              ],
+              "additionalProperties": false
+            },
+            "recordRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ScopedRecordRef"
+              }
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "queued",
+                "running"
+              ]
+            }
+          },
+          "required": [
+            "schemaVersion",
+            "id",
+            "profileId",
+            "revision",
+            "createdAt",
+            "kind",
+            "capacityAttemptCount",
+            "physicalCallCount",
+            "limits",
+            "recordRefs",
+            "status"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "schemaVersion": {
+              "const": 1
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "profileId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "revision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+            },
+            "kind": {
+              "const": "memory_update"
+            },
+            "capacityAttemptCount": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 2
+            },
+            "physicalCallCount": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "expectedRecordRevision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "limits": {
+              "type": "object",
+              "properties": {
+                "maxPhysicalCalls": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "maxElapsedMs": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "required": [
+                "maxPhysicalCalls",
+                "maxElapsedMs"
+              ],
+              "additionalProperties": false
+            },
+            "recordRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ScopedRecordRef"
+              }
+            },
+            "status": {
+              "const": "succeeded"
+            },
+            "finishedAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+            },
+            "result": {
+              "$ref": "#/$defs/MemoryUpdateOperationResult"
+            }
+          },
+          "required": [
+            "schemaVersion",
+            "id",
+            "profileId",
+            "revision",
+            "createdAt",
+            "kind",
+            "capacityAttemptCount",
+            "physicalCallCount",
+            "limits",
+            "recordRefs",
+            "status",
+            "finishedAt",
+            "result"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "schemaVersion": {
+              "const": 1
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "profileId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "revision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+            },
+            "kind": {
+              "const": "memory_update"
+            },
+            "capacityAttemptCount": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 2
+            },
+            "physicalCallCount": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "expectedRecordRevision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "limits": {
+              "type": "object",
+              "properties": {
+                "maxPhysicalCalls": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "maxElapsedMs": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "required": [
+                "maxPhysicalCalls",
+                "maxElapsedMs"
+              ],
+              "additionalProperties": false
+            },
+            "recordRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ScopedRecordRef"
+              }
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "failed",
+                "cancelled",
+                "interrupted"
+              ]
+            },
+            "finishedAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+            },
+            "error": {
+              "$ref": "#/$defs/Error"
+            }
+          },
+          "required": [
+            "schemaVersion",
+            "id",
+            "profileId",
+            "revision",
+            "createdAt",
+            "kind",
+            "capacityAttemptCount",
+            "physicalCallCount",
+            "limits",
+            "recordRefs",
+            "status",
+            "finishedAt",
+            "error"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "schemaVersion": {
+              "const": 1
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "profileId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "revision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+            },
+            "kind": {
+              "const": "import"
+            },
+            "capacityAttemptCount": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 2
+            },
+            "physicalCallCount": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "expectedRecordRevision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "limits": {
+              "type": "object",
+              "properties": {
+                "maxPhysicalCalls": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "maxElapsedMs": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "required": [
+                "maxPhysicalCalls",
+                "maxElapsedMs"
+              ],
+              "additionalProperties": false
+            },
+            "recordRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ScopedRecordRef"
+              }
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "queued",
+                "running"
+              ]
+            }
+          },
+          "required": [
+            "schemaVersion",
+            "id",
+            "profileId",
+            "revision",
+            "createdAt",
+            "kind",
+            "capacityAttemptCount",
+            "physicalCallCount",
+            "limits",
+            "recordRefs",
+            "status"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "schemaVersion": {
+              "const": 1
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "profileId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "revision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+            },
+            "kind": {
+              "const": "import"
+            },
+            "capacityAttemptCount": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 2
+            },
+            "physicalCallCount": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "expectedRecordRevision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "limits": {
+              "type": "object",
+              "properties": {
+                "maxPhysicalCalls": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "maxElapsedMs": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "required": [
+                "maxPhysicalCalls",
+                "maxElapsedMs"
+              ],
+              "additionalProperties": false
+            },
+            "recordRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ScopedRecordRef"
+              }
+            },
+            "status": {
+              "const": "succeeded"
+            },
+            "finishedAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+            },
+            "result": {
+              "$ref": "#/$defs/ImportOperationResult"
+            }
+          },
+          "required": [
+            "schemaVersion",
+            "id",
+            "profileId",
+            "revision",
+            "createdAt",
+            "kind",
+            "capacityAttemptCount",
+            "physicalCallCount",
+            "limits",
+            "recordRefs",
+            "status",
+            "finishedAt",
+            "result"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "schemaVersion": {
+              "const": 1
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "profileId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "revision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+            },
+            "kind": {
+              "const": "import"
+            },
+            "capacityAttemptCount": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 2
+            },
+            "physicalCallCount": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "expectedRecordRevision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "limits": {
+              "type": "object",
+              "properties": {
+                "maxPhysicalCalls": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "maxElapsedMs": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "required": [
+                "maxPhysicalCalls",
+                "maxElapsedMs"
+              ],
+              "additionalProperties": false
+            },
+            "recordRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ScopedRecordRef"
+              }
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "failed",
+                "cancelled",
+                "interrupted"
+              ]
+            },
+            "finishedAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+            },
+            "error": {
+              "$ref": "#/$defs/Error"
+            }
+          },
+          "required": [
+            "schemaVersion",
+            "id",
+            "profileId",
+            "revision",
+            "createdAt",
+            "kind",
+            "capacityAttemptCount",
+            "physicalCallCount",
+            "limits",
+            "recordRefs",
+            "status",
+            "finishedAt",
+            "error"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "schemaVersion": {
+              "const": 1
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "profileId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "revision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+            },
+            "kind": {
+              "const": "restore"
+            },
+            "capacityAttemptCount": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 2
+            },
+            "physicalCallCount": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "expectedRecordRevision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "limits": {
+              "type": "object",
+              "properties": {
+                "maxPhysicalCalls": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "maxElapsedMs": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "required": [
+                "maxPhysicalCalls",
+                "maxElapsedMs"
+              ],
+              "additionalProperties": false
+            },
+            "recordRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ScopedRecordRef"
+              }
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "queued",
+                "running"
+              ]
+            }
+          },
+          "required": [
+            "schemaVersion",
+            "id",
+            "profileId",
+            "revision",
+            "createdAt",
+            "kind",
+            "capacityAttemptCount",
+            "physicalCallCount",
+            "limits",
+            "recordRefs",
+            "status"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "schemaVersion": {
+              "const": 1
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "profileId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "revision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+            },
+            "kind": {
+              "const": "restore"
+            },
+            "capacityAttemptCount": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 2
+            },
+            "physicalCallCount": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "expectedRecordRevision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "limits": {
+              "type": "object",
+              "properties": {
+                "maxPhysicalCalls": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "maxElapsedMs": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "required": [
+                "maxPhysicalCalls",
+                "maxElapsedMs"
+              ],
+              "additionalProperties": false
+            },
+            "recordRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ScopedRecordRef"
+              }
+            },
+            "status": {
+              "const": "succeeded"
+            },
+            "finishedAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+            },
+            "result": {
+              "$ref": "#/$defs/RestoreOperationResult"
+            }
+          },
+          "required": [
+            "schemaVersion",
+            "id",
+            "profileId",
+            "revision",
+            "createdAt",
+            "kind",
+            "capacityAttemptCount",
+            "physicalCallCount",
+            "limits",
+            "recordRefs",
+            "status",
+            "finishedAt",
+            "result"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "schemaVersion": {
+              "const": 1
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "profileId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "revision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+            },
+            "kind": {
+              "const": "restore"
+            },
+            "capacityAttemptCount": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 2
+            },
+            "physicalCallCount": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "expectedRecordRevision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "limits": {
+              "type": "object",
+              "properties": {
+                "maxPhysicalCalls": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "maxElapsedMs": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "required": [
+                "maxPhysicalCalls",
+                "maxElapsedMs"
+              ],
+              "additionalProperties": false
+            },
+            "recordRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ScopedRecordRef"
+              }
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "failed",
+                "cancelled",
+                "interrupted"
+              ]
+            },
+            "finishedAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+            },
+            "error": {
+              "$ref": "#/$defs/Error"
+            }
+          },
+          "required": [
+            "schemaVersion",
+            "id",
+            "profileId",
+            "revision",
+            "createdAt",
+            "kind",
+            "capacityAttemptCount",
+            "physicalCallCount",
+            "limits",
+            "recordRefs",
+            "status",
+            "finishedAt",
+            "error"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "schemaVersion": {
+              "const": 1
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "profileId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "revision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+            },
+            "kind": {
+              "const": "connection_test"
+            },
+            "capacityAttemptCount": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 2
+            },
+            "physicalCallCount": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "expectedRecordRevision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "limits": {
+              "type": "object",
+              "properties": {
+                "maxPhysicalCalls": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "maxElapsedMs": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "required": [
+                "maxPhysicalCalls",
+                "maxElapsedMs"
+              ],
+              "additionalProperties": false
+            },
+            "recordRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ScopedRecordRef"
+              }
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "queued",
+                "running"
+              ]
+            }
+          },
+          "required": [
+            "schemaVersion",
+            "id",
+            "profileId",
+            "revision",
+            "createdAt",
+            "kind",
+            "capacityAttemptCount",
+            "physicalCallCount",
+            "limits",
+            "recordRefs",
+            "status"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "schemaVersion": {
+              "const": 1
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "profileId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "revision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+            },
+            "kind": {
+              "const": "connection_test"
+            },
+            "capacityAttemptCount": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 2
+            },
+            "physicalCallCount": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "expectedRecordRevision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "limits": {
+              "type": "object",
+              "properties": {
+                "maxPhysicalCalls": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "maxElapsedMs": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "required": [
+                "maxPhysicalCalls",
+                "maxElapsedMs"
+              ],
+              "additionalProperties": false
+            },
+            "recordRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ScopedRecordRef"
+              }
+            },
+            "status": {
+              "const": "succeeded"
+            },
+            "finishedAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+            },
+            "result": {
+              "$ref": "#/$defs/ConnectionTestOperationResult"
+            }
+          },
+          "required": [
+            "schemaVersion",
+            "id",
+            "profileId",
+            "revision",
+            "createdAt",
+            "kind",
+            "capacityAttemptCount",
+            "physicalCallCount",
+            "limits",
+            "recordRefs",
+            "status",
+            "finishedAt",
+            "result"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "schemaVersion": {
+              "const": 1
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "profileId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "revision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+            },
+            "kind": {
+              "const": "connection_test"
+            },
+            "capacityAttemptCount": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 2
+            },
+            "physicalCallCount": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "expectedRecordRevision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "limits": {
+              "type": "object",
+              "properties": {
+                "maxPhysicalCalls": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "maxElapsedMs": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "required": [
+                "maxPhysicalCalls",
+                "maxElapsedMs"
+              ],
+              "additionalProperties": false
+            },
+            "recordRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ScopedRecordRef"
+              }
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "failed",
+                "cancelled",
+                "interrupted"
+              ]
+            },
+            "finishedAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+            },
+            "error": {
+              "$ref": "#/$defs/Error"
+            }
+          },
+          "required": [
+            "schemaVersion",
+            "id",
+            "profileId",
+            "revision",
+            "createdAt",
+            "kind",
+            "capacityAttemptCount",
+            "physicalCallCount",
+            "limits",
+            "recordRefs",
+            "status",
+            "finishedAt",
+            "error"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "schemaVersion": {
+              "const": 1
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "profileId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "revision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+            },
+            "kind": {
+              "const": "connector_action"
+            },
+            "capacityAttemptCount": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 2
+            },
+            "physicalCallCount": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "expectedRecordRevision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "limits": {
+              "type": "object",
+              "properties": {
+                "maxPhysicalCalls": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "maxElapsedMs": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "required": [
+                "maxPhysicalCalls",
+                "maxElapsedMs"
+              ],
+              "additionalProperties": false
+            },
+            "recordRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ScopedRecordRef"
+              }
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "queued",
+                "running"
+              ]
+            }
+          },
+          "required": [
+            "schemaVersion",
+            "id",
+            "profileId",
+            "revision",
+            "createdAt",
+            "kind",
+            "capacityAttemptCount",
+            "physicalCallCount",
+            "limits",
+            "recordRefs",
+            "status"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "schemaVersion": {
+              "const": 1
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "profileId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "revision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+            },
+            "kind": {
+              "const": "connector_action"
+            },
+            "capacityAttemptCount": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 2
+            },
+            "physicalCallCount": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "expectedRecordRevision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "limits": {
+              "type": "object",
+              "properties": {
+                "maxPhysicalCalls": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "maxElapsedMs": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "required": [
+                "maxPhysicalCalls",
+                "maxElapsedMs"
+              ],
+              "additionalProperties": false
+            },
+            "recordRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ScopedRecordRef"
+              }
+            },
+            "status": {
+              "const": "succeeded"
+            },
+            "finishedAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+            },
+            "result": {
+              "$ref": "#/$defs/ConnectorActionOperationResult"
+            }
+          },
+          "required": [
+            "schemaVersion",
+            "id",
+            "profileId",
+            "revision",
+            "createdAt",
+            "kind",
+            "capacityAttemptCount",
+            "physicalCallCount",
+            "limits",
+            "recordRefs",
+            "status",
+            "finishedAt",
+            "result"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "schemaVersion": {
+              "const": 1
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "profileId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "revision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+            },
+            "kind": {
+              "const": "connector_action"
+            },
+            "capacityAttemptCount": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 2
+            },
+            "physicalCallCount": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "expectedRecordRevision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "limits": {
+              "type": "object",
+              "properties": {
+                "maxPhysicalCalls": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "maxElapsedMs": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "required": [
+                "maxPhysicalCalls",
+                "maxElapsedMs"
+              ],
+              "additionalProperties": false
+            },
+            "recordRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ScopedRecordRef"
+              }
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "failed",
+                "cancelled",
+                "interrupted"
+              ]
+            },
+            "finishedAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+            },
+            "error": {
+              "$ref": "#/$defs/Error"
+            }
+          },
+          "required": [
+            "schemaVersion",
+            "id",
+            "profileId",
+            "revision",
+            "createdAt",
+            "kind",
+            "capacityAttemptCount",
+            "physicalCallCount",
+            "limits",
+            "recordRefs",
+            "status",
+            "finishedAt",
+            "error"
+          ],
+          "additionalProperties": false
+        }
+      ]
     },
     "ContextManifest": {
       "type": "object",
@@ -2465,7 +5015,9 @@
             "MIGRATION_FAILED",
             "STORAGE_ERROR",
             "CONNECTION_INVALID",
-            "PROVIDER_OUTPUT_INCOMPLETE"
+            "PROVIDER_OUTPUT_INCOMPLETE",
+            "PROVIDER_AUTHENTICATION_FAILED",
+            "PROVIDER_TIMEOUT"
           ]
         },
         "messageKey": {

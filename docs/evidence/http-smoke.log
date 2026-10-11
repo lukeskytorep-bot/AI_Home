@@ -1,0 +1,2 @@
+PASS: corrected Vite preview started; HTML and 2 referenced assets returned HTTP 200.
+This check did not execute JavaScript or render a browser/WebView.

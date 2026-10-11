@@ -1,0 +1,25 @@
+[package]
+name = "ai-home"
+version = "0.0.1"
+edition = "2021"
+rust-version = "1.88"
+[lib]
+name = "ai_home"
+crate-type = ["staticlib", "cdylib", "rlib"]
+[[bin]]
+name = "ai-home"
+path = "src/main.rs"
+required-features = ["desktop"]
+[features]
+default = ["desktop"]
+desktop = ["dep:tauri"]
+[build-dependencies]
+tauri-build = { version = "=2.6.3", features = [] }
+[dependencies]
+tauri = { version = "=2.11.5", features = [], optional = true }
+serde_json = "=1.0.151"
+chrono = { version = "=0.4.45", default-features = false, features = ["clock", "std"] }
+regex = "=1.13.1"
+sha2 = "=0.10.9"
+sqlx = { version = "=0.8.6", default-features = false, features = ["runtime-tokio", "sqlite"] }
+tokio = { version = "=1.53.1", features = ["sync", "rt-multi-thread", "macros"] }

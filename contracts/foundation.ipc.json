@@ -1,0 +1,42 @@
+{
+  "contractVersion": 1,
+  "scope": "app",
+  "commands": {
+    "kernel.status.get": {
+      "payload": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "result": {
+        "$ref": "#/$defs/KernelStatus"
+      }
+    },
+    "app.events.list": {
+      "payload": {
+        "type": "object",
+        "properties": {
+          "afterSequence": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "afterSequence",
+          "limit"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "$ref": "#/$defs/EventPage"
+      }
+    }
+  },
+  "event": "app.preferences.changed"
+}

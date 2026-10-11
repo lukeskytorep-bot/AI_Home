@@ -1,0 +1,2 @@
+import React from 'react';import {createRoot} from 'react-dom/client';import {App} from './ui/App';import {nativeTransport} from './ipc/native';import {browserTransport} from './ipc/browser';import './ui/style.css';
+const desktop='__TAURI_INTERNALS__' in window;createRoot(document.getElementById('root')!).render(<React.StrictMode><App transport={desktop?nativeTransport:browserTransport()}/></React.StrictMode>);

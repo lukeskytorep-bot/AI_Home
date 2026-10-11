@@ -81,7 +81,8 @@
       "parseState": "ready",
       "extractedBlobId": "blob-text-1",
       "extractedSha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-      "importMethod": "text-utf8/1"
+      "importMethod": "text-utf8/1",
+      "mediaKind": "document"
     }
   },
   {
@@ -178,7 +179,533 @@
       "limits": {
         "maxPhysicalCalls": 4,
         "maxElapsedMs": 180000
+      },
+      "recordRefs": []
+    }
+  },
+  {
+    "name": "audit/success-chat",
+    "dto": "Operation",
+    "value": {
+      "schemaVersion": 1,
+      "id": "operation-1",
+      "profileId": "profile-1",
+      "revision": 2,
+      "createdAt": "2026-10-11T12:00:00Z",
+      "kind": "chat",
+      "status": "succeeded",
+      "capacityAttemptCount": 0,
+      "physicalCallCount": 0,
+      "limits": {
+        "maxPhysicalCalls": 4,
+        "maxElapsedMs": 180000
+      },
+      "recordRefs": [],
+      "result": {
+        "kind": "chat",
+        "conversationId": "conversation-1",
+        "userMessageId": "message-1",
+        "assistantMessageId": "message-2"
+      },
+      "finishedAt": "2026-10-11T12:01:00Z"
+    }
+  },
+  {
+    "name": "audit/success-memory_update",
+    "dto": "Operation",
+    "value": {
+      "schemaVersion": 1,
+      "id": "operation-1",
+      "profileId": "profile-1",
+      "revision": 2,
+      "createdAt": "2026-10-11T12:00:00Z",
+      "kind": "memory_update",
+      "status": "succeeded",
+      "capacityAttemptCount": 0,
+      "physicalCallCount": 0,
+      "limits": {
+        "maxPhysicalCalls": 4,
+        "maxElapsedMs": 180000
+      },
+      "recordRefs": [],
+      "result": {
+        "kind": "memory_update",
+        "outcome": "committed",
+        "recordId": "working-1",
+        "versionId": "version-2",
+        "recordRevision": 2
+      },
+      "finishedAt": "2026-10-11T12:01:00Z"
+    }
+  },
+  {
+    "name": "audit/success-import",
+    "dto": "Operation",
+    "value": {
+      "schemaVersion": 1,
+      "id": "operation-1",
+      "profileId": "profile-1",
+      "revision": 2,
+      "createdAt": "2026-10-11T12:00:00Z",
+      "kind": "import",
+      "status": "succeeded",
+      "capacityAttemptCount": 0,
+      "physicalCallCount": 0,
+      "limits": {
+        "maxPhysicalCalls": 4,
+        "maxElapsedMs": 180000
+      },
+      "recordRefs": [],
+      "result": {
+        "kind": "import",
+        "materialIds": [
+          "material-1"
+        ],
+        "attachmentIds": [],
+        "knowledgeSourceIds": [
+          "knowledge-1"
+        ],
+        "guidanceIds": [],
+        "proposalIds": []
+      },
+      "finishedAt": "2026-10-11T12:01:00Z"
+    }
+  },
+  {
+    "name": "audit/success-restore",
+    "dto": "Operation",
+    "value": {
+      "schemaVersion": 1,
+      "id": "operation-1",
+      "profileId": "profile-1",
+      "revision": 2,
+      "createdAt": "2026-10-11T12:00:00Z",
+      "kind": "restore",
+      "status": "succeeded",
+      "capacityAttemptCount": 0,
+      "physicalCallCount": 0,
+      "limits": {
+        "maxPhysicalCalls": 4,
+        "maxElapsedMs": 180000
+      },
+      "recordRefs": [],
+      "result": {
+        "kind": "restore",
+        "recordId": "working-1",
+        "versionId": "version-3",
+        "restoredFromVersionId": "version-1",
+        "recordRevision": 3
+      },
+      "finishedAt": "2026-10-11T12:01:00Z"
+    }
+  },
+  {
+    "name": "audit/success-connection_test",
+    "dto": "Operation",
+    "value": {
+      "schemaVersion": 1,
+      "id": "operation-1",
+      "profileId": "profile-1",
+      "revision": 2,
+      "createdAt": "2026-10-11T12:00:00Z",
+      "kind": "connection_test",
+      "status": "succeeded",
+      "capacityAttemptCount": 0,
+      "physicalCallCount": 0,
+      "limits": {
+        "maxPhysicalCalls": 4,
+        "maxElapsedMs": 180000
+      },
+      "recordRefs": [],
+      "result": {
+        "kind": "connection_test",
+        "connectionId": "connection-1",
+        "connectionRevision": 1,
+        "credentialRevision": 1,
+        "testedAt": "2026-10-11T12:01:00Z",
+        "outcome": "verified"
+      },
+      "finishedAt": "2026-10-11T12:01:00Z"
+    }
+  },
+  {
+    "name": "audit/success-connector_action",
+    "dto": "Operation",
+    "value": {
+      "schemaVersion": 1,
+      "id": "operation-1",
+      "profileId": "profile-1",
+      "revision": 2,
+      "createdAt": "2026-10-11T12:00:00Z",
+      "kind": "connector_action",
+      "status": "succeeded",
+      "capacityAttemptCount": 0,
+      "physicalCallCount": 0,
+      "limits": {
+        "maxPhysicalCalls": 4,
+        "maxElapsedMs": 180000
+      },
+      "recordRefs": [],
+      "result": {
+        "kind": "connector_action",
+        "bindingId": "binding-1",
+        "action": "read_feed",
+        "remoteEntityIds": [
+          "remote-thread-1"
+        ],
+        "feedCursor": "opaque-cursor-1",
+        "feedEpoch": "epoch-1"
+      },
+      "finishedAt": "2026-10-11T12:01:00Z"
+    }
+  },
+  {
+    "name": "audit/memory-no-change",
+    "dto": "Operation",
+    "value": {
+      "schemaVersion": 1,
+      "id": "operation-1",
+      "profileId": "profile-1",
+      "revision": 2,
+      "createdAt": "2026-10-11T12:00:00Z",
+      "kind": "memory_update",
+      "status": "succeeded",
+      "capacityAttemptCount": 0,
+      "physicalCallCount": 0,
+      "limits": {
+        "maxPhysicalCalls": 4,
+        "maxElapsedMs": 180000
+      },
+      "recordRefs": [],
+      "result": {
+        "kind": "memory_update",
+        "outcome": "no_change",
+        "recordId": "working-1",
+        "activeVersionId": "version-1"
+      },
+      "finishedAt": "2026-10-11T12:01:00Z"
+    }
+  },
+  {
+    "name": "audit/connection-failed",
+    "dto": "Operation",
+    "value": {
+      "schemaVersion": 1,
+      "id": "operation-1",
+      "profileId": "profile-1",
+      "revision": 2,
+      "createdAt": "2026-10-11T12:00:00Z",
+      "kind": "connection_test",
+      "status": "failed",
+      "capacityAttemptCount": 0,
+      "physicalCallCount": 0,
+      "limits": {
+        "maxPhysicalCalls": 4,
+        "maxElapsedMs": 180000
+      },
+      "recordRefs": [
+        {
+          "profileId": "profile-1",
+          "recordKind": "connection",
+          "recordId": "connection-1"
+        }
+      ],
+      "finishedAt": "2026-10-11T12:01:00Z",
+      "error": {
+        "code": "PROVIDER_AUTHENTICATION_FAILED",
+        "messageKey": "error.provider_authentication_failed",
+        "retryable": false,
+        "operationId": "operation-1"
       }
+    }
+  },
+  {
+    "name": "audit/connection-cancelled",
+    "dto": "Operation",
+    "value": {
+      "schemaVersion": 1,
+      "id": "operation-1",
+      "profileId": "profile-1",
+      "revision": 2,
+      "createdAt": "2026-10-11T12:00:00Z",
+      "kind": "connection_test",
+      "status": "cancelled",
+      "capacityAttemptCount": 0,
+      "physicalCallCount": 0,
+      "limits": {
+        "maxPhysicalCalls": 4,
+        "maxElapsedMs": 180000
+      },
+      "recordRefs": [
+        {
+          "profileId": "profile-1",
+          "recordKind": "connection",
+          "recordId": "connection-1"
+        }
+      ],
+      "finishedAt": "2026-10-11T12:01:00Z",
+      "error": {
+        "code": "OPERATION_CANCELLED",
+        "messageKey": "error.operation_cancelled",
+        "retryable": false,
+        "operationId": "operation-1"
+      }
+    }
+  },
+  {
+    "name": "audit/connection-interrupted",
+    "dto": "Operation",
+    "value": {
+      "schemaVersion": 1,
+      "id": "operation-1",
+      "profileId": "profile-1",
+      "revision": 2,
+      "createdAt": "2026-10-11T12:00:00Z",
+      "kind": "connection_test",
+      "status": "interrupted",
+      "capacityAttemptCount": 0,
+      "physicalCallCount": 0,
+      "limits": {
+        "maxPhysicalCalls": 4,
+        "maxElapsedMs": 180000
+      },
+      "recordRefs": [
+        {
+          "profileId": "profile-1",
+          "recordKind": "connection",
+          "recordId": "connection-1"
+        }
+      ],
+      "finishedAt": "2026-10-11T12:01:00Z",
+      "error": {
+        "code": "OPERATION_INTERRUPTED",
+        "messageKey": "error.operation_interrupted",
+        "retryable": false,
+        "operationId": "operation-1"
+      }
+    }
+  },
+  {
+    "name": "audit/vision-ready-no-ocr",
+    "dto": "ImportedMaterial",
+    "value": {
+      "schemaVersion": 1,
+      "id": "image-1",
+      "profileId": "profile-1",
+      "revision": 1,
+      "createdAt": "2026-10-11T12:00:00Z",
+      "fileName": "photo.png",
+      "mimeType": "image/png",
+      "originalBlobId": "blob-original-1",
+      "originalSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "originalSizeBytes": 120,
+      "purpose": "conversation",
+      "author": {
+        "kind": "ai",
+        "label": "Source assistant",
+        "assertedBy": "importer",
+        "verified": false
+      },
+      "importer": {
+        "kind": "human",
+        "localActorId": "owner-1"
+      },
+      "importedAt": "2026-10-11T12:00:00Z",
+      "parseState": "ready",
+      "mediaKind": "image",
+      "conversationId": "conversation-1",
+      "imageMetadata": {
+        "format": "png",
+        "width": 640,
+        "height": 480
+      }
+    }
+  },
+  {
+    "name": "audit/image-pending",
+    "dto": "ImportedMaterial",
+    "value": {
+      "schemaVersion": 1,
+      "id": "image-1",
+      "profileId": "profile-1",
+      "revision": 1,
+      "createdAt": "2026-10-11T12:00:00Z",
+      "fileName": "photo.png",
+      "mimeType": "image/png",
+      "originalBlobId": "blob-original-1",
+      "originalSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "originalSizeBytes": 120,
+      "purpose": "conversation",
+      "author": {
+        "kind": "ai",
+        "label": "Source assistant",
+        "assertedBy": "importer",
+        "verified": false
+      },
+      "importer": {
+        "kind": "human",
+        "localActorId": "owner-1"
+      },
+      "importedAt": "2026-10-11T12:00:00Z",
+      "parseState": "pending",
+      "mediaKind": "image",
+      "conversationId": "conversation-1"
+    }
+  },
+  {
+    "name": "audit/image-failed",
+    "dto": "ImportedMaterial",
+    "value": {
+      "schemaVersion": 1,
+      "id": "image-1",
+      "profileId": "profile-1",
+      "revision": 1,
+      "createdAt": "2026-10-11T12:00:00Z",
+      "fileName": "photo.png",
+      "mimeType": "image/png",
+      "originalBlobId": "blob-original-1",
+      "originalSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "originalSizeBytes": 120,
+      "purpose": "conversation",
+      "author": {
+        "kind": "ai",
+        "label": "Source assistant",
+        "assertedBy": "importer",
+        "verified": false
+      },
+      "importer": {
+        "kind": "human",
+        "localActorId": "owner-1"
+      },
+      "importedAt": "2026-10-11T12:00:00Z",
+      "parseState": "failed",
+      "mediaKind": "image",
+      "conversationId": "conversation-1",
+      "errorCode": "IMPORT_UNREADABLE"
+    }
+  },
+  {
+    "name": "audit/primary-measurement",
+    "dto": "TokenMeasurement",
+    "value": {
+      "value": 287,
+      "method": "estimated",
+      "estimatorId": "demo-estimator/1",
+      "modelRouteId": "primary-route-1",
+      "modelRouteRevision": 1
+    }
+  },
+  {
+    "name": "audit/scribe-measurement-same-revision",
+    "dto": "TokenMeasurement",
+    "value": {
+      "value": 301,
+      "method": "estimated",
+      "estimatorId": "demo-estimator/1",
+      "modelRouteId": "scribe-route-1",
+      "modelRouteRevision": 1
+    }
+  },
+  {
+    "name": "audit/guidance-measurement",
+    "dto": "PersistentGuidance",
+    "value": {
+      "schemaVersion": 1,
+      "id": "guidance-1",
+      "profileId": "profile-1",
+      "revision": 2,
+      "createdAt": "2026-10-11T12:00:00Z",
+      "materialId": "material-1",
+      "enabled": true,
+      "order": 0,
+      "language": "pl",
+      "contentSha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "tokenMeasurement": {
+        "value": 287,
+        "method": "estimated",
+        "estimatorId": "demo-estimator/1",
+        "modelRouteId": "primary-route-1",
+        "modelRouteRevision": 1
+      }
+    }
+  },
+  {
+    "name": "audit/version-measurement",
+    "dto": "MemoryVersion",
+    "value": {
+      "schemaVersion": 1,
+      "id": "version-2",
+      "profileId": "profile-1",
+      "revision": 2,
+      "createdAt": "2026-10-11T12:00:00Z",
+      "recordId": "working-1",
+      "versionNumber": 2,
+      "claimKind": "mixed",
+      "content": "Ustalony cel i otwarte zadania.",
+      "language": "pl",
+      "contentSha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "measurement": {
+        "value": 287,
+        "method": "estimated",
+        "estimatorId": "demo-estimator/1",
+        "modelRouteId": "primary-route-1",
+        "modelRouteRevision": 1
+      },
+      "sources": [],
+      "origin": "agent_decision",
+      "decisionReceiptId": "receipt-1"
+    }
+  },
+  {
+    "name": "audit/receipt-measurement",
+    "dto": "MemoryDecisionReceipt",
+    "value": {
+      "schemaVersion": 1,
+      "id": "receipt-1",
+      "profileId": "profile-1",
+      "revision": 2,
+      "createdAt": "2026-10-11T12:00:00Z",
+      "operationId": "operation-1",
+      "proposalId": "proposal-1",
+      "primaryRouteId": "primary-route-1",
+      "routeRevision": 1,
+      "decision": "accept",
+      "candidateSha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "candidateMeasurement": {
+        "value": 287,
+        "method": "estimated",
+        "estimatorId": "demo-estimator/1",
+        "modelRouteId": "primary-route-1",
+        "modelRouteRevision": 1
+      },
+      "reason": "Supported by the source."
+    }
+  },
+  {
+    "name": "audit/attempt-measurement",
+    "dto": "MemoryWriteAttempt",
+    "value": {
+      "schemaVersion": 1,
+      "id": "attempt-1",
+      "profileId": "profile-1",
+      "revision": 2,
+      "createdAt": "2026-10-11T12:00:00Z",
+      "operationId": "operation-1",
+      "proposalId": "proposal-1",
+      "attemptNumber": 1,
+      "capacityPolicySnapshot": {
+        "kind": "bounded",
+        "tokens": 300
+      },
+      "candidateSha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "candidateMeasurement": {
+        "value": 287,
+        "method": "estimated",
+        "estimatorId": "demo-estimator/1",
+        "modelRouteId": "primary-route-1",
+        "modelRouteRevision": 1
+      },
+      "result": "accepted"
     }
   }
 ]

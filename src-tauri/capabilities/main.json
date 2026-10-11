@@ -1,0 +1,13 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main",
+  "description": "Local main window: one validated dispatcher and read-only event subscription.",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "allow-home-dispatch",
+    "core:event:allow-listen",
+    "core:event:allow-unlisten"
+  ]
+}

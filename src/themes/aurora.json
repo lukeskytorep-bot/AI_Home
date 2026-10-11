@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "packVersion": "1.0",
+  "id": "aurora",
+  "displayName": "Aurora",
+  "variants": {
+    "light": {
+      "background": "#eef6f4",
+      "surface": "#ffffff",
+      "text": "#173932",
+      "muted": "#49645c",
+      "accent": "#216e5e",
+      "border": "#cadfd8",
+      "error": "#a72f46",
+      "success": "#187450"
+    },
+    "dark": {
+      "background": "#10231f",
+      "surface": "#1b332b",
+      "text": "#edf9f3",
+      "muted": "#accec1",
+      "accent": "#84d6b7",
+      "border": "#345b4a",
+      "error": "#ffabb9",
+      "success": "#86dfb5"
+    }
+  }
+}
