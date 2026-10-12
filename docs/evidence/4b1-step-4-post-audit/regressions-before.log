@@ -1,0 +1,67 @@
+   Compiling ai-home v0.0.1 (/workspace/scratch/8e3755d5c581/4b1_step4/AI_Home/src-tauri)
+warning: multiple fields are never read
+  --> src/providers/mod.rs:47:20
+   |
+46 | pub struct ProviderChatResponse {
+   |            -------------------- fields in this struct
+47 |     content:String,reasoning_content:Option<String>,reasoning_details:Option<Vec<Value>>,reasoning_source:Option<String>,
+   |                    ^^^^^^^^^^^^^^^^^                                                     ^^^^^^^^^^^^^^^^
+48 |     finish_reason:Option<String>,actual_model:Option<String>,usage:ProviderUsage,provider_request_id:Option<String>,actual_provider:Op...
+   |                                  ^^^^^^^^^^^^                                    ^^^^^^^^^^^^^^^^^^^                ^^^^^^^^^^^^^^^
+49 |     continuation_diagnostics:Option<()>,debug_payload:Option<()>,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^            ^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `enable_openrouter_streaming` is never used
+   --> src/providers/request_builders.rs:200:15
+    |
+200 | pub(super) fn enable_openrouter_streaming(body: &mut Value) -> Result<(), String> {
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: `ai-home` (lib test) generated 2 warnings
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.11s
+     Running unittests src/lib.rs (src-tauri/target/debug/deps/ai_home-2f7b3c5ffc9f5ee7)
+
+running 19 tests
+test providers::executor::tests::categories_match_harness_and_never_retry_authority_limits ... ok
+test providers::executor::tests::completion_metadata_is_classified_without_private_strings ... ok
+test providers::executor::tests::google_text_with_function_call_is_incomplete_without_retry ... FAILED
+test providers::executor::tests::malformed_tool_calls_is_invalid_without_recovery_post ... FAILED
+test providers::executor::tests::invalid_credentials_are_rejected_without_attempt ... ok
+test providers::executor::tests::a_second_transient_failure_stops ... ok
+test providers::executor::tests::retry_after_and_jitter_are_bounded ... ok
+test providers::executor::tests::runner_exits_after_ok_without_outer_retries ... ok
+test providers::executor::tests::paginated_discovery_and_retry_keep_one_total_budget ... ok
+test providers::executor::tests::cancelled_backoff_makes_no_second_call ... ok
+test providers::executor::tests::retry_after_cannot_outlive_the_operation_deadline ... ok
+test providers::executor::tests::smaller_total_budget_cannot_be_reset_by_recovery ... ok
+test providers::executor::tests::successful_semantic_response_is_never_replayed ... ok
+test providers::executor::tests::transient_http_retries_once_with_same_body_and_auth ... ok
+test providers::executor::tests::refusals_limits_invalid_schema_and_auth_never_replay ... ok
+test providers::executor::tests::explicit_empty_response_can_recover ... ok
+test providers::executor::tests::invalid_json_has_only_one_recovery ... ok
+test providers::executor::tests::truncated_body_has_single_recovery ... ok
+test providers::executor::tests::recovery_and_standard_retry_share_four_call_budget ... ok
+
+failures:
+
+---- providers::executor::tests::google_text_with_function_call_is_incomplete_without_retry stdout ----
+
+thread 'providers::executor::tests::google_text_with_function_call_is_incomplete_without_retry' (293) panicked at src/providers/executor/tests.rs:447:5:
+assertion failed: matches!(parse_response(ProviderKind::Google,payload.clone()),Err(ProtocolError::OutputIncomplete))
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- providers::executor::tests::malformed_tool_calls_is_invalid_without_recovery_post stdout ----
+
+thread 'providers::executor::tests::malformed_tool_calls_is_invalid_without_recovery_post' (296) panicked at src/providers/executor/tests.rs:460:5:
+assertion failed: matches!(parse_response(ProviderKind::CustomOpenai,payload.clone()),Err(ProtocolError::InvalidResponse))
+
+
+failures:
+    providers::executor::tests::google_text_with_function_call_is_incomplete_without_retry
+    providers::executor::tests::malformed_tool_calls_is_invalid_without_recovery_post
+
+test result: FAILED. 17 passed; 2 failed; 0 ignored; 0 measured; 43 filtered out; finished in 0.69s
+
+error: test failed, to rerun pass `--lib`

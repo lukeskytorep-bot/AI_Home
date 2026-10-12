@@ -1,0 +1,8 @@
+{
+  "sourceArchiveSha256": "534b7c96458895625fd969949a1dfe5ac12cbc6f9716b56474d1493f9c375f6e",
+  "source": "src-tauri/src/secrets.rs",
+  "sourceSha256": "20cf8edfca0bac422310f08f1f9b1bfd8a9050789dd46bac446c608c42426b30",
+  "destination": "src-tauri/src/vault.rs",
+  "destinationSha256": "c1bc634f340eb1f407c9e14c23429c44cf5395d764f0519c74b14f67ec41f514",
+  "adaptation": "Own AI Home namespace/version and immutable references; profile/connection/provider/endpoint/credentialRevision binding; fresh readback; blocking OS access off runtime; no legacy fallback, secret Debug/Serialize, identity fingerprint, SQL secret or key-derived digest; Linux persistent Secret Service instead of kernel-only native store. Step 4 adds installation HMAC-SHA256 from the same source; immutable master reference, readback, no automatic regeneration, legacy receipts are read-only."
+}

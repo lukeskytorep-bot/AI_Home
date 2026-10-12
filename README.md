@@ -1,33 +1,33 @@
-# AI Home — fundament 4B-0
+# AI Home — profiles and provider connections
 
-Stan 12 października 2026: baza aplikacji z React/TypeScript + Rust/Tauri + SQLite. EN domyślnie, PL, Orbital/Aurora, light/dark/system. Profile, AI API i pamięć należą do kolejnych etapów. Forum nie jest wymagane.
+Stan 12.10.2026: kandydat 4B-1 krok 4 po korekcie audytu. Desktop ma konfigurator EN/PL, trwałe profile i połączenia, klucze w systemowym vault, modele Primary/Scribe oraz test dostępu do listy modeli z trwałym wynikiem. Rozmowy i pamięć agenta są kolejnymi etapami. AI Home nie wymaga forum.
+
+EN jest domyślny przy pierwszym uruchomieniu; zapisany język jest zachowany. Skórki Orbital/Aurora obsługują light/dark/system. Browser preview nie zapisuje kluczy i nie wykonuje połączeń dostawców. Conscious pozostaje niedostępny.
 
 ## Uruchomienie i kontrole
 
-Node.js 24; `npm ci`, `npm test`, `npm run verify:boundaries`, `npm run build`.
-Browser preview: `npm run dev`, http://127.0.0.1:1420. Preview ma własny localStorage; nie sprawdza SQLite/WebView.
-Desktop: Rust stable i wymagania systemowe Tauri, https://v2.tauri.app/start/prerequisites/ . `npm run tauri dev`. `src-tauri/Cargo.lock` jest już zachowany w repozytorium. Testy natywne: `cargo test --manifest-path src-tauri/Cargo.toml --all-targets --locked`.
+Node.js 24: `npm ci`, `npm test`, `npm run verify:boundaries`, `npm run build`.
+Browser preview: `npm run dev`, http://127.0.0.1:1420.
+Desktop: Rust stable i wymagania systemowe Tauri, https://v2.tauri.app/start/prerequisites/ ; `npm run tauri dev`.
+Natywne testy wraz z Tauri: `cargo test --manifest-path src-tauri/Cargo.toml --all-targets --locked`.
+Headless Rust/SQLite: ten sam command z `--no-default-features`; nie sprawdza WebView ani desktop feature.
 
-Zwykłe CI: frontend i Rust/SQLite/Tauri na Ubuntu, bez artefaktów do pobrania. Ręcznie `check_windows=true` dodaje Windows, a `build_desktop=true` dodaje Windows i tworzy pliki do sprawdzenia. Nie publikuje release ani instalatorów. Prepare Cargo lockfile jest potrzebne wyłącznie do uzasadnionych zmian zależności, nie przy każdym etapie.
+Cargo.lock jest dołączony i należy go commitować. Zwykłe CI sprawdza frontend i Rust/SQLite/Tauri na Ubuntu, bez tworzenia instalatorów. Istniejące ręczne `check_windows=true` dodaje Windows, a `build_desktop=true` przygotowuje pliki do odbioru desktopu. Nie publikuje release. Ta nakładka nie wymaga Prepare Cargo lockfile.
 
-## Jedna wersja P2
+Linuxowy vault wymaga dostępnego i odblokowanego Secret Service; Windows używa Credential Manager, macOS Keychain. Błąd magazynu nie uruchamia fallbacku do pliku ani localStorage. Test połączenia pobiera modele; nie potwierdza jeszcze działania konkretnego modelu w czacie.
 
-`snapshots/p2-v1.1` zawiera komplet odebranego przekazania P2 1.1, w tym build_audit_fixtures.py, własne kontrakty i oryginalny SHA256SUMS.txt. `python3 check_contracts.py` sprawdza zgodność kontraktów aplikacji z tym snapshotem i uruchamia 193 kontrole. 119 dotyczy historycznej wersji P2, 145 wynikało ze starszego skryptu uruchamianego na nowych kontraktach. Nie są to wyniki tego samego zestawu testów. Materiał mieszany przeniesiono do snapshots/p2-legacy-mixed; jego hashe nie oznaczają zgodności obecnej aplikacji.
+Natywny wykonawca ma ograniczony retry/recovery na jednym budżecie (4 wywołania/180 s). Test połączenia używa go przy pobieraniu modeli. Biblioteka czatu odrzuca odpowiedź uciętą limitem lub refusal; nie dopisuje kontynuacji. Rozmowy użytkownika nadal nie są wdrożone.
 
-## Dowody i status
+## Aktualne dowody
 
-`docs/evidence/manifest.sha256.json` i główny `SHA256SUMS.txt` identyfikują drzewa tego przekazania. Manifest obejmuje wszystkie pliki źródłowe i dowodowe poza sobą i SHA256SUMS; SHA256SUMS obejmuje także manifest, poza samym sobą. `python3 scripts/verify-source.py .` sprawdza kompletność i hashe; ten sam skrypt przyjmuje pełny ZIP. Nazwa pobranego ZIP-a jest dowolna. Po kolejnych zmianach manifest odświeżać przy następnym przekazaniu; nie przedstawiać dawnych hashy jako dowodów nowego stanu.
+Lokalnie: 97/97 Rust Linux bez desktop feature, 71/71 frontend, TypeScript/build, 18/18 granice i P2 193/193 PASS. Rzeczywisty OS vault, płatne API, Windows/Tauri/WebView i renderowanie Chromium pozostają niewykonane lokalnie. Wynik kroku 4 wymaga nowego CI oraz audytu. Całe 4B-1 i otwarte bramki Windows/WebView 4B-0 pozostają otwarte.
 
-Edward potwierdził udane CI po poprawce async. Brakuje identyfikatora przebiegu i zakresu platform, dlatego zapisujemy potwierdzenie użytkownika, nie niezależnie zweryfikowany PASS wszystkich systemów. Windows, wygenerowane uprawnienia i rzeczywisty WebView pozostają do odbioru. 4B-0 otwarty; 4B-1 rozpoczęty od przeniesienia biblioteki protokołów, bez zamknięcia całego etapu. Szczegóły: docs/ACCEPTANCE_PL.md i docs/AI_HOME_4B0_FUNDAMENT_RAPORT_PL.md.
+Raport: `docs/AI_HOME_4B1_KROK_4_RAPORT_PL.md`; plan: `docs/AI_HOME_4B_ETAPY_PRACY_v1.0_PL.md`; bramki: `docs/ACCEPTANCE_PL.md`. Dawne raporty kroków 1–3 i logi w `docs/evidence` zachowują stan swoich historycznych przekazań. Edward potwierdził zielone CI poprzednich kroków; nie przekazał identyfikatorów przebiegów ani zakresu platform.
 
-## Rozpoczęte 4B-1
+## Kontrakty i inwentarz
 
-Pierwszy krok przenosi bibliotekę formatów żądań/odpowiedzi oraz retry z Harness. Nie wykonuje jeszcze HTTP ani nie przechowuje kluczy. `docs/AI_HOME_4B1_KROK_1_RAPORT_PL.md` opisuje zakres, testy i następny krok. Cargo.lock i codzienne CI pozostają bez zmian.
+P2 i foundation zachowano bajtowo. `contracts/connections.ipc.json` dodaje tylko scoped odczyty cache modeli i ostatniego testu. Lokalna baza 1 → 2 dodaje konfigurację i trwałe operacje; 2 → 3 dodaje wyłącznie referencję klucza instalacji HMAC. Preferencje, profile, połączenia i receipts są zachowane. Nowe polecenia zapisujące klucz mają HMAC z lokalnym kluczem w vault; stare receipts są sprawdzane z oryginalnym sekretem i nie wykonują zapisu ponownie. Źródła Harness i adaptacje identyfikują pliki w `docs/reuse`, z zachowanym MIT notice.
 
-## 4B-1 krok 1 — korekta audytowa
+`snapshots/p2-v1.1` jest pełnym zamrożonym przekazaniem P2 1.1. `python3 check_contracts.py` wykonuje jego 193 kontrole; 119 jest wynikiem historycznego P2, a 145 wynikało z wcześniejszego checkera na późniejszych kontraktach. Nie są to wyniki jednego zestawu. `snapshots/p2-legacy-mixed` jest historią.
 
-Korekta na dokładnej bazie AI_Home-main (1).zip: zgodny pełny inwentarz, dołączony weryfikator i zachowany podpisany tekst Google. Dodano test parser → replay; 15 testów Rust czeka na wykonanie w istniejącym CI. Szczegóły i hash bazy: docs/AI_HOME_4B1_KROK_1_RAPORT_PL.md. Całe 4B-1 pozostaje otwarte.
-
-## 4B-1 krok 2 — HTTP i listy modeli
-
-Natywny moduł HTTP/discovery gotowy do integracji; ekran i IPC jeszcze go nie wywołują. 50 testów Rust Linux bez desktop feature oraz 63 testy frontendu PASS; build i 17 kontroli granic PASS. Klucze są na tym etapie tylko obiektami w pamięci natywnej, bez vault. Dołączono Cargo.lock z TLS; workflow bez zmian. Raport: docs/AI_HOME_4B1_KROK_2_RAPORT_PL.md. Nowe CI i odbiór kroku 2 wymagane; całe 4B-1 pozostaje otwarte.
+`docs/evidence/manifest.sha256.json` i `SHA256SUMS.txt` opisują komplet aktualnego przekazania. W Windows: `py -3 scripts/verify-source.py .`; Linux: `python3 scripts/verify-source.py .`. Weryfikator przyjmuje także pełny SOURCE.zip pod dowolną nazwą. Po zmianach odnowić manifest przy kolejnym przekazaniu; dawne hashe nie są dowodem nowego stanu.

@@ -395,7 +395,7 @@ async fn truncated_body_is_network_failure() {
             .unwrap()
             .chat(&r, &credential(&r), &budget())
             .await,
-        Err(TransportError::Network)
+        Err(TransportError::BodyRead)
     ));
 }
 #[tokio::test]

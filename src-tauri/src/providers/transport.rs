@@ -23,6 +23,7 @@ const MAX_BODY: usize = 8 * 1024 * 1024;
 const MAX_REQUEST: usize = 16 * 1024 * 1024;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TransportError {
+    Storage,
     Configuration,
     Protocol(ProtocolError),
     CredentialMismatch,
@@ -32,6 +33,7 @@ pub enum TransportError {
     ResponseTooLarge,
     RequestTooLarge,
     Network,
+    BodyRead,
     InvalidJson,
     HttpStatus {
         status: u16,
@@ -44,6 +46,7 @@ impl std::fmt::Display for TransportError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // Never interpolate URLs, headers, provider body or reqwest error text.
         f.write_str(match self {
+            Self::Storage => "storage_error",
             Self::Configuration => "provider_configuration",
             Self::Protocol(_) => "provider_protocol",
             Self::CredentialMismatch => "credential_binding_mismatch",
@@ -53,6 +56,7 @@ impl std::fmt::Display for TransportError {
             Self::ResponseTooLarge => "provider_response_too_large",
             Self::RequestTooLarge => "provider_request_too_large",
             Self::Network => "provider_network",
+            Self::BodyRead => "provider_body_read",
             Self::InvalidJson => "invalid_provider_json",
             Self::HttpStatus { .. } => "provider_http_status",
             Self::InvalidModelList => "invalid_model_list",
@@ -134,12 +138,21 @@ impl Cancellation {
 }
 /// Shared by all physical calls of one operation, including discovery pages.
 /// Errors, retries and later recovery must use this same budget, never a reset.
+/// The application may commit a reservation before any HTTP bytes are sent.
+/// Providers stay independent of SQLite and application operation DTOs.
+pub trait CallRecorder: Send + Sync {
+    fn reserved(
+        &self,
+        count: u8,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), TransportError>> + Send + '_>>;
+}
 #[derive(Clone)]
 pub struct CallBudget {
     deadline: Instant,
     maximum: u8,
     used: Arc<AtomicU8>,
     cancellation: Cancellation,
+    recorder: Option<Arc<dyn CallRecorder>>,
 }
 impl CallBudget {
     pub fn new(
@@ -156,10 +169,15 @@ impl CallBudget {
             maximum,
             used: Arc::new(AtomicU8::new(0)),
             cancellation,
+            recorder: None,
         })
     }
     pub fn standard(cancellation: Cancellation) -> Self {
         Self::new(Duration::from_secs(180), 4, cancellation).expect("constant limits")
+    }
+    pub fn with_recorder(mut self, recorder: Arc<dyn CallRecorder>) -> Self {
+        self.recorder = Some(recorder);
+        self
     }
     pub fn physical_calls(&self) -> u8 {
         self.used.load(Ordering::SeqCst)
@@ -172,6 +190,22 @@ impl CallBudget {
             return Err(TransportError::Timeout);
         }
         Ok(())
+    }
+    pub(super) async fn wait_for_retry(&self, delay: Duration) -> Result<(), TransportError> {
+        self.ensure_active()?;
+        if self.physical_calls() >= self.maximum {
+            return Err(TransportError::CallLimit);
+        }
+        let wake = Instant::now()
+            .checked_add(delay)
+            .ok_or(TransportError::Timeout)?;
+        if wake >= self.deadline {
+            return Err(TransportError::Timeout);
+        }
+        tokio::select! {biased;
+            _=self.cancellation.cancelled()=>Err(TransportError::Cancelled),
+            _=tokio::time::sleep_until(wake)=>self.ensure_active(),
+        }
     }
     fn reserve(&self) -> Result<(), TransportError> {
         self.ensure_active()?;
@@ -215,7 +249,15 @@ impl HttpTransport {
             .map_err(|_| TransportError::Configuration)?;
         Ok(Self { client, body_limit })
     }
-    pub async fn chat(
+    pub async fn execute_chat(
+        &self,
+        request: &ProviderChatRequest,
+        credential: &BoundCredential,
+        budget: &CallBudget,
+    ) -> Result<ProviderChatResponse, TransportError> {
+        super::executor::run(budget, || self.chat(request, credential, budget)).await
+    }
+    pub(super) async fn chat(
         &self,
         request: &ProviderChatRequest,
         credential: &BoundCredential,
@@ -245,6 +287,15 @@ impl HttpTransport {
             super::parse_response(request.provider, payload).map_err(TransportError::Protocol)?;
         budget.ensure_active()?;
         Ok(parsed)
+    }
+    pub(super) async fn execute_model_page(
+        &self,
+        scope: &ScopeStamp,
+        credential: &BoundCredential,
+        query: &[(String, String)],
+        budget: &CallBudget,
+    ) -> Result<Value, TransportError> {
+        super::executor::run(budget, || self.model_page(scope, credential, query, budget)).await
     }
     pub(super) async fn model_page(
         &self,
@@ -279,6 +330,7 @@ impl HttpTransport {
             biased;
             _ = budget.cancellation.cancelled() => Err(TransportError::Cancelled),
             result = timeout_at(budget.deadline, async {
+                if let Some(recorder) = &budget.recorder { recorder.reserved(budget.physical_calls()).await?; }
                 let mut response = self.client.execute(request).await.map_err(network_error)?;
                 let status = response.status();
                 if !status.is_success() {
@@ -291,7 +343,7 @@ impl HttpTransport {
                     return Err(TransportError::ResponseTooLarge);
                 }
                 let mut body = Vec::new();
-                while let Some(chunk) = response.chunk().await.map_err(network_error)? {
+                while let Some(chunk) = response.chunk().await.map_err(|_| TransportError::BodyRead)? {
                     if chunk.len() > self.body_limit - body.len() { return Err(TransportError::ResponseTooLarge); }
                     body.extend_from_slice(&chunk);
                 }

@@ -43,7 +43,7 @@ impl HttpTransport {
                     }
                 }
             }
-            let payload = self.model_page(scope, credential, &query, budget).await?;
+            let payload = self.execute_model_page(scope, credential, &query, budget).await?;
             let (page, next) = parse_models(scope.provider, &payload)?;
             for model in page {
                 if !ids.insert(model.id.clone()) {

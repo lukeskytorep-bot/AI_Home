@@ -1,0 +1,8 @@
+{
+  "sourceArchiveSha256": "534b7c96458895625fd969949a1dfe5ac12cbc6f9716b56474d1493f9c375f6e",
+  "source": "src/providers/retry.ts",
+  "sourceSha256": "78c1f186bffe83fd5791357dad72af33f99ac5c92fa4074cb235f9d3fe7d5157",
+  "destination": "src-tauri/src/providers/executor.rs",
+  "destinationSha256": "c43fd9106aea6f797ac85a8346dc7943762a63339c2dabf789f0af6dbd301bfc",
+  "adaptation": "Native bounded adaptation of transient status classification, exponential full jitter and Retry-After; safe enums instead of raw error strings. One standard retry per stage, one unchanged-request recovery, shared cancellation/deadline/call budget. No continuation, streaming callbacks, refusal/limit retries or semantic output repair."
+}

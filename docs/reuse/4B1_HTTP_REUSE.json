@@ -12,15 +12,15 @@
       "source": "src-tauri/src/providers/transport.rs",
       "sourceSha256": "f4d53da74211d9badc9b42e059c61a27b1dc047eb84fba8d7725d8042096c616",
       "destination": "src-tauri/src/providers/transport.rs",
-      "destinationSha256": "fa17bf788bfe6dbf61e116608f3e1e7be10e5911c1df78db702004b446c20c3d",
-      "adaptation": "Client/timeouts and Retry-After policy adapted; bounded bodies, atomic shared call budget, no redirects/proxies/implicit retry, sticky per-operation cancellation instead of global registry; safe enum instead of raw strings."
+      "destinationSha256": "69e0f2b40aaea738cf35b756086c1e75c9061376b55ada3999c1e8993f2d7002",
+      "adaptation": "Client/timeouts and Retry-After policy adapted; bounded bodies, atomic shared call budget, no redirects/proxies/implicit retry, sticky per-operation cancellation instead of global registry; safe enum instead of raw strings.; native CallRecorder interface persists reservations before dispatch in step 3 without a SQLite dependency in providers Step 4 exposes bounded execute_chat and cancellable budget-aware retry waits; physical chat stays module-private."
     },
     {
       "source": "src-tauri/src/providers.rs",
       "sourceSha256": "216112699f67ce9dc047b4770632475e10880a9c0250fb32505b72696d6bba11",
       "destination": "src-tauri/src/providers/discovery.rs",
-      "destinationSha256": "8d3d22f9b974f7ffe52ead1030a9354403dec1d3825d1a8483d26e36993a871d",
-      "adaptation": "Models endpoint/auth flow adapted; typed results, validated complete pagination, explicit incomplete/error status. No Tauri command or vault is copied."
+      "destinationSha256": "a0663d3c6aa9869d0320ff95f9d6c57478f2bbc09ac0812f0375bcaa903ef638",
+      "adaptation": "Models endpoint/auth flow adapted; typed results, validated complete pagination, explicit incomplete/error status. No Tauri command or vault is copied. Step 4 retries each page on the same operation budget/deadline."
     }
   ]
 }

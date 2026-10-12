@@ -1,25 +1,53 @@
-# Odbiór 4B-0
+# AI Home — aktualne bramki odbioru
 
-Stan po Final Normalization: etap nadal otwarty. Edward upoważnił rozpoczęcie pierwszej części 4B-1; nie oznacza to zamknięcia poniższych bramek.
+Stan 12.10.2026: kandydat 4B-1 krok 4 po korekcie audytu do nowego CI/audytu. Poprzedni krok ma potwierdzenie zielonego CI Edwarda, bez numeru/platform. Całe 4B-1 pozostaje otwarte.
 
-- [x] Frontend: testy, TypeScript i build; lokalne wyniki w docs/evidence.
-- [x] Korekta szkicu: Ponów i opóźnione zdarzenia nie kasują własnych zmian.
-- [x] Cargo.lock zachowany; podpis async zwraca Result.
-- [x] Edward potwierdził udane CI po poprawce; zapisano jako deklarację użytkownika, bez niezależnego odczytu przebiegu.
-- [x] Jedna kanoniczna wersja P2 1.1, komplet źródeł/dowodów oraz wyjaśnienie 119/145/193.
-- [x] Usunięto nieużywane duplikaty; aktualny manifest obejmuje całe przekazanie.
-- [ ] Zachować link/commit/logi zielonego CI, potwierdzić zakres testów i obu platform; nie dopisywać liczby natywnych testów bez logu.
-- [ ] Ręczny Windows: check_windows=true albo build_desktop=true, jeśli nie ma już dowodu jego zaliczenia.
+## Krok 4 — wykonane i lokalnie sprawdzone
+
+- [x] Jeden retry transportowy na etap i jedna próba recovery odczytu/JSON/pustego wyniku; wspólny limit 4 wywołań/180 s, bez resetowania przez paginację.
+- [x] Anulowanie backoff, Retry-After ograniczone do 30 s i pozostałego deadline.
+- [x] Commit każdego licznika przed HTTP; trwały wynik connection.test i operation.get po dwóch próbach.
+- [x] Brak retry po sukcesie, odmowie, limicie wyjścia, błędzie bindingu, walidacji lub zapisu.
+- [x] Korekta audytu: Google functionCall razem z tekstem daje OutputIncomplete; malformed tool_calls daje InvalidResponse przed klasyfikacją pustego tekstu. Oba bez ponowienia.
+- [x] HMAC nowych credential receipts, klucz instalacji tylko w vault, świeży readback i brak regeneracji brakującego klucza.
+- [x] Migracja v1/v2 → v3 i zgodny, tylko odczytowy replay starych receipts sprawdzone w testach.
+- [x] 97/97 Rust Linux headless, 71/71 frontend, build, 18/18 granice i P2 193/193 PASS.
+- [x] P2, zależności, Cargo.lock, workflow i uprawnienia bez zmian.
+- [ ] Nowe CI oraz audyt dokładnej nakładki kroku 4.
+- [ ] Rzeczywisty OS vault na Windows/Linux i uzgodniony smoke dostawców.
+- [ ] Odbiór Windows i WebView zgodnie z otwartymi bramkami 4B-0.
+
+Raport aktualny: `AI_HOME_4B1_KROK_4_RAPORT_PL.md`. Poniższe wyniki kroku 3 są historyczne. Krok 4 nie dodaje streamingu, rozmów, automatycznej kontynuacji, narzędzi ani naprawy pamięci; te funkcje mają dalsze etapy.
+
+## Historyczny zakres kroku 3 — zachowany
+
+- [x] Profile, własne połączenia/endpointy, trasy Primary/Scribe i scoped IPC.
+- [x] Systemowy vault zaimplementowany z własnym bindingiem i świeżym odczytem kontrolnym; brak secret-only fallbacku.
+- [x] Trwałe queued/running/result/error, operation.get/cancel i ostatni test po restarcie.
+- [x] Commit rezerwacji przed HTTP; spóźniony wynik nie zatwierdza zmienionego połączenia.
+- [x] Klucz nie trafia do SQLite, receipts, localStorage ani odpowiedzi IPC; zmiana klucza zachowuje tożsamość profilu.
+- [x] Migracja faktycznej bazy v1 → v2: preferencje zachowane, integrity/FK PASS.
+- [x] 70/70 Rust Linux headless, 71/71 frontend, TypeScript/build, 18/18 granice i P2 193/193 PASS.
+- [x] Cargo.lock wygenerowany przez Cargo, wcześniejsze wersje pakietów zachowane; workflow/uprawnienia bez zmian.
+- [x] Inwentarz katalogu/ZIP-a i odtworzenie nakładki na poprzedniej bazie sprawdzone.
+- [x] Zielone CI kroku 3 potwierdzone przez Edwarda; numer przebiegu i platformy nie zostały przekazane.
+- [ ] Audyt kroku 3.
+- [ ] Rzeczywisty vault na Windows/Linux: zapis/readback/restart, zablokowany magazyn, zmiana klucza i endpointu.
+- [ ] Natywny WebView: oba wyglądy, EN/PL, klawiatura, wąskie okno, szkice, restart i błędy. Testy UI mają zakres jsdom; Chromium nie uruchomiono.
+- [ ] Uzgodniony live smoke połączeń; pobranie listy modeli nie dowodzi działania czatu.
+- [x] Retry/recovery zaimplementowane i lokalnie sprawdzone w kroku 4; wymagany nowy wynik CI/audyt.
+
+Szczegóły: `AI_HOME_4B1_KROK_3_RAPORT_PL.md`. Raporty kroków 1/2 oraz wcześniejsze logi są historycznymi stanami przekazań, nie deklaracją obecnego NOT RUN dla testów już wykonanych w kroku 3. Nie rozpoczęto rozmów 4B-2; wcześniejsze create/list/snapshot profilu są zależnością konfiguratora.
+
+## Pozostałe bramki fundamentu 4B-0
+
+- [x] Ochrona szkicu ustawień: Ponów i opóźnione zdarzenia nie kasują własnych zmian.
+- [x] Cargo.lock i poprawiony async Result; lokalne testy fundamentu/SQLite przeszły w aktualnym zestawie.
+- [x] P2 1.1 zamrożone; dawne 119/145/193 rozdzielone, duplikaty zostały wcześniej uporządkowane.
+- [ ] Zachować link/commit/logi zielonego CI i potwierdzić zakres obu platform.
+- [ ] Windows: istniejące `check_windows=true`, jeśli brak dowodu jego zaliczenia.
 - [ ] Kontrola wygenerowanych uprawnień głównego okna.
-- [ ] WebView: start, zapis ustawień, restart, EN/PL, skórki light/dark/system, klawiatura, wąskie okno i błędy.
-- [ ] Audyt Final Normalization i decyzja o zamknięciu 4B-0.
+- [ ] Rzeczywisty WebView ze startem, restartem, preferencjami i obsługą błędów.
+- [ ] Decyzja odbiorowa o zamknięciu 4B-0.
 
-Przed 4B-12 ustalić status integracji 4A na podstawie bieżących dowodów. Potwierdzenie odbioru przez Edwarda obowiązuje; starszy indeks z otwartą bramką produkcyjną wymaga uzgodnienia, nie automatycznego przepisania na PASS.
-
-## 4B-1 krok 1 — korekta audytowa
-
-Korekta na dokładnej bazie AI_Home-main (1).zip: zgodny pełny inwentarz, dołączony weryfikator i zachowany podpisany tekst Google. Dodano test parser → replay; 15 testów Rust czeka na wykonanie w istniejącym CI. Szczegóły i hash bazy: docs/AI_HOME_4B1_KROK_1_RAPORT_PL.md. Całe 4B-1 pozostaje otwarte.
-
-## 4B-1 krok 2 — HTTP i listy modeli
-
-Natywny moduł HTTP/discovery gotowy do integracji; ekran i IPC jeszcze go nie wywołują. 50 testów Rust Linux bez desktop feature oraz 63 testy frontendu PASS; build i 17 kontroli granic PASS. Klucze są na tym etapie tylko obiektami w pamięci natywnej, bez vault. Dołączono Cargo.lock z TLS; workflow bez zmian. Raport: docs/AI_HOME_4B1_KROK_2_RAPORT_PL.md. Nowe CI i odbiór kroku 2 wymagane; całe 4B-1 pozostaje otwarte.
+Przed 4B-12 ustalić kanoniczny status integracji 4A. Odbiór potwierdzony przez Edwarda obowiązuje; starszy indeks z otwartą bramką produkcyjną wymaga uzgodnienia.

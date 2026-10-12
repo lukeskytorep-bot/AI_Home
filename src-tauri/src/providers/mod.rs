@@ -4,6 +4,8 @@ mod adapters;
 mod request_builders;
 mod response_parsers;
 mod reasoning;
+mod executor;
+mod completion;
 pub mod transport;
 mod discovery;
 pub use discovery::DiscoveredModel;
@@ -51,7 +53,7 @@ impl ProviderChatResponse {
     pub fn usage(&self)->&ProviderUsage{&self.usage}
     pub fn finish_reason(&self)->Option<&str>{self.finish_reason.as_deref()}
 }
-#[derive(Clone,Copy,Debug,PartialEq,Eq)]pub enum ProtocolError{InvalidEndpoint,InvalidRequest,RouteMismatch,InvalidResponse}
+#[derive(Clone,Copy,Debug,PartialEq,Eq)]pub enum ProtocolError{InvalidEndpoint,InvalidRequest,RouteMismatch,InvalidResponse,EmptyResponse,OutputIncomplete,PolicyBlocked}
 pub struct PreparedChat{pub endpoint:String,pub body:Value}
 /// No secret is accepted by protocol builders; native auth is added later.
 pub fn prepare_chat(request:&ProviderChatRequest,endpoint:&str)->Result<PreparedChat,ProtocolError>{
@@ -62,6 +64,7 @@ pub fn prepare_chat(request:&ProviderChatRequest,endpoint:&str)->Result<Prepared
 }
 pub fn normalize_endpoint(provider:ProviderKind,value:&str)->Result<String,ProtocolError>{adapters::normalize_endpoint(provider,value)}
 pub fn parse_response(provider:ProviderKind,payload:Value)->Result<ProviderChatResponse,ProtocolError>{
+    completion::validate(provider,&payload)?;
     // Raw provider errors may echo keys, prompts or private data; keep them internal.
     response_parsers::parse_chat_response(provider,payload,None).map_err(|_|ProtocolError::InvalidResponse)
 }
