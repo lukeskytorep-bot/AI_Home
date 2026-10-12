@@ -1,0 +1,17 @@
+#!/usr/bin/env python3
+"""Remove only known superseded/duplicate files after applying the patch."""
+from pathlib import Path
+import hashlib
+root=Path(__file__).resolve().parent.parent
+expected={'build_handoff.py': 'fc984d69dbc5c097f60898374e739642c8afed9bf1d301a3abdc6d9a01ef67e5', 'build_contracts.py': 'ab046128a40473b7ea43f4a0245dfac7756b90de49a2b22d3bc82bd2fbdd8d3e', 'REFERENCE_CHECKS.txt': 'c2f7af3a9f6feefccb60020cfaeed17334d80f0f6f4d1eb1632535c1fe15bd6b', 'build_ipc.py': '9c5f8ad74579b8b5d5e355647d2146a6035bbf110f3a4d195ab1782dd3c61493', 'AI_HOME_CI_MANIFEST.json': '855e864fd9a0135ad23cae78ea30daec4b851a871c95d1356bc8a6c54061d3c1', 'AI_HOME_P2_KONTRAKTY_IPC_I_MODULY_PL.md': '7f6bc5682ab456b53918e842e519e308e4ad09eea13319498b3bd0b98bc5ba2d', 'SOURCE_IDENTITIES.json': '48080b25dfdea664a9de6d9c67b66fca5312b0df4dee622ac9e9ad13e2987e3d', 'verify_handoff.py': '5244eebe77230ace0f7f31e84d5582369a8e4cedbd25cd305df86ae71dcad80f', 'AI_HOME_TAURI_ASYNC_COMMAND_FIX_MANIFEST.json': '8818c9d31ae447ae0d1af54c77b0f9e3ac3bc88ff38c2208f892c760f128fa20', 'src-tauri/AI_HOME_TAURI_ASYNC_COMMAND_FIX_MANIFEST.json': '8818c9d31ae447ae0d1af54c77b0f9e3ac3bc88ff38c2208f892c760f128fa20', 'src-tauri/src-tauri/src/lib.rs': '11ca7aadcc709a678f46bafe22da4ca308af4f2a893a22fd48fee6fa8ff6653a', 'docs/evidence/environment.json': '00b7a4fcfff5880910bee32ffeaa046985c5cbf92caa14b9ca17bff939b97f14', 'docs/evidence/http-smoke.log': '55c3ad1f9fd1d34d2a6ea39e99508a4aac67820574ab9d3de359092ff692a72b', 'docs/evidence/previous-source-sha256.txt': '42111011fe692ecb878179c692a327397c5f0b620e4a7ba3de5af7fa36644b4d'}
+for name,sha in expected.items():
+    p=root/name
+    if p.exists() and (not p.is_file() or hashlib.sha256(p.read_bytes()).hexdigest()!=sha):
+        raise SystemExit('Changed file; cleanup stopped without deleting anything: '+name)
+for name in expected:
+    p=root/name
+    if p.exists():p.unlink()
+for name in ['src-tauri/src-tauri/src','src-tauri/src-tauri']:
+    p=root/name
+    if p.exists() and not any(p.iterdir()):p.rmdir()
+print('PASS: only known obsolete files removed; safe to run again.')
