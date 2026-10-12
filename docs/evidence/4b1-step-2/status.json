@@ -1,0 +1,25 @@
+{
+  "stage": "4B-1 step 2 \u2014 native HTTP/discovery",
+  "previousStepCi": "GREEN \u2014 confirmed by Edward 2026-10-12; run/platforms not provided",
+  "rust": {
+    "passed": 50,
+    "protocolTests": 15,
+    "newTests": 27,
+    "foundationSQLiteTests": 8,
+    "command": "cargo test --manifest-path src-tauri/Cargo.toml --no-default-features --all-targets --locked --offline",
+    "compiler": "rustc 1.99.0 (b940084d7 2026-09-28)",
+    "desktopFeature": false
+  },
+  "frontendTests": 63,
+  "boundaryChecks": 17,
+  "p2Checks": 193,
+  "liveApiTests": "NOT RUN",
+  "windowsDesktopWebView": "NOT RUN locally",
+  "vault": false,
+  "persistentConnectionTest": false,
+  "newIpcCommands": 0,
+  "workflowChanged": false,
+  "cargoLockChanged": true,
+  "existingCrateVersionsUpgraded": false,
+  "nextStepCi": "REQUIRED"
+}

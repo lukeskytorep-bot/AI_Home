@@ -19,3 +19,7 @@ Przed 4B-12 ustalić status integracji 4A na podstawie bieżących dowodów. Pot
 ## 4B-1 krok 1 — korekta audytowa
 
 Korekta na dokładnej bazie AI_Home-main (1).zip: zgodny pełny inwentarz, dołączony weryfikator i zachowany podpisany tekst Google. Dodano test parser → replay; 15 testów Rust czeka na wykonanie w istniejącym CI. Szczegóły i hash bazy: docs/AI_HOME_4B1_KROK_1_RAPORT_PL.md. Całe 4B-1 pozostaje otwarte.
+
+## 4B-1 krok 2 — HTTP i listy modeli
+
+Natywny moduł HTTP/discovery gotowy do integracji; ekran i IPC jeszcze go nie wywołują. 50 testów Rust Linux bez desktop feature oraz 63 testy frontendu PASS; build i 17 kontroli granic PASS. Klucze są na tym etapie tylko obiektami w pamięci natywnej, bez vault. Dołączono Cargo.lock z TLS; workflow bez zmian. Raport: docs/AI_HOME_4B1_KROK_2_RAPORT_PL.md. Nowe CI i odbiór kroku 2 wymagane; całe 4B-1 pozostaje otwarte.

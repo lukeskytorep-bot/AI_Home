@@ -1,0 +1,26 @@
+{
+  "sourceArchiveSha256": "534b7c96458895625fd969949a1dfe5ac12cbc6f9716b56474d1493f9c375f6e",
+  "files": [
+    {
+      "source": "src-tauri/src/providers/adapters.rs",
+      "sourceSha256": "22525b7348af202fc2e58575892a0dc6b473986c5e22558684d91f35f4100582",
+      "destination": "src-tauri/src/providers/adapters.rs",
+      "destinationSha256": "1fe0ab803b9052e68b0d75d6bc96f3b46e7636b58f3d0d53e21a229d1211615e",
+      "adaptation": "URL parsing and family auth adapted; strict query/fragment/credential rejection, sensitive headers, AI Home attribution."
+    },
+    {
+      "source": "src-tauri/src/providers/transport.rs",
+      "sourceSha256": "f4d53da74211d9badc9b42e059c61a27b1dc047eb84fba8d7725d8042096c616",
+      "destination": "src-tauri/src/providers/transport.rs",
+      "destinationSha256": "fa17bf788bfe6dbf61e116608f3e1e7be10e5911c1df78db702004b446c20c3d",
+      "adaptation": "Client/timeouts and Retry-After policy adapted; bounded bodies, atomic shared call budget, no redirects/proxies/implicit retry, sticky per-operation cancellation instead of global registry; safe enum instead of raw strings."
+    },
+    {
+      "source": "src-tauri/src/providers.rs",
+      "sourceSha256": "216112699f67ce9dc047b4770632475e10880a9c0250fb32505b72696d6bba11",
+      "destination": "src-tauri/src/providers/discovery.rs",
+      "destinationSha256": "8d3d22f9b974f7ffe52ead1030a9354403dec1d3825d1a8483d26e36993a871d",
+      "adaptation": "Models endpoint/auth flow adapted; typed results, validated complete pagination, explicit incomplete/error status. No Tauri command or vault is copied."
+    }
+  ]
+}

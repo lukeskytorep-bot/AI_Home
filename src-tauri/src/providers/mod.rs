@@ -1,10 +1,12 @@
-//! Provider protocol port: no network, no keyring, no frontend IPC.
-//! Native transport and persistent connections are the next part of 4B-1.
+//! Native provider protocols and bounded HTTP. No keyring or frontend IPC yet.
 use serde_json::Value;
 mod adapters;
 mod request_builders;
 mod response_parsers;
 mod reasoning;
+pub mod transport;
+mod discovery;
+pub use discovery::DiscoveredModel;
 #[derive(Clone,Copy,Debug,PartialEq,Eq)]
 pub enum ProviderKind {Openrouter,Openai,Google,Anthropic,CustomOpenai}
 #[derive(Clone,Debug,PartialEq,Eq)]
