@@ -157,7 +157,7 @@
     "src-tauri/src/providers/response_parsers.rs": "5776b95115fc2587f6c252db342cde4a24a46a8c3a4b9c7591d6e69922902e67",
     "src-tauri/src/providers/tests.rs": "697d74fd1f95572d360e6464477d4ae7288fb6e993186981786036d40017be23",
     "src-tauri/src/providers/transport.rs": "69e0f2b40aaea738cf35b756086c1e75c9061376b55ada3999c1e8993f2d7002",
-    "src-tauri/src/providers/transport/tests.rs": "23c537731ad47c5cff0b9d2b1d4365a8fe141248f9ec6ec109249863dbc5967a",
+    "src-tauri/src/providers/transport/tests.rs": "e20f1907051f4ebe1a56a1997d76d4884a6ee0c94cffede33bcb978922271d76",
     "src-tauri/src/vault.rs": "c1bc634f340eb1f407c9e14c23429c44cf5395d764f0519c74b14f67ec41f514",
     "src-tauri/tauri.conf.json": "f0ef6bdbce7b8dd0dd8aa96232a211a21eb4929456bbc4b3e5ac65d16257ca8b",
     "src-tauri/tests/connections.rs": "2b1a746a77dd715d2750da012697dfb9ce938738a72258d1ce896d53d5390f3a",

@@ -400,16 +400,23 @@ async fn truncated_body_is_network_failure() {
 }
 #[tokio::test]
 async fn total_deadline_includes_wait_for_headers() {
-    let s = server(vec![vec![]]).await;
+    let mut s = server(vec![vec![]]).await;
     let r = request(s.base.clone());
-    let b = CallBudget::new(Duration::from_millis(50), 1, Cancellation::default()).unwrap();
-    assert!(matches!(
-        HttpTransport::new()
-            .unwrap()
-            .chat(&r, &credential(&r), &b)
-            .await,
-        Err(TransportError::Timeout)
-    ));
+    // Client/TLS setup and credential validation must not consume the short
+    // test deadline before the HTTP request can be dispatched on a busy runner.
+    let t = HttpTransport::new().unwrap();
+    let c = credential(&r);
+    let b = CallBudget::new(Duration::from_secs(2), 1, Cancellation::default()).unwrap();
+    let future = t.chat(&r, &c, &b);
+    tokio::pin!(future);
+    // Prove the server received the request and is deliberately withholding
+    // headers. An early pre-dispatch timeout must not count as a passing test.
+    tokio::select! {
+        result = &mut future => panic!("request ended before server receipt: {:?}", result.err()),
+        raw = s.requests.recv() => assert!(raw.is_some(), "server did not receive the request"),
+    }
+    assert_eq!(b.physical_calls(), 1);
+    assert!(matches!(future.await, Err(TransportError::Timeout)));
     assert_eq!(b.physical_calls(), 1);
 }
 #[tokio::test]
