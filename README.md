@@ -1,45 +1,21 @@
-# AI Home — 4B-0 foundation
+# AI Home — fundament 4B-0
 
-**Source candidate for audit. The React frontend builds and its tests pass. Native Rust/Tauri compilation and WebView verification are pending. This is not a desktop release.**
+Stan 12 października 2026: baza aplikacji z React/TypeScript + Rust/Tauri + SQLite. EN domyślnie, PL, Orbital/Aurora, light/dark/system. Profile, AI API i pamięć należą do kolejnych etapów. Forum nie jest wymagane.
 
-AI Home is independent of the forum and AI RV Harness. English is the default; Polish is available. This foundation implements application preferences, a kernel in Standard/NullState mode, typed IPC, locale/theme validation, and an application event journal. It does not call AI providers. Profiles, chat, file imports, memories and Conscious are later stages.
+## Uruchomienie i kontrole
 
-## Run the browser preview
+Node.js 24; `npm ci`, `npm test`, `npm run verify:boundaries`, `npm run build`.
+Browser preview: `npm run dev`, http://127.0.0.1:1420. Preview ma własny localStorage; nie sprawdza SQLite/WebView.
+Desktop: Rust stable i wymagania systemowe Tauri, https://v2.tauri.app/start/prerequisites/ . `npm run tauri dev`. `src-tauri/Cargo.lock` jest już zachowany w repozytorium. Testy natywne: `cargo test --manifest-path src-tauri/Cargo.toml --all-targets --locked`.
 
-Use Node.js 24 and npm. From this directory:
+Zwykłe CI: frontend i Rust/SQLite/Tauri na Ubuntu, bez artefaktów do pobrania. Ręcznie `check_windows=true` dodaje Windows, a `build_desktop=true` dodaje Windows i tworzy pliki do sprawdzenia. Nie publikuje release ani instalatorów. Prepare Cargo lockfile jest potrzebne wyłącznie do uzasadnionych zmian zależności, nie przy każdym etapie.
 
-```sh
-npm ci
-npm run dev
-```
+## Jedna wersja P2
 
-Open http://127.0.0.1:1420. The preview is explicitly labeled and uses its own localStorage namespace. It does not test SQLite, desktop permissions or the WebView. Language and theme changes are previews until **Save settings** is clicked.
+`snapshots/p2-v1.1` zawiera komplet odebranego przekazania P2 1.1, w tym build_audit_fixtures.py, własne kontrakty i oryginalny SHA256SUMS.txt. `python3 check_contracts.py` sprawdza zgodność kontraktów aplikacji z tym snapshotem i uruchamia 193 kontrole. 119 dotyczy historycznej wersji P2, 145 wynikało ze starszego skryptu uruchamianego na nowych kontraktach. Nie są to wyniki tego samego zestawu testów. Materiał mieszany przeniesiono do snapshots/p2-legacy-mixed; jego hashe nie oznaczają zgodności obecnej aplikacji.
 
-```sh
-npm test
-npm run verify:boundaries
-npm run build
-```
+## Dowody i status
 
-## Run the desktop candidate
+`docs/evidence/manifest.sha256.json` i główny `SHA256SUMS.txt` identyfikują drzewa tego przekazania. Manifest obejmuje wszystkie pliki źródłowe i dowodowe poza sobą i SHA256SUMS; SHA256SUMS obejmuje także manifest, poza samym sobą. `python3 scripts/verify-source.py .` sprawdza kompletność i hashe; ten sam skrypt przyjmuje pełny ZIP. Nazwa pobranego ZIP-a jest dowolna. Po kolejnych zmianach manifest odświeżać przy następnym przekazaniu; nie przedstawiać dawnych hashy jako dowodów nowego stanu.
 
-Install Rust stable, the platform Tauri 2 prerequisites and Node.js 24. See https://v2.tauri.app/start/prerequisites/ . On Windows, Rust/MSVC and WebView2 are required. On Linux, WebKitGTK and related build libraries are required.
-
-```sh
-npm ci
-cargo test --manifest-path src-tauri/Cargo.toml --no-default-features
-npm run tauri dev
-npm run tauri build -- --no-bundle
-```
-
-Run the manual **Prepare Cargo lockfile** workflow first, review its artifact, and commit `src-tauri/Cargo.lock`. Routine CI requires this file and uses `--locked`. See `docs/CI_PL.md`. The first local Cargo run can also resolve dependencies and generate `src-tauri/Cargo.lock`. Direct versions come from the audited Harness snapshot; **the Rust lockfile could not be resolved in the preparation environment**. Preserve and commit the generated lockfile after a successful native run, CI already requires `--locked`. The npm lockfile is included and was used in the verified build.
-
-The native candidate stores `foundation.sqlite3` in Tauri's application data directory. A SQLite transaction saves preferences, idempotency receipt and journal event together. Desktop errors do not cause fallback to browser storage. No API credentials are accepted in this stage.
-
-## Check before closing 4B-0
-
-The provided GitHub Actions workflow tests the frontend, runs full-feature Rust/SQLite tests and compiles Tauri targets on Windows and Linux, without creating a product release. An optional manual build_desktop input builds runnable candidates. The updated workflow has not been run yet. This directory can become a GitHub repository now; no repository was remotely created or published during preparation.
-
-Complete the checklist in `docs/ACCEPTANCE_PL.md`, retain the CI logs and Rust lockfile, and audit the resulting code. Native compilation alone does not confirm rendering, keyboard behavior or persistence in the actual WebView.
-
-Polski: szczegóły modułów, poleceń i ograniczeń znajdują się w `docs/ARCHITECTURE_PL.md`. Raport przekazania i aktualny plan są w `docs/`. Pakiety językowe i skórek są zwykłym JSON-em, bez wykonywalnych dodatków. Walidacja pakietów jest gotowa; instalator pakietów użytkownika należy do późniejszego etapu.
+Edward potwierdził udane CI po poprawce async. Brakuje identyfikatora przebiegu i zakresu platform, dlatego zapisujemy potwierdzenie użytkownika, nie niezależnie zweryfikowany PASS wszystkich systemów. Windows, wygenerowane uprawnienia i rzeczywisty WebView pozostają do odbioru. 4B-0 otwarty; 4B-1 nierozpoczęty. Szczegóły: docs/ACCEPTANCE_PL.md i docs/AI_HOME_4B0_FUNDAMENT_RAPORT_PL.md.

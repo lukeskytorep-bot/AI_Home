@@ -42,3 +42,7 @@ Plan przeniesienia gotowych providerów, retry/continuation, sekretów, importer
 ## Korekta CI po pierwszej kompilacji
 
 Logi Edwarda ujawniły niezgodną rodzinę zależności Tauri. Przypięto runtime/makra/build na zestaw migawki Harness; poprawka czeka na CI. `docs/CI_PL.md` opisuje generację i zachowanie Cargo.lock, zwykłe testy pełnego desktop feature oraz oddzielną ręczną kompilację kandydata. Nie ma publikacji wydania po każdym etapie.
+
+## Final Normalization — 12.10.2026
+
+Aktualny README, Acceptance i raport są nadrzędne wobec wcześniejszych opisów CI. Cargo.lock jest zachowany, async home_dispatch zwraca Result, a codzienny workflow działa na Ubuntu. snapshots/p2-v1.1 jest pełnym kanonicznym przekazaniem P2; jego generatorów nie używać na runtime. P2-legacy-mixed i 4b0-evidence-before-normalization przechowują historyczne bytes, nie hashe bieżącego drzewa. Funkcjonalnego kodu aplikacji, kontraktów, Cargo.lock i workflow nie zmieniono w normalizacji.

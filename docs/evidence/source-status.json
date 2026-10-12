@@ -1,0 +1,18 @@
+{
+  "inputFile": "AI_Home-main.zip",
+  "inputSha256": "279c338e8cbc610aede90f236c495f4fc12d2e777937635820896cdb3edc1b86",
+  "canonicalP2": "1.1",
+  "p2Checks": 193,
+  "ci": {
+    "source": "Edward confirmation in conversation, 2026-10-12 00:20 Europe/Warsaw",
+    "reported": "success after async correction",
+    "independentlyVerified": false,
+    "runUrl": null,
+    "commit": null,
+    "windowsVerified": false,
+    "webViewVerified": false
+  },
+  "localNativeTests": "NOT RUN — cargo/rustc unavailable",
+  "stage4B0": "OPEN",
+  "stage4B1": "NOT STARTED"
+}

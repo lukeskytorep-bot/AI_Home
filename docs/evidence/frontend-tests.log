@@ -4,11 +4,11 @@ npm warn Unknown env config "http-proxy". This will stop working in the next maj
 > vitest run
 
 
- RUN  v4.1.10 /workspace/scratch/8e3755d5c581/ai_home_4b0/AI-Home
+ RUN  v4.1.10 /workspace/scratch/8e3755d5c581/normalization_work/AI_Home
 
 
  Test Files  3 passed (3)
       Tests  53 passed (53)
-   Start at  16:58:15
-   Duration  782ms (transform 228ms, setup 0ms, import 367ms, tests 317ms, environment 812ms)
+   Start at  18:37:19
+   Duration  814ms (transform 220ms, setup 0ms, import 367ms, tests 303ms, environment 953ms)
 
