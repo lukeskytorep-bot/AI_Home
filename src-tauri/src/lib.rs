@@ -3,6 +3,8 @@ pub mod domain;
 pub mod kernel;
 pub mod persistence;
 pub mod providers;
+pub mod vault;
+mod connections;
 #[cfg(feature="desktop")]
 mod desktop {
     use tauri::{Emitter,Manager};

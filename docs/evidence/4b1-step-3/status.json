@@ -1,0 +1,27 @@
+{
+  "stage": "4B-1 step 3",
+  "previousStepCi": "GREEN \u2014 confirmed by Edward, run/platforms not provided",
+  "rustTests": 70,
+  "newNativeIntegrationTests": 20,
+  "frontendTests": 71,
+  "newFrontendTests": 8,
+  "boundaryChecks": 18,
+  "p2Checks": 193,
+  "rustCommand": "cargo test --manifest-path src-tauri/Cargo.toml --no-default-features --all-targets --locked --offline",
+  "compiler": "rustc 1.99.0",
+  "nativeDesktopWebView": "NOT RUN",
+  "realOsVault": "NOT RUN \u2014 injected test store; Linux production backend compiled",
+  "liveApi": "NOT RUN \u2014 loopback fixtures only",
+  "chromiumRendering": "NOT RUN \u2014 Playwright browser download failed",
+  "localDatabaseVersion": 2,
+  "oldP2AndFoundationContractsChanged": false,
+  "supplementalScopedReads": [
+    "connection.models.list",
+    "connection.test.latest"
+  ],
+  "workflowChanged": false,
+  "jsDependenciesChanged": false,
+  "cargoLockChanged": true,
+  "nextCi": "REQUIRED",
+  "stage4B1": "OPEN"
+}

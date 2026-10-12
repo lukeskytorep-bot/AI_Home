@@ -1,0 +1,119 @@
+{
+  "contractVersion": 1,
+  "commands": {
+    "connection.models.list": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "connectionId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "connectionId"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512
+                },
+                "label": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1024
+                }
+              },
+              "required": [
+                "id",
+                "label"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "connectionRevision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "credentialRevision": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "items",
+          "connectionRevision",
+          "credentialRevision"
+        ],
+        "additionalProperties": false
+      },
+      "mutates": false,
+      "requiresExpectedRevision": false,
+      "async": false
+    },
+    "connection.test.latest": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "connectionId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "connectionId"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "found": {
+                "const": false
+              }
+            },
+            "required": [
+              "found"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "found": {
+                "const": true
+              },
+              "operation": {
+                "$ref": "#/$defs/Operation"
+              }
+            },
+            "required": [
+              "found",
+              "operation"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "mutates": false,
+      "requiresExpectedRevision": false,
+      "async": false
+    }
+  }
+}

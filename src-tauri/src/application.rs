@@ -3,7 +3,7 @@ use sha2::{Digest,Sha256};
 use sqlx::Row;
 use tokio::sync::Mutex;
 use crate::{domain::schema,kernel::Kernel,persistence::Store};
-pub struct Application {store:Store,kernel:Kernel,gate:Mutex<()>}
+pub struct Application {store:Store,kernel:Kernel,gate:Mutex<()>,connections:crate::connections::Connections}
 pub struct Dispatch {pub response:Value,pub event:Option<Value>}
 fn error(r:&Value,code:&str)->Value{json!({"contractVersion":1,"requestId":r["requestId"].as_str().filter(|s|!s.is_empty()&&s.len()<=128).unwrap_or("invalid-request"),"ok":false,"error":{"code":code,"messageKey":format!("error.{}",code.to_lowercase()),"retryable":false}})}
 fn success(r:&Value,result:Value)->Value{json!({"contractVersion":1,"requestId":r["requestId"],"ok":true,"result":result})}
@@ -18,7 +18,8 @@ fn pack(kind:&str,value:&Value)->Result<Vec<String>,&'static str>{
     Ok(vec![])
 }
 impl Application {
-    pub fn new(store:Store)->Self{let mut kernel=Kernel::new();kernel.ready();Self{store,kernel,gate:Mutex::new(())}}
+    pub fn new(store:Store)->Self{Self::with_vault(store,crate::vault::Vault::os())}
+    pub fn with_vault(store:Store,vault:crate::vault::Vault)->Self{let mut kernel=Kernel::new();kernel.ready();let connections=crate::connections::Connections::new(store.pool.clone(),vault);Self{store,kernel,gate:Mutex::new(()),connections}}
     pub fn stop(&mut self){self.kernel.stop();}
     pub async fn dispatch(&self,r:Value)->Dispatch{
         let _guard=self.gate.lock().await;
@@ -27,11 +28,13 @@ impl Application {
     async fn execute(&self,r:&Value)->Result<Dispatch,sqlx::Error>{
         let reject=|code|Dispatch{response:error(r,code),event:None};
         if r["contractVersion"]!=1{return Ok(reject("UNSUPPORTED_CONTRACT_VERSION"))}
-        if !schema::dto("CommandEnvelope",r)||r.get("profileId").is_some(){return Ok(reject("VALIDATION_ERROR"))}
+        if !schema::dto("CommandEnvelope",r){return Ok(reject("VALIDATION_ERROR"))}
+        if crate::connections::supports(r["command"].as_str().unwrap()){return Ok(Dispatch{response:self.connections.dispatch(r.clone()).await,event:None})}
         let command=r["command"].as_str().unwrap();
         let catalog=embedded(include_str!("../../contracts/ipc.catalog.json"));let foundation=embedded(include_str!("../../contracts/foundation.ipc.json"));
         let implemented=["app.preferences.get","app.preferences.set","app.pack.validate","kernel.status.get","app.events.list"];
         if !implemented.contains(&command){return Ok(reject("UNKNOWN_COMMAND"))}
+        if r.get("profileId").is_some(){return Ok(reject("VALIDATION_ERROR"))}
         let contract=catalog["commands"].get(command).or_else(||foundation["commands"].get(command)).unwrap();
         if !schema::valid(&r["payload"],&contract["payload"]){return Ok(reject("VALIDATION_ERROR"))}
         let result=match command{
