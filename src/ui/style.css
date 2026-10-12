@@ -3,3 +3,5 @@
 .connection-setup fieldset{border:0;padding:0;margin:20px 0;min-width:0}.connection-setup label{display:flex;flex-direction:column;gap:7px;margin-bottom:12px}.connection-setup input{width:100%;min-width:0;box-sizing:border-box;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--background);color:inherit;font:inherit}.connection-setup button{margin:4px 8px 4px 0}.connection-setup .save{flex-wrap:wrap}.connection-setup legend{font-weight:600;margin-bottom:12px}.connection-setup ul{padding-left:20px;overflow-wrap:anywhere}
 
 .connection-setup{margin-top:24px}
+
+.conversations textarea{display:block;width:100%;box-sizing:border-box;resize:vertical;min-height:9rem;padding:.8rem;border:1px solid var(--border);border-radius:.7rem;background:var(--surface);color:inherit;font:inherit;margin:.5rem 0}.conversations button{margin:.4rem .5rem .4rem 0}

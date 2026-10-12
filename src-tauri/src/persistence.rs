@@ -14,13 +14,16 @@ impl Store {
         let pool=SqlitePoolOptions::new().max_connections(1).connect_with(options).await?;
         let mut tx=pool.begin().await?;
         let version:i64=sqlx::query_scalar("PRAGMA user_version").fetch_one(&mut *tx).await?;
-        if version>3{return Err(sqlx::Error::Protocol("unsupported storage version".into()))}
+        if version>4{return Err(sqlx::Error::Protocol("unsupported storage version".into()))}
         sqlx::query("CREATE TABLE IF NOT EXISTS preferences (id INTEGER PRIMARY KEY CHECK(id=1), revision INTEGER NOT NULL, body TEXT NOT NULL)").execute(&mut *tx).await?;
         sqlx::query("CREATE TABLE IF NOT EXISTS receipts (request_id TEXT PRIMARY KEY, fingerprint TEXT NOT NULL, response TEXT NOT NULL)").execute(&mut *tx).await?;
         sqlx::query("CREATE TABLE IF NOT EXISTS app_events (sequence INTEGER PRIMARY KEY AUTOINCREMENT, body TEXT NOT NULL)").execute(&mut *tx).await?;
         let d:Value=serde_json::from_str(include_str!("../../contracts/defaults.json")).unwrap();
         sqlx::query("INSERT OR IGNORE INTO preferences(id,revision,body) VALUES(1,1,?)").bind(d["appPreferences"].to_string()).execute(&mut *tx).await?;
         for statement in [
+            "CREATE TABLE IF NOT EXISTS conversations (profile_id TEXT NOT NULL REFERENCES profiles(id), id TEXT NOT NULL, revision INTEGER NOT NULL, body TEXT NOT NULL, PRIMARY KEY(profile_id,id))",
+            "CREATE TABLE IF NOT EXISTS messages (profile_id TEXT NOT NULL, id TEXT NOT NULL, conversation_id TEXT NOT NULL, sequence INTEGER NOT NULL CHECK(sequence>0), revision INTEGER NOT NULL, body TEXT NOT NULL, PRIMARY KEY(profile_id,id), UNIQUE(profile_id,conversation_id,sequence), FOREIGN KEY(profile_id,conversation_id) REFERENCES conversations(profile_id,id))",
+            "CREATE TABLE IF NOT EXISTS conversation_cursors (id TEXT PRIMARY KEY, profile_id TEXT NOT NULL, conversation_id TEXT NOT NULL, kind TEXT NOT NULL, after_key TEXT NOT NULL, page_limit INTEGER NOT NULL)",
             "CREATE TABLE IF NOT EXISTS installation_hmac (id INTEGER PRIMARY KEY CHECK(id=1), credential_ref TEXT NOT NULL)",
             "CREATE TABLE IF NOT EXISTS profile_cursors (id TEXT PRIMARY KEY, after_id TEXT NOT NULL, page_limit INTEGER NOT NULL)",
             "CREATE TABLE IF NOT EXISTS profiles (id TEXT PRIMARY KEY, revision INTEGER NOT NULL, body TEXT NOT NULL)",
@@ -46,7 +49,7 @@ impl Store {
             sqlx::query("INSERT INTO profile_events(profile_id,sequence,body) VALUES(?,?,?)").bind(profile).bind(sequence).bind(event.to_string()).execute(&mut *tx).await?;
 
         }
-        sqlx::query("PRAGMA user_version=3").execute(&mut *tx).await?;tx.commit().await?;
+        sqlx::query("PRAGMA user_version=4").execute(&mut *tx).await?;tx.commit().await?;
         let store=Self{pool};store.preferences().await?;Ok(store)
     }
     pub async fn preferences(&self)->Result<Value,sqlx::Error>{

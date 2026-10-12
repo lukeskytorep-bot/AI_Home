@@ -1,0 +1,120 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> ai-home@0.0.1 test
+> vitest run --run tests/conversations-ui.test.tsx
+
+
+ RUN  v4.1.10 /workspace/scratch/8e3755d5c581/4b2_correction/work/AI_Home
+
+ ❯ tests/conversations-ui.test.tsx (10 tests | 9 failed) 86ms
+   × keeps unsaved drafts separate when changing conversations 20ms
+   × language change and refresh preserve dirty text 7ms
+   × save uses conversation scope and revision; send remains unavailable 6ms
+   × conflict updates revision and keeps local text for retry 5ms
+   × ambiguous failure reuses request ID and never reveals raw error 5ms
+   × profile switching hides foreign conversations and restores owned draft 5ms
+   × creates a conversation without a model or API key 4ms
+   × a delayed successful save preserves newer edits and marks them unsaved 4ms
+   × profile pages use the frozen P2 payload and load both pages 7ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 9 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/conversations-ui.test.tsx > keeps unsaved drafts separate when changing conversations
+TypeError: Cannot read properties of null (reading 'tagName')
+ ❯ change tests/conversations-ui.test.tsx:28:87
+
+ ❯ open tests/conversations-ui.test.tsx:30:85
+ ❯ tests/conversations-ui.test.tsx:32:74
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/9]⎯
+
+ FAIL  tests/conversations-ui.test.tsx > language change and refresh preserve dirty text
+TypeError: Cannot read properties of null (reading 'tagName')
+ ❯ change tests/conversations-ui.test.tsx:28:87
+
+ ❯ open tests/conversations-ui.test.tsx:30:85
+ ❯ tests/conversations-ui.test.tsx:33:64
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/9]⎯
+
+ FAIL  tests/conversations-ui.test.tsx > save uses conversation scope and revision; send remains unavailable
+TypeError: Cannot read properties of null (reading 'tagName')
+ ❯ change tests/conversations-ui.test.tsx:28:87
+
+ ❯ open tests/conversations-ui.test.tsx:30:85
+ ❯ tests/conversations-ui.test.tsx:34:84
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/9]⎯
+
+ FAIL  tests/conversations-ui.test.tsx > conflict updates revision and keeps local text for retry
+TypeError: Cannot read properties of null (reading 'tagName')
+ ❯ change tests/conversations-ui.test.tsx:28:87
+
+ ❯ open tests/conversations-ui.test.tsx:30:85
+ ❯ tests/conversations-ui.test.tsx:35:73
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/9]⎯
+
+ FAIL  tests/conversations-ui.test.tsx > ambiguous failure reuses request ID and never reveals raw error
+TypeError: Cannot read properties of null (reading 'tagName')
+ ❯ change tests/conversations-ui.test.tsx:28:87
+
+ ❯ open tests/conversations-ui.test.tsx:30:85
+ ❯ tests/conversations-ui.test.tsx:36:80
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/9]⎯
+
+ FAIL  tests/conversations-ui.test.tsx > profile switching hides foreign conversations and restores owned draft
+TypeError: Cannot read properties of null (reading 'tagName')
+ ❯ change tests/conversations-ui.test.tsx:28:87
+
+ ❯ open tests/conversations-ui.test.tsx:30:85
+ ❯ tests/conversations-ui.test.tsx:37:87
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/9]⎯
+
+ FAIL  tests/conversations-ui.test.tsx > creates a conversation without a model or API key
+TypeError: Cannot read properties of null (reading 'tagName')
+ ❯ change tests/conversations-ui.test.tsx:28:87
+
+ ❯ tests/conversations-ui.test.tsx:38:128
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/9]⎯
+
+ FAIL  tests/conversations-ui.test.tsx > a delayed successful save preserves newer edits and marks them unsaved
+TypeError: Cannot read properties of null (reading 'tagName')
+ ❯ change tests/conversations-ui.test.tsx:28:87
+
+ ❯ open tests/conversations-ui.test.tsx:30:85
+ ❯ tests/conversations-ui.test.tsx:40:87
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/9]⎯
+
+ FAIL  tests/conversations-ui.test.tsx > profile pages use the frozen P2 payload and load both pages
+AssertionError: expected [ { page: { limit: 100 } } ] to deeply equal [ { limit: 100 }, …(1) ]
+
+- Expected
++ Received
+
+  [
+    {
++     "page": {
+        "limit": 100,
+      },
+-   {
+-     "cursor": "page-2",
+-     "limit": 100,
+    },
+  ]
+
+ ❯ tests/conversations-ui.test.tsx:42:193
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/9]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  9 failed | 1 passed (10)
+   Start at  16:15:08
+   Duration  706ms (transform 107ms, setup 0ms, import 167ms, tests 86ms, environment 302ms)
+

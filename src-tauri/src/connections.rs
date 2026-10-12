@@ -13,9 +13,16 @@ use sha2::{Digest, Sha256};
 use sqlx::{Row, Sqlite, SqlitePool, Transaction};
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::Mutex;
+#[path = "conversations.rs"]
+mod conversation_storage;
 type Failure = &'static str;
 type Tx<'a> = Transaction<'a, Sqlite>;
 const COMMANDS: &[&str] = &[
+    "conversation.create",
+    "conversation.draft.set",
+    "conversation.get",
+    "conversation.list",
+    "conversation.messages.list",
     "profile.create",
     "profile.list",
     "profile.snapshot",
@@ -97,6 +104,8 @@ fn validate_record(table: &str, v: &Value) -> bool {
             "profiles" => "Profile",
             "connections" => "ProviderConnection",
             "routes" => "ModelRoute",
+            "conversations" => "Conversation",
+            "messages" => "Message",
             _ => "Operation",
         },
         v,
@@ -208,9 +217,12 @@ impl Connections {
             serde_json::from_str(include_str!("../../contracts/ipc.catalog.json")).unwrap();
         let extra: Value =
             serde_json::from_str(include_str!("../../contracts/connections.ipc.json")).unwrap();
+        let conversations: Value =
+            serde_json::from_str(include_str!("../../contracts/conversations.ipc.json")).unwrap();
         let contract = catalog["commands"]
             .get(command)
             .or_else(|| extra["commands"].get(command))
+            .or_else(|| conversations["commands"].get(command))
             .ok_or("UNKNOWN_COMMAND")?;
         if !schema::dto("CommandEnvelope", r)
             || !schema::valid(&r["payload"], &contract["payload"])
@@ -351,6 +363,10 @@ impl Connections {
                     return Err("POLICY_DENIED");
                 }
                 match command {
+                    c if c.starts_with("conversation.") => {
+                        conversation_storage::execute(&mut tx, c, profile, payload, expected)
+                            .await?
+                    }
                     "profile.snapshot" => {
                         let mut all = vec![];
                         for table in ["connections", "routes"] {

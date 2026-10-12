@@ -1,4 +1,17 @@
-# AI Home — aktualne bramki odbioru
+# Aktualny odbiór: 4B-2 krok 1
+
+- [x] Profile-scoped create/list/get i draft.set z CAS/idempotencją.
+- [x] UI EN/PL zachowuje dirty draft przy wyborze rozmowy/profilu, zmianie języka, konflikcie i spóźnionym save.
+- [x] Migration v3 → v4, restart, FK i rollback sprawdzone.
+- [x] 107/107 native headless z audytu (kod niezmieniony), 81/81 frontend, build, 19/19 granice, 193/193 P2 PASS.
+- [x] Korekta payloadu profile.list na wszystkich stronach; mock UI waliduje każde żądanie według kontraktu.
+- [ ] Nowe CI/ponowny audyt korekty tej części.
+- [ ] Wysyłanie do modelu i wyświetlanie trwałej historii wiadomości — 4B-2 krok 2.
+- [ ] Rzeczywisty OS vault/live API, Windows/Tauri/WebView — wcześniejsze odbiory nadal otwarte.
+
+Edward potwierdził zielone CI wcześniejszego kroku 4 po synchronizacji i poprawce deadline, bez identyfikacji platform/przebiegu. Poniższy materiał kroku 4 jest historyczny. 4B-2 ani całe 4B-1 nie otrzymują PASS CLOSED.
+
+# Historyczne bramki wcześniejszego przekazania
 
 Stan 12.10.2026: kandydat 4B-1 krok 4 po korekcie audytu do nowego CI/audytu. Poprzedni krok ma potwierdzenie zielonego CI Edwarda, bez numeru/platform. Całe 4B-1 pozostaje otwarte.
 
