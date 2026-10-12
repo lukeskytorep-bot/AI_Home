@@ -1,0 +1,12 @@
+{
+  "date": "2026-10-11",
+  "node": "v24.19.0",
+  "npm": "11.9.0",
+  "rustc": null,
+  "cargo": null,
+  "nativeTests": "NOT RUN",
+  "desktopBuild": "NOT RUN",
+  "ciWindowsLinux": "NOT RUN",
+  "realBrowserWebView": "NOT RUN \u2014 Playwright Chromium executable missing",
+  "jsdom": "26.1.0"
+}

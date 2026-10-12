@@ -1,0 +1,7 @@
+PASS original ZIP and external digest
+PASS renamed identical ZIP and original digest filename
+PASS changed ZIP bytes rejected by external digest
+PASS extra payload rejected by manifest
+PASS missing payload rejected by manifest
+PASS duplicate payload rejected by manifest
+RESULT: 6/6 handoff verifier checks PASS

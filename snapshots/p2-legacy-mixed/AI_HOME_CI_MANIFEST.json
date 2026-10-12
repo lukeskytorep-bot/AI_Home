@@ -1,0 +1,11 @@
+{
+  ".github/workflows/foundation.yml": "eee6b4157ddf8897fe8e44e25fd146d8ca558fbd8bd0df503ce9825b4e467021",
+  ".github/workflows/prepare-cargo-lock.yml": "b06df7a3daabdc72044f68f41f28e021646530ed40bbb09fba67df64ca6e199e",
+  "src-tauri/Cargo.toml": "ab9f17ee0dbe2bd8ffd5f900b716f0d51a1daa0beea843669af7d119b54d456b",
+  "README.md": "4e901c3d64022d09eb169aefd0b3bc2db17b9b2bd2219f91dfb28280e1dc55ba",
+  "docs/CI_PL.md": "a45a15b5070e2184a9ec86c2add8247e615cfb08eda79babd222723a65686eda",
+  "docs/ACCEPTANCE_PL.md": "538defc972a1a286319a7492761a0ebb4a821cbd072bad9ff65167651ac1dedd",
+  "docs/ARCHITECTURE_PL.md": "21f13ab81ac215633a1c80acbe5334bd32de54332ba6c9c088123ffe4a60482f",
+  "docs/AI_HOME_4B0_FUNDAMENT_RAPORT_PL.md": "544608b8c5a1b785f03237905cdbc81ae0656c6adfc591f0c3c85f4f13256106",
+  "docs/AI_HOME_4B_ETAPY_PRACY_v1.0_PL.md": "337d66d5c2871638e96ba247c238ae9a8651dbc9ab5ee159ef9ecadb485e4d1a"
+}

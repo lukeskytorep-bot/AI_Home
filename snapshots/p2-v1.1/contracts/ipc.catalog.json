@@ -1,0 +1,1056 @@
+{
+  "contractVersion": 1,
+  "commands": {
+    "app.preferences.get": {
+      "scope": "app",
+      "payload": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "result": {
+        "$ref": "#/$defs/AppPreferences"
+      },
+      "firstImplementationStage": "4B-0",
+      "mutates": false,
+      "requiresExpectedRevision": false,
+      "async": false
+    },
+    "app.preferences.set": {
+      "scope": "app",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "locale": {
+            "type": "string",
+            "minLength": 1
+          },
+          "themeId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "themeVariant": {
+            "type": "string",
+            "enum": [
+              "light",
+              "dark",
+              "system"
+            ]
+          }
+        },
+        "required": [
+          "locale",
+          "themeId",
+          "themeVariant"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "$ref": "#/$defs/AppPreferences"
+      },
+      "firstImplementationStage": "4B-0",
+      "mutates": true,
+      "requiresExpectedRevision": true,
+      "async": false
+    },
+    "app.pack.validate": {
+      "scope": "app",
+      "payload": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "locale"
+              },
+              "pack": {
+                "$ref": "#/$defs/LocalePack"
+              }
+            },
+            "required": [
+              "kind",
+              "pack"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "theme"
+              },
+              "pack": {
+                "$ref": "#/$defs/ThemePack"
+              }
+            },
+            "required": [
+              "kind",
+              "pack"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "valid": {
+            "const": true
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "required": [
+          "valid",
+          "warnings"
+        ],
+        "additionalProperties": false
+      },
+      "firstImplementationStage": "4B-0",
+      "mutates": false,
+      "requiresExpectedRevision": false,
+      "async": false
+    },
+    "profile.create": {
+      "scope": "app",
+      "payload": {
+        "$ref": "#/$defs/ProfileDraft"
+      },
+      "result": {
+        "$ref": "#/$defs/Profile"
+      },
+      "firstImplementationStage": "4B-2",
+      "mutates": true,
+      "requiresExpectedRevision": false,
+      "async": false
+    },
+    "profile.list": {
+      "scope": "app",
+      "payload": {
+        "$ref": "#/$defs/PageRequest"
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/Profile"
+            }
+          },
+          "nextCursor": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "additionalProperties": false
+      },
+      "firstImplementationStage": "4B-2",
+      "mutates": false,
+      "requiresExpectedRevision": false,
+      "async": false
+    },
+    "profile.snapshot": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "result": {
+        "$ref": "#/$defs/StateSnapshot"
+      },
+      "firstImplementationStage": "4B-2",
+      "mutates": false,
+      "requiresExpectedRevision": false,
+      "async": false
+    },
+    "profile.update": {
+      "scope": "profile",
+      "payload": {
+        "$ref": "#/$defs/ProfilePatch"
+      },
+      "result": {
+        "$ref": "#/$defs/Profile"
+      },
+      "firstImplementationStage": "4B-2",
+      "mutates": true,
+      "requiresExpectedRevision": true,
+      "async": false
+    },
+    "profile.archive": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "archived": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "archived"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "$ref": "#/$defs/Profile"
+      },
+      "firstImplementationStage": "4B-6",
+      "mutates": true,
+      "requiresExpectedRevision": true,
+      "async": false
+    },
+    "connection.create": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "connection": {
+            "$ref": "#/$defs/ConnectionDraft"
+          },
+          "credential": {
+            "$ref": "#/$defs/CredentialInput"
+          }
+        },
+        "required": [
+          "connection",
+          "credential"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "$ref": "#/$defs/ProviderConnection"
+      },
+      "firstImplementationStage": "4B-1",
+      "mutates": true,
+      "requiresExpectedRevision": false,
+      "async": false
+    },
+    "connection.update": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "connectionId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "connection": {
+            "$ref": "#/$defs/ConnectionDraft"
+          }
+        },
+        "required": [
+          "connectionId",
+          "connection"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "$ref": "#/$defs/ProviderConnection"
+      },
+      "firstImplementationStage": "4B-1",
+      "mutates": true,
+      "requiresExpectedRevision": true,
+      "async": false
+    },
+    "connection.credential.set": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "connectionId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "credential": {
+            "$ref": "#/$defs/CredentialInput"
+          }
+        },
+        "required": [
+          "connectionId",
+          "credential"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "$ref": "#/$defs/ProviderConnection"
+      },
+      "firstImplementationStage": "4B-1",
+      "mutates": true,
+      "requiresExpectedRevision": true,
+      "async": false
+    },
+    "connection.test": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "connectionId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "connectionId"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "$ref": "#/$defs/Accepted"
+      },
+      "firstImplementationStage": "4B-1",
+      "mutates": true,
+      "requiresExpectedRevision": true,
+      "async": true
+    },
+    "route.save": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "routeId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "route": {
+            "$ref": "#/$defs/RouteDraft"
+          }
+        },
+        "required": [
+          "route"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "$ref": "#/$defs/ModelRoute"
+      },
+      "firstImplementationStage": "4B-1",
+      "mutates": true,
+      "requiresExpectedRevision": true,
+      "async": false
+    },
+    "route.assign": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "primary",
+              "scribe"
+            ]
+          },
+          "routeId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "role",
+          "routeId"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "$ref": "#/$defs/Profile"
+      },
+      "firstImplementationStage": "4B-1",
+      "mutates": true,
+      "requiresExpectedRevision": true,
+      "async": false
+    },
+    "conversation.create": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "title",
+          "language"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "$ref": "#/$defs/Conversation"
+      },
+      "firstImplementationStage": "4B-2",
+      "mutates": true,
+      "requiresExpectedRevision": false,
+      "async": false
+    },
+    "conversation.draft.set": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "conversationId",
+          "text"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "$ref": "#/$defs/Conversation"
+      },
+      "firstImplementationStage": "4B-2",
+      "mutates": true,
+      "requiresExpectedRevision": true,
+      "async": false
+    },
+    "conversation.messages.list": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "page": {
+            "$ref": "#/$defs/PageRequest"
+          }
+        },
+        "required": [
+          "conversationId",
+          "page"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/Message"
+            }
+          },
+          "nextCursor": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "additionalProperties": false
+      },
+      "firstImplementationStage": "4B-2",
+      "mutates": false,
+      "requiresExpectedRevision": false,
+      "async": false
+    },
+    "chat.send": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1
+          },
+          "language": {
+            "type": "string",
+            "minLength": 1
+          },
+          "attachmentIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          }
+        },
+        "required": [
+          "conversationId",
+          "content",
+          "language",
+          "attachmentIds"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "$ref": "#/$defs/Accepted"
+      },
+      "firstImplementationStage": "4B-2",
+      "mutates": true,
+      "requiresExpectedRevision": true,
+      "async": true
+    },
+    "operation.get": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "operationId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "operationId"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "$ref": "#/$defs/Operation"
+      },
+      "firstImplementationStage": "4B-1",
+      "mutates": false,
+      "requiresExpectedRevision": false,
+      "async": false
+    },
+    "operation.cancel": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "operationId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "operationId"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "$ref": "#/$defs/Operation"
+      },
+      "firstImplementationStage": "4B-1",
+      "mutates": true,
+      "requiresExpectedRevision": false,
+      "async": false
+    },
+    "material.import": {
+      "scope": "profile",
+      "payload": {
+        "$ref": "#/$defs/ImportRequest"
+      },
+      "result": {
+        "$ref": "#/$defs/Accepted"
+      },
+      "firstImplementationStage": "4B-2A",
+      "mutates": true,
+      "requiresExpectedRevision": false,
+      "async": true
+    },
+    "material.get": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "materialId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "materialId"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "$ref": "#/$defs/ImportedMaterial"
+      },
+      "firstImplementationStage": "4B-2A",
+      "mutates": false,
+      "requiresExpectedRevision": false,
+      "async": false
+    },
+    "guidance.enabled.set": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "guidanceId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "enabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "guidanceId",
+          "enabled"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "$ref": "#/$defs/PersistentGuidance"
+      },
+      "firstImplementationStage": "4B-4",
+      "mutates": true,
+      "requiresExpectedRevision": true,
+      "async": false
+    },
+    "memory.update.request": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "recordId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "sourceRefs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/SourceRef"
+            }
+          }
+        },
+        "required": [
+          "recordId",
+          "sourceRefs"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "$ref": "#/$defs/Accepted"
+      },
+      "firstImplementationStage": "4B-3",
+      "mutates": true,
+      "requiresExpectedRevision": true,
+      "async": true
+    },
+    "memory.versions.list": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "recordId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "page": {
+            "$ref": "#/$defs/PageRequest"
+          }
+        },
+        "required": [
+          "recordId",
+          "page"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/MemoryVersion"
+            }
+          },
+          "nextCursor": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "additionalProperties": false
+      },
+      "firstImplementationStage": "4B-4",
+      "mutates": false,
+      "requiresExpectedRevision": false,
+      "async": false
+    },
+    "memory.outdated.set": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "recordId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "outdated": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "recordId",
+          "outdated"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "$ref": "#/$defs/MemoryRecord"
+      },
+      "firstImplementationStage": "4B-4",
+      "mutates": true,
+      "requiresExpectedRevision": true,
+      "async": false
+    },
+    "memory.restore": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "recordId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "versionId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "recordId",
+          "versionId"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "$ref": "#/$defs/Accepted"
+      },
+      "firstImplementationStage": "4B-4",
+      "mutates": true,
+      "requiresExpectedRevision": true,
+      "async": true
+    },
+    "activity.list": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "afterSequence": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "afterSequence",
+          "limit"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/Activity"
+            }
+          },
+          "lastSequence": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "items",
+          "lastSequence"
+        ],
+        "additionalProperties": false
+      },
+      "firstImplementationStage": "4B-2",
+      "mutates": false,
+      "requiresExpectedRevision": false,
+      "async": false
+    },
+    "context.preview": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "routeId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "conversationId",
+          "routeId"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "$ref": "#/$defs/ContextManifest"
+      },
+      "firstImplementationStage": "4B-5",
+      "mutates": false,
+      "requiresExpectedRevision": false,
+      "async": false
+    },
+    "connector.capabilities.get": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "bindingId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "bindingId"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "capabilities": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "protocolVersion": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "capabilities",
+          "protocolVersion"
+        ],
+        "additionalProperties": false
+      },
+      "firstImplementationStage": "4B-12",
+      "mutates": false,
+      "requiresExpectedRevision": false,
+      "async": false
+    }
+  },
+  "events": {
+    "operation.changed": {
+      "$ref": "#/$defs/Operation"
+    },
+    "activity.appended": {
+      "$ref": "#/$defs/Activity"
+    },
+    "message.created": {
+      "$ref": "#/$defs/Message"
+    },
+    "memory.changed": {
+      "$ref": "#/$defs/MemoryRecord"
+    },
+    "profile.changed": {
+      "$ref": "#/$defs/Profile"
+    },
+    "connection.changed": {
+      "$ref": "#/$defs/ProviderConnection"
+    },
+    "guidance.changed": {
+      "$ref": "#/$defs/PersistentGuidance"
+    },
+    "snapshot.required": {
+      "type": "object",
+      "properties": {
+        "lastAvailableSequence": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "lastAvailableSequence"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "internalPorts": {
+    "ProviderGateway": {
+      "input": [
+        "profileId",
+        "routeId",
+        "routeRevision",
+        "contextManifestId",
+        "operationId",
+        "outputSchemaId"
+      ],
+      "output": [
+        "normalizedResponse",
+        "usage",
+        "continuationEnvelope"
+      ],
+      "effects": "provider network only; no storage mutation"
+    },
+    "CommunityConnector": {
+      "operations": [
+        "capabilities",
+        "registerOrBind",
+        "readThread",
+        "readFeed",
+        "createThread",
+        "reply",
+        "recoverIdentity"
+      ],
+      "input": [
+        "profileId",
+        "bindingId",
+        "operationId",
+        "policyGrantId",
+        "idempotencyKey"
+      ],
+      "output": [
+        "remoteResult",
+        "cursor",
+        "epoch"
+      ],
+      "effects": "write requires Executive/Policy grant; wire fixtures frozen at 4B-12"
+    },
+    "ConsciousAdapter": {
+      "input": [
+        "profileId",
+        "engineState",
+        "observation"
+      ],
+      "output": [
+        "WakeCandidate",
+        "stateSnapshot"
+      ],
+      "effects": "no provider calls, tools, memory writes or external sends"
+    },
+    "MemoryStore": {
+      "input": [
+        "profileId",
+        "recordId",
+        "expectedRevision",
+        "expectedActiveVersion",
+        "validatedDecisionReceipt",
+        "policySnapshot"
+      ],
+      "output": [
+        "newImmutableVersion",
+        "newRecordRevision"
+      ],
+      "effects": "single transactional commit"
+    },
+    "MemoryRetriever": {
+      "input": [
+        "profileId",
+        "query",
+        "budget",
+        "excludedStates"
+      ],
+      "output": [
+        "sourceFragments",
+        "measurements",
+        "omissions"
+      ],
+      "effects": "read only; no policy changes"
+    },
+    "ToolGateway": {
+      "input": [
+        "profileId",
+        "operationId",
+        "toolId",
+        "policyGrantId",
+        "validatedArguments"
+      ],
+      "output": [
+        "toolResult",
+        "activity"
+      ],
+      "effects": "all external effects go through Executive/Policy"
+    }
+  },
+  "errors": [
+    "VALIDATION_ERROR",
+    "UNSUPPORTED_CONTRACT_VERSION",
+    "UNKNOWN_COMMAND",
+    "NOT_FOUND",
+    "PROFILE_SCOPE_MISMATCH",
+    "REVISION_CONFLICT",
+    "IDEMPOTENCY_CONFLICT",
+    "CONNECTION_UNVERIFIED",
+    "CREDENTIAL_UNAVAILABLE",
+    "STALE_CONNECTION_TEST",
+    "MODEL_CAPABILITY_UNKNOWN",
+    "VISION_UNSUPPORTED",
+    "IMPORT_BATCH_TOO_LARGE",
+    "IMPORT_TOO_LARGE",
+    "IMPORT_UNREADABLE",
+    "MEMORY_CAPACITY_EXCEEDED",
+    "MEMORY_PRIMARY_REJECTED",
+    "MEMORY_FORMAT_INVALID",
+    "CONTEXT_BUDGET_EXCEEDED",
+    "GUIDANCE_BUDGET_EXCEEDED",
+    "OUTPUT_BUDGET_INSUFFICIENT",
+    "COST_ESTIMATE_UNKNOWN",
+    "OPERATION_BUDGET_EXCEEDED",
+    "OPERATION_CANCELLED",
+    "OPERATION_INTERRUPTED",
+    "PROVIDER_ERROR",
+    "POLICY_DENIED",
+    "MODE_UNAVAILABLE",
+    "EVENT_GAP",
+    "PACK_INVALID",
+    "MIGRATION_FAILED",
+    "STORAGE_ERROR",
+    "CONNECTION_INVALID",
+    "PROVIDER_OUTPUT_INCOMPLETE",
+    "PROVIDER_AUTHENTICATION_FAILED",
+    "PROVIDER_TIMEOUT"
+  ]
+}

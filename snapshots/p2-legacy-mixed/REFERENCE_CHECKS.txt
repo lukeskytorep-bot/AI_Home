@@ -1,0 +1,120 @@
+PASS reference #/$defs/ConnectionDraft
+PASS reference #/$defs/MemoryRecord
+PASS reference #/$defs/Error
+PASS reference #/$defs/ThemePack
+PASS reference #/$defs/ContextBudgetPolicy
+PASS reference #/$defs/ImportRequest
+PASS reference #/$defs/ProfileDraft
+PASS reference #/$defs/LocalePack
+PASS reference #/$defs/RouteDraft
+PASS reference #/$defs/MemoryVersion
+PASS reference #/$defs/SourceRef
+PASS reference #/$defs/MemoryKind
+PASS reference #/$defs/Profile
+PASS reference #/$defs/StateSnapshot
+PASS reference #/$defs/Message
+PASS reference #/$defs/ImportedMaterial
+PASS reference #/$defs/MemoryCapacityPolicy
+PASS reference #/$defs/PersistentGuidance
+PASS reference #/$defs/Activity
+PASS reference #/$defs/Accepted
+PASS reference #/$defs/TokenMeasurement
+PASS reference #/$defs/PageRequest
+PASS reference #/$defs/AppPreferences
+PASS reference #/$defs/Operation
+PASS reference #/$defs/MemorySettings
+PASS reference #/$defs/CredentialInput
+PASS reference #/$defs/ProfilePatch
+PASS reference #/$defs/Author
+PASS reference #/$defs/ContextManifest
+PASS reference #/$defs/ProviderConnection
+PASS reference #/$defs/ModelRoute
+PASS reference #/$defs/Conversation
+PASS defaults EN
+PASS AppPreferences defaults
+PASS MemorySettings defaults
+PASS ContextBudgetPolicy defaults
+PASS bounded 299
+PASS bounded 300
+PASS bounded 500
+PASS bounded 800
+PASS bounded 1000
+PASS bounded 1000000
+PASS invalid capacity {'kind': 'bounded', 'tokens': 0}
+PASS invalid capacity {'kind': 'bounded', 'tokens': True}
+PASS invalid capacity {'kind': 'unlimited', 'tokens': 1000000}
+PASS invalid capacity {'kind': 'unlimited', 'secret': 'x'}
+PASS explicit unlimited
+PASS independent L4 default
+PASS owned endpoint DTO
+PASS reject unsafe/bad connection secret
+PASS reject unsafe/bad connection status
+PASS reject unsafe/bad connection status
+PASS route DTO
+PASS route own connection
+PASS route foreign connection
+PASS matching test attestation
+PASS stale revision
+PASS stale credentialRevision
+PASS primary accept
+PASS primary modify
+PASS primary reject
+PASS invalid primary decision
+PASS invalid primary decision
+PASS invalid primary decision
+PASS no UI agent decision command
+PASS catalog app.preferences.get
+PASS catalog app.preferences.set
+PASS catalog app.pack.validate
+PASS catalog profile.create
+PASS catalog profile.list
+PASS catalog profile.snapshot
+PASS catalog profile.update
+PASS catalog profile.archive
+PASS catalog connection.create
+PASS catalog connection.update
+PASS catalog connection.credential.set
+PASS catalog connection.test
+PASS catalog route.save
+PASS catalog route.assign
+PASS catalog conversation.create
+PASS catalog conversation.draft.set
+PASS catalog conversation.messages.list
+PASS catalog chat.send
+PASS catalog operation.get
+PASS catalog operation.cancel
+PASS catalog material.import
+PASS catalog material.get
+PASS catalog guidance.enabled.set
+PASS catalog memory.update.request
+PASS catalog memory.versions.list
+PASS catalog memory.outdated.set
+PASS catalog memory.restore
+PASS catalog activity.list
+PASS catalog context.preview
+PASS catalog connector.capabilities.get
+PASS credential input no extra fields
+PASS default output separate from unlimited
+PASS fixture new-profile
+PASS fixture human-import-ai-author
+PASS fixture source-provenance
+PASS fixture theme-pack
+PASS fixture locale-pack
+PASS fixture empty-memory
+PASS fixture error
+PASS fixture queued-operation
+PASS empty profile patch rejected
+PASS SQLite composite FK isolation
+PASS CAS first commit
+PASS CAS stale rejection
+PASS CAS latest preserved
+PASS candidate fits 299
+PASS candidate fits 300
+PASS modified candidate 301 rejected
+PASS unlimited not numeric sentinel
+PASS allowed capacity attempt 1
+PASS allowed capacity attempt 2
+PASS third attempt rejected
+PASS context sum fits
+PASS context sum overflow
+RESULT: 119/119 reference checks PASS; no Rust/Tauri, keyring, browser or live API tests.
