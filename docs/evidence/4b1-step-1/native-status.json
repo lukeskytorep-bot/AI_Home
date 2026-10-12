@@ -1,0 +1,18 @@
+{
+  "stage": "4B-1 first protocol step",
+  "newRustTests": 15,
+  "localRustTests": "NOT RUN — cargo/rustc unavailable",
+  "liveApiTests": "NOT RUN",
+  "networkImplemented": false,
+  "credentialStorageImplemented": false,
+  "newIpcCommands": 0,
+  "workflowChanged": false,
+  "dependencyLockChanged": false,
+  "frontendTests": 63,
+  "boundaryChecks": 17,
+  "dependencies": "reused installed AI Home dependencies with identical package-lock; fresh offline npm ci failed due missing cache xmlchars",
+  "baseArchive": "AI_Home-main (1).zip",
+  "baseArchiveSha256": "85b4d928e9e2131f1c9169531ab1bdd161664ece0cc7f61f30a0ea6fa7f9e3c4",
+  "postAuditCi": "REQUIRED — not run here",
+  "googleParserReplayRegression": "Added — NOT RUN locally"
+}

@@ -18,4 +18,12 @@ Zwykłe CI: frontend i Rust/SQLite/Tauri na Ubuntu, bez artefaktów do pobrania.
 
 `docs/evidence/manifest.sha256.json` i główny `SHA256SUMS.txt` identyfikują drzewa tego przekazania. Manifest obejmuje wszystkie pliki źródłowe i dowodowe poza sobą i SHA256SUMS; SHA256SUMS obejmuje także manifest, poza samym sobą. `python3 scripts/verify-source.py .` sprawdza kompletność i hashe; ten sam skrypt przyjmuje pełny ZIP. Nazwa pobranego ZIP-a jest dowolna. Po kolejnych zmianach manifest odświeżać przy następnym przekazaniu; nie przedstawiać dawnych hashy jako dowodów nowego stanu.
 
-Edward potwierdził udane CI po poprawce async. Brakuje identyfikatora przebiegu i zakresu platform, dlatego zapisujemy potwierdzenie użytkownika, nie niezależnie zweryfikowany PASS wszystkich systemów. Windows, wygenerowane uprawnienia i rzeczywisty WebView pozostają do odbioru. 4B-0 otwarty; 4B-1 nierozpoczęty. Szczegóły: docs/ACCEPTANCE_PL.md i docs/AI_HOME_4B0_FUNDAMENT_RAPORT_PL.md.
+Edward potwierdził udane CI po poprawce async. Brakuje identyfikatora przebiegu i zakresu platform, dlatego zapisujemy potwierdzenie użytkownika, nie niezależnie zweryfikowany PASS wszystkich systemów. Windows, wygenerowane uprawnienia i rzeczywisty WebView pozostają do odbioru. 4B-0 otwarty; 4B-1 rozpoczęty od przeniesienia biblioteki protokołów, bez zamknięcia całego etapu. Szczegóły: docs/ACCEPTANCE_PL.md i docs/AI_HOME_4B0_FUNDAMENT_RAPORT_PL.md.
+
+## Rozpoczęte 4B-1
+
+Pierwszy krok przenosi bibliotekę formatów żądań/odpowiedzi oraz retry z Harness. Nie wykonuje jeszcze HTTP ani nie przechowuje kluczy. `docs/AI_HOME_4B1_KROK_1_RAPORT_PL.md` opisuje zakres, testy i następny krok. Cargo.lock i codzienne CI pozostają bez zmian.
+
+## 4B-1 krok 1 — korekta audytowa
+
+Korekta na dokładnej bazie AI_Home-main (1).zip: zgodny pełny inwentarz, dołączony weryfikator i zachowany podpisany tekst Google. Dodano test parser → replay; 15 testów Rust czeka na wykonanie w istniejącym CI. Szczegóły i hash bazy: docs/AI_HOME_4B1_KROK_1_RAPORT_PL.md. Całe 4B-1 pozostaje otwarte.

@@ -1,0 +1,47 @@
+{
+  "sourceArchiveSha256": "534b7c96458895625fd969949a1dfe5ac12cbc6f9716b56474d1493f9c375f6e",
+  "files": [
+    {
+      "source": "src-tauri/src/providers/request_builders.rs",
+      "destination": "src-tauri/src/providers/request_builders.rs",
+      "sourceSha256": "7a546da46bb74e827ccc19af7ed741f3e6abb58afe0affec4e19e27350f45f91",
+      "destinationSha256": "6bb42d269cd7758f5612fb78d914741440d07eb223596519051da0b0aa5888e5",
+      "adaptation": "MIT notice; restrict provider enum/output-field match to P2 families"
+    },
+    {
+      "source": "src-tauri/src/providers/response_parsers.rs",
+      "destination": "src-tauri/src/providers/response_parsers.rs",
+      "sourceSha256": "aa398f4390ff1744e56bf345efa9f25b3565d8cb3ab6fd26e0244541d0507bc9",
+      "destinationSha256": "5776b95115fc2587f6c252db342cde4a24a46a8c3a4b9c7591d6e69922902e67",
+      "adaptation": "MIT notice; facade maps raw errors to safe enum; checked_add prevents usage overflow; preserve exact Google visible text with native continuation"
+    },
+    {
+      "source": "src-tauri/src/providers/reasoning.rs",
+      "destination": "src-tauri/src/providers/reasoning.rs",
+      "sourceSha256": "1e7db7523d31c70020832785549b281489f4ff532c043706da22905478e9147d",
+      "destinationSha256": "d383e3d97824ebf25400452064610de82d7e18bf3ba38e6ad1bc41f9a0d8f65d",
+      "adaptation": "MIT notice; generic logic unchanged"
+    },
+    {
+      "source": "src/providers/retry.ts",
+      "destination": "src/providers/retry.ts",
+      "sourceSha256": "78c1f186bffe83fd5791357dad72af33f99ac5c92fa4074cb235f9d3fe7d5157",
+      "destinationSha256": "78c1f186bffe83fd5791357dad72af33f99ac5c92fa4074cb235f9d3fe7d5157",
+      "adaptation": "byte-identical"
+    },
+    {
+      "source": "src/providers/providerError.ts",
+      "destination": "src/providers/providerError.ts",
+      "sourceSha256": "528b6acc7973c337c40f40d4b26e9d861485aee9171ab365d1898e770a9e8b83",
+      "destinationSha256": "528b6acc7973c337c40f40d4b26e9d861485aee9171ab365d1898e770a9e8b83",
+      "adaptation": "byte-identical"
+    },
+    {
+      "source": "src/providers/retry.test.ts",
+      "destination": "tests/providers/retry.test.ts",
+      "sourceSha256": "8597ed003decf794eeb8df4e08237d4540be4bbb604625f96ebaed5fcdc8dbf3",
+      "destinationSha256": "666163b54a22a30b091f8e93d2dc367903f99c84d82fae27245cc3d9d3ef4df0",
+      "adaptation": "test imports adapted to destination"
+    }
+  ]
+}
