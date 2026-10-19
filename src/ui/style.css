@@ -5,3 +5,5 @@
 .connection-setup{margin-top:24px}
 
 .conversations textarea{display:block;width:100%;box-sizing:border-box;resize:vertical;min-height:9rem;padding:.8rem;border:1px solid var(--border);border-radius:.7rem;background:var(--surface);color:inherit;font:inherit;margin:.5rem 0}.conversations button{margin:.4rem .5rem .4rem 0}
+
+.chat-panel{margin-top:1.5rem;padding-top:1rem;border-top:1px solid var(--border)}.chat-history{max-height:32rem;overflow:auto}.message{padding:1rem;border:1px solid var(--border);border-radius:.7rem;margin:1rem 0}.message.human{background:var(--background)}.message-text{white-space:pre-wrap;overflow-wrap:anywhere;margin-top:.4rem}.stop{background:#a31828;color:white;font-weight:700}

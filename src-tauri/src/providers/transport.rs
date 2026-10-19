@@ -179,10 +179,12 @@ impl CallBudget {
         self.recorder = Some(recorder);
         self
     }
+    pub(crate) fn deadline(&self) -> Instant { self.deadline }
+    pub(crate) async fn cancelled(&self) { self.cancellation.cancelled().await }
     pub fn physical_calls(&self) -> u8 {
         self.used.load(Ordering::SeqCst)
     }
-    pub(super) fn ensure_active(&self) -> Result<(), TransportError> {
+    pub(crate) fn ensure_active(&self) -> Result<(), TransportError> {
         if *self.cancellation.sender.borrow() {
             return Err(TransportError::Cancelled);
         }

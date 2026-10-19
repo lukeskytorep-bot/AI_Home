@@ -1,0 +1,189 @@
+{
+  "contractVersion": 1,
+  "commands": {
+    "chat.settings.get": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "routeId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "routeRevision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "modelId": {
+            "type": "string"
+          },
+          "contextTokens": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2000000
+          },
+          "source": {
+            "const": "user_declared"
+          },
+          "measurement": {
+            "const": "utf8_bytes_estimate"
+          },
+          "outputTokens": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "inputReserveTokens": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "routeId",
+          "routeRevision",
+          "modelId",
+          "contextTokens",
+          "source",
+          "measurement",
+          "outputTokens",
+          "inputReserveTokens"
+        ],
+        "additionalProperties": false
+      },
+      "mutates": false,
+      "requiresExpectedRevision": false,
+      "async": false
+    },
+    "chat.settings.set": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "routeId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "contextTokens": {
+            "type": "integer",
+            "minimum": 1024,
+            "maximum": 2000000
+          }
+        },
+        "required": [
+          "routeId",
+          "contextTokens"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "routeId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "routeRevision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "modelId": {
+            "type": "string"
+          },
+          "contextTokens": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2000000
+          },
+          "source": {
+            "const": "user_declared"
+          },
+          "measurement": {
+            "const": "utf8_bytes_estimate"
+          },
+          "outputTokens": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "inputReserveTokens": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "routeId",
+          "routeRevision",
+          "modelId",
+          "contextTokens",
+          "source",
+          "measurement",
+          "outputTokens",
+          "inputReserveTokens"
+        ],
+        "additionalProperties": false
+      },
+      "mutates": true,
+      "requiresExpectedRevision": true,
+      "async": false
+    },
+    "conversation.chat.latest": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "conversationId"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "found": {
+                "const": false
+              }
+            },
+            "required": [
+              "found"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "found": {
+                "const": true
+              },
+              "operation": {
+                "$ref": "#/$defs/Operation"
+              }
+            },
+            "required": [
+              "found",
+              "operation"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "mutates": false,
+      "requiresExpectedRevision": false,
+      "async": false
+    }
+  }
+}

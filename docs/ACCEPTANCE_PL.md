@@ -1,3 +1,28 @@
+# Korekta audytu 4B-2 krok 2 — 19.10.2026
+
+- [x] Accepted rozlicza szkic również po zmianie rozmowy i przy błędzie historii; nowszy tekst jest zachowany.
+- [x] Terminalny polling uzgadnia rewizję mimo opóźnionego IPC.
+- [x] Odrzucenie załączników używa istniejącego kodu P2 i podlega walidacji Error/ResultEnvelope.
+- [x] Cztery nowe regresje UI; logi korekty osobno od historycznych wyników.
+- [ ] Nowe CI i ponowny audyt korekty.
+- [ ] Live API, rzeczywisty vault, Windows/Tauri/WebView.
+
+4B-2 pozostaje otwarte. 4B-2A nie rozpoczęto. Poniżej historyczny odbiór przed korektą.
+
+# Aktualny odbiór: 4B-2 krok 2
+
+- [x] chat.send, trwały człowiek/operacja przed HTTP, atomowa odpowiedź i końcowy wynik.
+- [x] History ordering, izolacja, idempotencja, CAS, STOP i ochrona przed late response po zmianie konfiguracji.
+- [x] Jawna deklaracja kontekstu i metoda szacowana; brak cichego skracania historii; limit odpowiedzi/rezerwa widoczne.
+- [x] Prywatny replay związany ze ScopeStamp, bez hidden data w IPC.
+- [x] Migracja v4 → v5 i interrupted po restarcie bez wznowienia HTTP.
+- [x] 125/125 native headless, 89/89 frontend, build, 20/20 granice, 193/193 P2 PASS.
+- [ ] Nowe CI/audyt kroku 2.
+- [ ] Rzeczywisty OS vault/live API i Windows/Tauri/WebView — nadal osobny odbiór.
+- [ ] Odbiór wcześniejszej korekty kroku 1 nie został osobno potwierdzony w ostatniej wiadomości Edwarda.
+
+Edward potwierdził zielone CI 4B-1 i upoważnił kontynuację. Poniższe wpisy zachowują historyczne stany. 4B-2 nie jest PASS CLOSED.
+
 # Aktualny odbiór: 4B-2 krok 1
 
 - [x] Profile-scoped create/list/get i draft.set z CAS/idempotencją.

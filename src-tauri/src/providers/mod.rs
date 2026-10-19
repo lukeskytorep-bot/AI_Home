@@ -1,5 +1,6 @@
 //! Native provider protocols and bounded HTTP. No keyring or frontend IPC yet.
 use serde_json::Value;
+pub(crate) mod replay;
 mod adapters;
 mod request_builders;
 mod response_parsers;

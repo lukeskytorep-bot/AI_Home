@@ -1,0 +1,107 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> ai-home@0.0.1 test
+> vitest run --reporter=verbose
+
+
+ RUN  v4.1.10 /workspace/scratch/8e3755d5c581/audit_fix/work/AI_Home
+
+ ✓ tests/providers/retry.test.ts > provider retry policy > centralizes the complete standard HTTP retry status policy, including 524 and 529 4ms
+ ✓ tests/providers/retry.test.ts > provider retry policy > automatically retries only explicit not-yet-processed and throttling responses 1ms
+ ✓ tests/providers/retry.test.ts > provider retry policy > keeps the existing transient retry window open before the first semantic chunk 0ms
+ ✓ tests/providers/retry.test.ts > provider retry policy > never retries a stream that exceeded a local bounded-buffer guard 0ms
+ ✓ tests/providers/retry.test.ts > provider retry policy > never retries a streaming failure after the first semantic chunk 0ms
+ ✓ tests/providers/retry.test.ts > provider retry policy > limits ambiguous transport recovery to one retry 1ms
+ ✓ tests/providers/retry.test.ts > provider retry policy > retries transient gateway statuses according to the configured count 0ms
+ ✓ tests/providers/retry.test.ts > provider retry policy > does not retry safety, configuration, or credential failures 0ms
+ ✓ tests/providers/retry.test.ts > provider retry policy > does not retry permanent authentication and request errors 0ms
+ ✓ tests/providers/retry.test.ts > provider retry policy > uses bounded full-jitter exponential backoff 0ms
+ ✓ tests/contracts.test.ts > P2 compatibility > new-profile 3ms
+ ✓ tests/contracts.test.ts > P2 compatibility > human-import-ai-author 0ms
+ ✓ tests/contracts.test.ts > P2 compatibility > source-provenance 0ms
+ ✓ tests/contracts.test.ts > P2 compatibility > theme-pack 0ms
+ ✓ tests/contracts.test.ts > P2 compatibility > locale-pack 0ms
+ ✓ tests/contracts.test.ts > P2 compatibility > empty-memory 0ms
+ ✓ tests/contracts.test.ts > P2 compatibility > error 0ms
+ ✓ tests/contracts.test.ts > P2 compatibility > queued-operation 0ms
+ ✓ tests/contracts.test.ts > P2 compatibility > audit/success-chat 0ms
+ ✓ tests/contracts.test.ts > P2 compatibility > audit/success-memory_update 0ms
+ ✓ tests/contracts.test.ts > P2 compatibility > audit/success-import 0ms
+ ✓ tests/contracts.test.ts > P2 compatibility > audit/success-restore 0ms
+ ✓ tests/contracts.test.ts > P2 compatibility > audit/success-connection_test 0ms
+ ✓ tests/contracts.test.ts > P2 compatibility > audit/success-connector_action 0ms
+ ✓ tests/contracts.test.ts > P2 compatibility > audit/memory-no-change 0ms
+ ✓ tests/contracts.test.ts > P2 compatibility > audit/connection-failed 0ms
+ ✓ tests/contracts.test.ts > P2 compatibility > audit/connection-cancelled 0ms
+ ✓ tests/contracts.test.ts > P2 compatibility > audit/connection-interrupted 0ms
+ ✓ tests/contracts.test.ts > P2 compatibility > audit/vision-ready-no-ocr 0ms
+ ✓ tests/contracts.test.ts > P2 compatibility > audit/image-pending 0ms
+ ✓ tests/contracts.test.ts > P2 compatibility > audit/image-failed 0ms
+ ✓ tests/contracts.test.ts > P2 compatibility > audit/primary-measurement 0ms
+ ✓ tests/contracts.test.ts > P2 compatibility > audit/scribe-measurement-same-revision 0ms
+ ✓ tests/contracts.test.ts > P2 compatibility > audit/guidance-measurement 0ms
+ ✓ tests/contracts.test.ts > P2 compatibility > audit/version-measurement 0ms
+ ✓ tests/contracts.test.ts > P2 compatibility > audit/receipt-measurement 0ms
+ ✓ tests/contracts.test.ts > P2 compatibility > audit/attempt-measurement 0ms
+ ✓ tests/contracts.test.ts > P2 compatibility > rejects extra DTO fields 2ms
+ ✓ tests/contracts.test.ts > P2 compatibility > rejects empty route identity 0ms
+ ✓ tests/contracts.test.ts > P2 compatibility > does not require fake image OCR 0ms
+ ✓ tests/contracts.test.ts > declarative packs > accepts all shipped packs 2ms
+ ✓ tests/contracts.test.ts > declarative packs > ships complete EN/PL with English fallback 1ms
+ ✓ tests/contracts.test.ts > declarative packs > reports missing optional translations and refuses invented keys 3ms
+ ✓ tests/contracts.test.ts > declarative packs > rejects executable CSS in a theme 0ms
+ ✓ tests/contracts.test.ts > keeps text and controls readable in every shipped theme variant 1ms
+ ✓ tests/transport.test.ts > starts in English with an independent namespace 3ms
+ ✓ tests/transport.test.ts > persists preferences, replayable events and receipts across restart 4ms
+ ✓ tests/transport.test.ts > rejects a stale write without erasing newer data 1ms
+ ✓ tests/transport.test.ts > rejects reused request identity with a different payload 1ms
+ ✓ tests/transport.test.ts > handles opaque request ids including prototype property names 1ms
+ ✓ tests/transport.test.ts > rejects wrong version, invalid payload, unknown commands and app profile scope 1ms
+ ✓ tests/transport.test.ts > keeps corrupt storage for diagnosis and returns a safe error 0ms
+ ✓ tests/transport.test.ts > does not emit or report success when storage fails 1ms
+ ✓ tests/transport.test.ts > keeps a committed result when a subscriber fails 1ms
+ ✓ tests/transport.test.ts > reports a preview retention gap rather than silently skipping events 84ms
+ ✓ tests/connections-ui.test.tsx > browser preview has no profile IPC or secret field 34ms
+ ✓ tests/app.test.tsx > boots EN and displays explicit preview and future stages 73ms
+ ✓ tests/chat-ui.test.tsx > requires an explicit context declaration before enabling send 54ms
+ ✓ tests/chat-ui.test.tsx > sends the frozen P2 command with conversation CAS and no attachments 12ms
+ ✓ tests/chat-ui.test.tsx > reuses the same accepted-attempt identity after ambiguous transport failure 19ms
+ ✓ tests/conversations-ui.test.tsx > browser preview does not call native storage 30ms
+ ✓ tests/chat-ui.test.tsx > polls durable result and renders provider text without HTML execution 16ms
+ ✓ tests/chat-ui.test.tsx > STOP sends scoped cancellation and prevents another send while running 19ms
+ ✓ tests/chat-ui.test.tsx > restores the last operation on mount without resending a message 4ms
+ ✓ tests/chat-ui.test.tsx > does not send on empty input and shows Polish controls 3ms
+ ✓ tests/chat-ui.test.tsx > error does not clear the unsent attempt or expose raw provider output 5ms
+ ✓ tests/chat-ui.test.tsx > terminal polling reconciles the conversation revision after delayed history IPC 7ms
+ ✓ tests/connections-ui.test.tsx > lists profiles and keeps key only in the field, clearing it on profile change 66ms
+ ✓ tests/connections-ui.test.tsx > clears key on provider change and explains saved connection test 42ms
+ ✓ tests/connections-ui.test.tsx > sends secret in scoped native IPC and clears field after successful key write 35ms
+ ✓ tests/conversations-ui.test.tsx > keeps unsaved drafts separate when changing conversations 84ms
+ ✓ tests/conversations-ui.test.tsx > language change and refresh preserve dirty text 34ms
+ ✓ tests/conversations-ui.test.tsx > save uses conversation scope and revision; send remains unavailable 24ms
+ ✓ tests/app.test.tsx > changes PL, skin and variant without losing the draft, then saves 70ms
+ ✓ tests/app.test.tsx > shows a readable error instead of accepting broken storage 21ms
+ ✓ tests/app.test.tsx > offers labeled controls and a current navigation item 13ms
+ ✓ tests/connections-ui.test.tsx > reuses request ID after an ambiguous transport failure without showing raw error 34ms
+ ✓ tests/app.test.tsx > keeps the user draft after a revision conflict and allows explicit retry 40ms
+ ✓ tests/app.test.tsx > preserves PL when the visible Retry button resynchronizes after a conflict 36ms
+ ✓ tests/app.test.tsx > does not erase new edits when the saved revision event arrives late 30ms
+ ✓ tests/app.test.tsx > updates committed revisions while dirty and resumes clean synchronization after saving 24ms
+ ✓ tests/conversations-ui.test.tsx > conflict updates revision and keeps local text for retry 30ms
+ ✓ tests/conversations-ui.test.tsx > ambiguous failure reuses request ID and never reveals raw error 28ms
+ ✓ tests/conversations-ui.test.tsx > profile switching hides foreign conversations and restores owned draft 22ms
+ ✓ tests/conversations-ui.test.tsx > creates a conversation without a model or API key 15ms
+ ✓ tests/conversations-ui.test.tsx > a delayed successful save preserves newer edits and marks them unsaved 22ms
+ ✓ tests/conversations-ui.test.tsx > profile pages use the frozen P2 payload and load both pages 3ms
+ ✓ tests/conversations-ui.test.tsx > acknowledges Accepted after switching conversations without reviving the sent draft 24ms
+ ✓ tests/conversations-ui.test.tsx > clears an accepted draft even if history fails, including after manual refresh 15ms
+ ✓ tests/conversations-ui.test.tsx > Accepted keeps newer text typed while sending across a conversation switch 21ms
+ ✓ tests/connections-ui.test.tsx > uses the selected connection revision for a test and polls the durable operation 434ms
+ ✓ tests/connections-ui.test.tsx > shows Polish setup and independent Primary and Scribe choices 15ms
+ ✓ tests/connections-ui.test.tsx > language changes keep the same draft when the transport is unchanged 12ms
+
+ Test Files  7 passed (7)
+      Tests  93 passed (93)
+   Start at  10:09:29
+   Duration  1.66s (transform 1.54s, setup 0ms, import 2.13s, tests 1.60s, environment 3.07s)
+

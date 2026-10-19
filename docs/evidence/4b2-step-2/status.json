@@ -1,0 +1,30 @@
+{
+  "stage": "4B-2 step2",
+  "date": "2026-10-18",
+  "baseSourceSha256": "93ad8491d27e63c78bb5f45684de9d69698b9130ffe6a3e1bce34fe6e62ca8db",
+  "cumulativeBaseSha256": "0b7c424b3fa2b07aa221ecd80d922472f5c85ee2a816f11e53418bd8a703c2c4",
+  "userConfirmation": "4B-1 green; no run/platform IDs; separate step1 correction acceptance not supplied",
+  "rustTests": 125,
+  "rustSuites": {
+    "unitProviderVault": 68,
+    "chat": 15,
+    "connections": 24,
+    "conversations": 10,
+    "foundation": 8
+  },
+  "frontendTests": 89,
+  "boundaryChecks": 20,
+  "p2Checks": 193,
+  "databaseVersion": 5,
+  "contextSource": "user_declared",
+  "contextMeasurement": "utf8_bytes_estimate",
+  "outputDefaultTokens": 1024,
+  "liveApi": "NOT RUN \u2014 loopback only",
+  "realOsVault": "NOT RUN \u2014 injected store",
+  "windowsWebView": "NOT RUN",
+  "nextCi": "REQUIRED",
+  "nextAudit": "REQUIRED",
+  "4B2": "OPEN",
+  "dependenciesChanged": false,
+  "workflowChanged": false
+}

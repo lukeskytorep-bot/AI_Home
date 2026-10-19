@@ -1,0 +1,81 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> ai-home@0.0.1 test
+> vitest run tests/conversations-ui.test.tsx tests/chat-ui.test.tsx --reporter=verbose
+
+
+ RUN  v4.1.10 /workspace/scratch/8e3755d5c581/audit_fix/work/AI_Home
+
+ ✓ tests/chat-ui.test.tsx > requires an explicit context declaration before enabling send 51ms
+ ✓ tests/chat-ui.test.tsx > sends the frozen P2 command with conversation CAS and no attachments 20ms
+ ✓ tests/chat-ui.test.tsx > reuses the same accepted-attempt identity after ambiguous transport failure 16ms
+ ✓ tests/chat-ui.test.tsx > polls durable result and renders provider text without HTML execution 21ms
+ ✓ tests/chat-ui.test.tsx > STOP sends scoped cancellation and prevents another send while running 10ms
+ ✓ tests/chat-ui.test.tsx > restores the last operation on mount without resending a message 4ms
+ ✓ tests/chat-ui.test.tsx > does not send on empty input and shows Polish controls 8ms
+ ✓ tests/chat-ui.test.tsx > error does not clear the unsent attempt or expose raw provider output 7ms
+ × tests/chat-ui.test.tsx > terminal polling reconciles the conversation revision after delayed history IPC 29ms
+   → expected "vi.fn()" to be called with arguments: [ ObjectContaining {"revision": 3} ]
+
+Number of calls: 0
+
+ ✓ tests/conversations-ui.test.tsx > browser preview does not call native storage 43ms
+ ✓ tests/conversations-ui.test.tsx > keeps unsaved drafts separate when changing conversations 103ms
+ ✓ tests/conversations-ui.test.tsx > language change and refresh preserve dirty text 47ms
+ ✓ tests/conversations-ui.test.tsx > save uses conversation scope and revision; send remains unavailable 27ms
+ ✓ tests/conversations-ui.test.tsx > conflict updates revision and keeps local text for retry 29ms
+ ✓ tests/conversations-ui.test.tsx > ambiguous failure reuses request ID and never reveals raw error 58ms
+ ✓ tests/conversations-ui.test.tsx > profile switching hides foreign conversations and restores owned draft 47ms
+ ✓ tests/conversations-ui.test.tsx > creates a conversation without a model or API key 17ms
+ ✓ tests/conversations-ui.test.tsx > a delayed successful save preserves newer edits and marks them unsaved 24ms
+ ✓ tests/conversations-ui.test.tsx > profile pages use the frozen P2 payload and load both pages 3ms
+ × tests/conversations-ui.test.tsx > acknowledges Accepted after switching conversations without reviving the sent draft 186ms
+   → expected 'Sent once' to be '' // Object.is equality
+ × tests/conversations-ui.test.tsx > clears an accepted draft even if history fails, including after manual refresh 17ms
+   → expected 'Sent once' to be '' // Object.is equality
+ ✓ tests/conversations-ui.test.tsx > Accepted keeps newer text typed while sending across a conversation switch 25ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/chat-ui.test.tsx > terminal polling reconciles the conversation revision after delayed history IPC
+AssertionError: expected "vi.fn()" to be called with arguments: [ ObjectContaining {"revision": 3} ]
+
+Number of calls: 0
+
+ ❯ tests/chat-ui.test.tsx:34:374
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  tests/conversations-ui.test.tsx > acknowledges Accepted after switching conversations without reviving the sent draft
+AssertionError: expected 'Sent once' to be '' // Object.is equality
+
+- Expected
++ Received
+
++ Sent once
+
+ ❯ tests/conversations-ui.test.tsx:50:465
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  tests/conversations-ui.test.tsx > clears an accepted draft even if history fails, including after manual refresh
+AssertionError: expected 'Sent once' to be '' // Object.is equality
+
+- Expected
++ Received
+
++ Sent once
+
+ ❯ tests/conversations-ui.test.tsx:51:244
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  3 failed | 19 passed (22)
+   Start at  10:10:17
+   Duration  2.36s (transform 1.18s, setup 0ms, import 1.39s, tests 796ms, environment 1.07s)
+

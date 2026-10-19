@@ -12,8 +12,8 @@
       "source": "src-tauri/src/providers/transport.rs",
       "sourceSha256": "f4d53da74211d9badc9b42e059c61a27b1dc047eb84fba8d7725d8042096c616",
       "destination": "src-tauri/src/providers/transport.rs",
-      "destinationSha256": "69e0f2b40aaea738cf35b756086c1e75c9061376b55ada3999c1e8993f2d7002",
-      "adaptation": "Client/timeouts and Retry-After policy adapted; bounded bodies, atomic shared call budget, no redirects/proxies/implicit retry, sticky per-operation cancellation instead of global registry; safe enum instead of raw strings.; native CallRecorder interface persists reservations before dispatch in step 3 without a SQLite dependency in providers Step 4 exposes bounded execute_chat and cancellable budget-aware retry waits; physical chat stays module-private."
+      "destinationSha256": "d877fe293c9a6c566325d0bc452f40c3ab0ab81baf1b2210a1a45e44dfa39e02",
+      "adaptation": "Client/timeouts and Retry-After policy adapted; bounded bodies, atomic shared call budget, no redirects/proxies/implicit retry, sticky per-operation cancellation instead of global registry; safe enum instead of raw strings.; native CallRecorder interface persists reservations before dispatch in step 3 without a SQLite dependency in providers Step 4 exposes bounded execute_chat and cancellable budget-aware retry waits; physical chat stays module-private. 4B-2 step2 exposes native-only deadline/cancellation inspection to bound vault readback and final commit; retry/HTTP policy stays unchanged."
     },
     {
       "source": "src-tauri/src/providers.rs",

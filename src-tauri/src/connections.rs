@@ -13,11 +13,17 @@ use sha2::{Digest, Sha256};
 use sqlx::{Row, Sqlite, SqlitePool, Transaction};
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::Mutex;
+#[path = "chat.rs"]
+mod chat_runtime;
 #[path = "conversations.rs"]
 mod conversation_storage;
 type Failure = &'static str;
 type Tx<'a> = Transaction<'a, Sqlite>;
 const COMMANDS: &[&str] = &[
+    "chat.send",
+    "chat.settings.get",
+    "chat.settings.set",
+    "conversation.chat.latest",
     "conversation.create",
     "conversation.draft.set",
     "conversation.get",
@@ -219,10 +225,13 @@ impl Connections {
             serde_json::from_str(include_str!("../../contracts/connections.ipc.json")).unwrap();
         let conversations: Value =
             serde_json::from_str(include_str!("../../contracts/conversations.ipc.json")).unwrap();
+        let chat: Value =
+            serde_json::from_str(include_str!("../../contracts/chat.ipc.json")).unwrap();
         let contract = catalog["commands"]
             .get(command)
             .or_else(|| extra["commands"].get(command))
             .or_else(|| conversations["commands"].get(command))
+            .or_else(|| chat["commands"].get(command))
             .ok_or("UNKNOWN_COMMAND")?;
         if !schema::dto("CommandEnvelope", r)
             || !schema::valid(&r["payload"], &contract["payload"])
@@ -304,6 +313,7 @@ impl Connections {
             }
         }
         let mut launch = None;
+        let mut chat_launch = None;
         let mut cancel_after = Vec::new();
         let result = match command {
             "profile.create" => {
@@ -363,6 +373,18 @@ impl Connections {
                     return Err("POLICY_DENIED");
                 }
                 match command {
+                    "chat.settings.get" | "chat.settings.set" => {
+                        chat_runtime::settings(&mut tx, command, profile, payload, expected).await?
+                    }
+                    "conversation.chat.latest" => {
+                        chat_runtime::latest(&mut tx, profile, payload).await?
+                    }
+                    "chat.send" => {
+                        let (job, op) =
+                            chat_runtime::accept(&mut tx, &p, payload, expected).await?;
+                        chat_launch = Some((job, op.clone()));
+                        json!({"operation":op})
+                    }
                     c if c.starts_with("conversation.") => {
                         conversation_storage::execute(&mut tx, c, profile, payload, expected)
                             .await?
@@ -496,7 +518,7 @@ impl Connections {
                             payload["connectionId"].as_str().unwrap(),
                         )
                         .await?;
-                        let row=sqlx::query("SELECT id FROM operations WHERE profile_id=? AND json_extract(body,'$.recordRefs[0].recordId')=? ORDER BY rowid DESC LIMIT 1").bind(profile).bind(c["id"].as_str().unwrap()).fetch_optional(&mut *tx).await.map_err(|_|"STORAGE_ERROR")?;
+                        let row=sqlx::query("SELECT id FROM operations WHERE profile_id=? AND json_extract(body,'$.recordRefs[0].recordId')=? AND json_extract(body,'$.kind')='connection_test' ORDER BY rowid DESC LIMIT 1").bind(profile).bind(c["id"].as_str().unwrap()).fetch_optional(&mut *tx).await.map_err(|_|"STORAGE_ERROR")?;
                         match row {
                             Some(row) => {
                                 json!({"found":true,"operation":get(&mut tx,"operations",profile,row.get("id")).await?})
@@ -728,6 +750,34 @@ impl Connections {
                 service.active.lock().await.remove(&opid);
             });
         }
+        if let Some((job, op)) = chat_launch {
+            let cancel = Cancellation::default();
+            let budget = CallBudget::new(
+                std::time::Duration::from_millis(op["limits"]["maxElapsedMs"].as_u64().unwrap()),
+                op["limits"]["maxPhysicalCalls"].as_u64().unwrap() as u8,
+                cancel.clone(),
+            )
+            .map_err(|_| "VALIDATION_ERROR")?
+            .with_recorder(Arc::new(RecordAttempt {
+                pool: self.pool.clone(),
+                gate: self.gate.clone(),
+                profile: op["profileId"].as_str().unwrap().into(),
+                operation: op["id"].as_str().unwrap().into(),
+            }));
+            self.active
+                .lock()
+                .await
+                .insert(op["id"].as_str().unwrap().into(), (cancel, budget.clone()));
+            let service = self.clone();
+            tokio::spawn(async move {
+                let opid = op["id"].as_str().unwrap().to_string();
+                let profile = op["profileId"].as_str().unwrap().to_string();
+                if chat_runtime::run(&service, job, op, budget).await.is_err() {
+                    let _ = service.fail_operation(&profile, &opid).await;
+                }
+                service.active.lock().await.remove(&opid);
+            });
+        }
         Ok(response)
     }
     async fn secret_fingerprint(
@@ -867,7 +917,7 @@ fn terminal(op: &mut Value, status: &str, code: Failure) -> Result<(), Failure> 
     bump(op)?;
     op["status"] = json!(status);
     op["finishedAt"] = json!(now());
-    op["error"] = json!({"code":code,"messageKey":format!("error.{}",code.to_lowercase()),"retryable":code!="OPERATION_CANCELLED","operationId":op["id"]});
+    op["error"] = json!({"code":code,"messageKey":format!("error.{}",code.to_lowercase()),"retryable":matches!(code,"PROVIDER_TIMEOUT"|"PROVIDER_ERROR"|"STORAGE_ERROR"|"REVISION_CONFLICT"|"OPERATION_INTERRUPTED"),"operationId":op["id"]});
     Ok(())
 }
 fn transport_code(e: TransportError) -> Failure {
@@ -954,6 +1004,17 @@ impl providers::transport::CallRecorder for RecordAttempt {
                 .map_err(|_| TransportError::Storage)?;
             if op["status"] != "running" {
                 return Err(TransportError::Cancelled);
+            }
+            if op["kind"] == "chat" {
+                chat_runtime::ensure_current(&mut tx, &op)
+                    .await
+                    .map_err(|code| {
+                        if code == "STORAGE_ERROR" {
+                            TransportError::Storage
+                        } else {
+                            TransportError::Cancelled
+                        }
+                    })?;
             }
             if count == 0 || u64::from(count) > op["limits"]["maxPhysicalCalls"].as_u64().unwrap() {
                 return Err(TransportError::CallLimit);

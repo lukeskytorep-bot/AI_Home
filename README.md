@@ -1,6 +1,6 @@
 # AI Home — profiles, conversations and saved drafts
 
-Stan 12.10.2026: kandydat 4B-2 krok 1 po korekcie audytu. Desktop dodaje rozmowy osobne dla każdego profilu i trwały zapis szkiców. Konfigurator, połączenia, klucze i Primary/Scribe pozostają dostępne. Przycisk Wyślij jest jeszcze wyłączony; odpowiedzi modelu należą do następnej części. AI Home nie wymaga forum.
+Stan 19.10.2026: korekta audytu 4B-2 krok 2, przed ponownym CI/audytem. Profile i rozmowy mają trwałe szkice, wykonywalny czat tekstowy z modelem Primary, historię, status operacji i STOP. Po wybraniu Primary/zweryfikowanego połączenia użytkownik musi zadeklarować okno kontekstu modelu. Pamięć, załączniki i streaming nie są jeszcze dostępne. AI Home nie wymaga forum.
 
 EN jest domyślny przy pierwszym uruchomieniu; zapisany język jest zachowany. Skórki Orbital/Aurora obsługują light/dark/system. Browser preview nie zapisuje kluczy i nie wykonuje połączeń dostawców. Conscious pozostaje niedostępny.
 
@@ -16,13 +16,15 @@ Cargo.lock jest dołączony i należy go commitować. Zwykłe CI sprawdza fronte
 
 Linuxowy vault wymaga dostępnego i odblokowanego Secret Service; Windows używa Credential Manager, macOS Keychain. Błąd magazynu nie uruchamia fallbacku do pliku ani localStorage. Test połączenia pobiera modele; nie potwierdza jeszcze działania konkretnego modelu w czacie.
 
-Natywny wykonawca ma ograniczony retry/recovery na jednym budżecie (4 wywołania/180 s). Test połączenia używa go przy pobieraniu modeli. Biblioteka czatu odrzuca odpowiedź uciętą limitem lub refusal; nie dopisuje kontynuacji. Organizacja rozmów i zapis szkiców są dostępne; wysyłanie do modelu jest kolejną częścią.
+Natywny wykonawca ma ograniczony retry/recovery na jednym budżecie (4 wywołania/180 s). Test połączenia używa go przy pobieraniu modeli. Biblioteka czatu odrzuca odpowiedź uciętą limitem lub refusal; nie dopisuje kontynuacji. Organizacja rozmów i zapis szkiców są dostępne; wysyłanie do modelu jest dostępne w kroku 2.
 
 ## Aktualne dowody
 
-Rust Linux 107/107 potwierdzony dla wcześniejszej paczki przez audytora; kod native niezmieniony w korekcie. Ponownie lokalnie: 81/81 frontend, TypeScript/build, 19/19 granice i P2 193/193 PASS. Rzeczywisty OS vault, płatne API, Windows/Tauri/WebView i renderowanie Chromium pozostają niewykonane lokalnie. Wynik 4B-2 kroku 1 wymaga nowego CI oraz audytu. Całe 4B-1 i otwarte bramki Windows/WebView 4B-0 pozostają otwarte.
+Rust Linux 125/125 PASS lokalnie bez desktop feature. Frontend: 93/93 frontend, TypeScript/build, 20/20 granice i P2 193/193 PASS. Rzeczywisty OS vault, płatne API, Windows/Tauri/WebView i renderowanie Chromium pozostają niewykonane lokalnie. Wynik 4B-2 kroku 2 wymaga nowego CI oraz audytu. Całe 4B-1 i otwarte bramki Windows/WebView 4B-0 pozostają otwarte.
 
-Raport: `docs/AI_HOME_4B2_KROK_1_RAPORT_PL.md`; plan: `docs/AI_HOME_4B_ETAPY_PRACY_v1.0_PL.md`; bramki: `docs/ACCEPTANCE_PL.md`. Dawne raporty 4B-1 kroków 1–4 i logi w `docs/evidence` zachowują stan swoich historycznych przekazań. Edward potwierdził zielone CI poprzednich kroków; nie przekazał identyfikatorów przebiegów ani zakresu platform.
+Raport: `docs/AI_HOME_4B2_KROK_2_RAPORT_PL.md`; plan: `docs/AI_HOME_4B_ETAPY_PRACY_v1.0_PL.md`; bramki: `docs/ACCEPTANCE_PL.md`. Dawne raporty 4B-1 kroków 1–4 i logi w `docs/evidence` zachowują stan swoich historycznych przekazań. Edward potwierdził zielone CI poprzednich kroków; nie przekazał identyfikatorów przebiegów ani zakresu platform.
+
+Nowa baza v4 → v5 dodaje trwałe operacje czatu i prywatny replay. contracts/chat.ipc.json dodaje jawne ustawienia kontekstu i odczyt ostatniego chat. Pomiar kontekstu jest szacowany, limit zadeklarowany przez użytkownika. Cała historia jest uwzględniana albo żądanie odrzucone; nic nie jest cicho skracane. Efektywne wyjście to minimum limitu trasy i profilu (domyślnie 1024), widoczne w panelu. Restart nie ponawia płatnych wywołań.
 
 ## Kontrakty i inwentarz
 
@@ -31,3 +33,5 @@ P2 i foundation zachowano bajtowo. contracts/conversations.ipc.json dodaje tylko
 `snapshots/p2-v1.1` jest pełnym zamrożonym przekazaniem P2 1.1. `python3 check_contracts.py` wykonuje jego 193 kontrole; 119 jest wynikiem historycznego P2, a 145 wynikało z wcześniejszego checkera na późniejszych kontraktach. Nie są to wyniki jednego zestawu. `snapshots/p2-legacy-mixed` jest historią.
 
 `docs/evidence/manifest.sha256.json` i `SHA256SUMS.txt` opisują komplet aktualnego przekazania. W Windows: `py -3 scripts/verify-source.py .`; Linux: `python3 scripts/verify-source.py .`. Weryfikator przyjmuje także pełny SOURCE.zip pod dowolną nazwą. Po zmianach odnowić manifest przy kolejnym przekazaniu; dawne hashe nie są dowodem nowego stanu.
+
+Korekta audytu: Accepted rozlicza szkic także po przełączeniu rozmowy lub błędzie historii; polling zachowuje aktualną rewizję. Załączniki pozostają niedostępne i zwracają kontraktowy VALIDATION_ERROR. Aktualne logi: `docs/evidence/4b2-step-2-correction/`.
