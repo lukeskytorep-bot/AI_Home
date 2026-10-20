@@ -1,0 +1,246 @@
+warning: multiple fields are never read
+  --> src/providers/mod.rs:49:20
+   |
+48 | pub struct ProviderChatResponse {
+   |            -------------------- fields in this struct
+49 |     content:String,reasoning_content:Option<String>,reasoning_details:Option<Vec<Value>>,reasoning_source:Option<String>,
+   |                    ^^^^^^^^^^^^^^^^^                                                     ^^^^^^^^^^^^^^^^
+50 |     finish_reason:Option<String>,actual_model:Option<String>,usage:ProviderUsage,provider_request_id:Option<String>,actual_provider:Op...
+   |                                  ^^^^^^^^^^^^                                    ^^^^^^^^^^^^^^^^^^^                ^^^^^^^^^^^^^^^
+51 |     continuation_diagnostics:Option<()>,debug_payload:Option<()>,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^            ^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `enable_openrouter_streaming` is never used
+   --> src/providers/request_builders.rs:200:15
+    |
+200 | pub(super) fn enable_openrouter_streaming(body: &mut Value) -> Result<(), String> {
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+   Compiling ai-home v0.0.1 (/workspace/scratch/8e3755d5c581/vision_fix/work/AI_Home/src-tauri)
+warning: `ai-home` (lib) generated 2 warnings
+warning: unused import: `AtomicUsize`
+  --> tests/chat.rs:12:30
+   |
+12 |         atomic::{AtomicBool, AtomicUsize, Ordering},
+   |                              ^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `sqlx::Row`
+ --> tests/chat.rs:8:5
+  |
+8 | use sqlx::Row;
+  |     ^^^^^^^^^
+
+warning: `ai-home` (test "chat") generated 2 warnings (run `cargo fix --test "chat" -p ai-home` to apply 1 suggestion)
+warning: `ai-home` (lib test) generated 2 warnings (2 duplicates)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 21.87s
+     Running unittests src/lib.rs (/workspace/scratch/8e3755d5c581/step2/work/AI_Home/src-tauri/target/debug/deps/ai_home-90524c3444291721)
+
+running 79 tests
+test connections::chat_runtime::document_context::tests::google_gif_is_blocked_without_silent_conversion ... ok
+test connections::chat_runtime::document_context::tests::anthropic_known_dimensions_and_encoded_byte_limits_are_checked ... ok
+test imports::image::tests::rejects_damage_disguised_files_and_pixel_bombs ... ok
+test imports::image::tests::encoded_byte_limit_is_enforced ... ok
+test imports::image::tests::rejects_animated_gif_and_apng_instead_of_silently_using_first_frame ... ok
+test imports::image::tests::static_formats_have_verified_signature_dimensions_and_decode ... ok
+test imports::parser::tests::invalid_utf8_and_mislabeled_files_are_rejected ... ok
+test providers::discovery::tests::google_filters_embedding_and_preserves_cursor ... ok
+test providers::discovery::tests::model_formats_and_pagination ... ok
+test imports::parser::tests::docx_dtd_is_rejected_and_is_not_resolved ... ok
+test providers::discovery::tests::invalid_lists_do_not_become_empty_success ... ok
+test providers::executor::tests::categories_match_harness_and_never_retry_authority_limits ... ok
+test providers::executor::tests::anthropic_tool_block_requires_handling_even_with_end_turn ... ok
+test providers::executor::tests::completion_metadata_is_classified_without_private_strings ... ok
+test providers::executor::tests::google_text_with_function_call_is_incomplete_without_retry ... ok
+test providers::executor::tests::malformed_google_function_fields_are_not_empty_recovery ... ok
+test providers::executor::tests::invalid_credentials_are_rejected_without_attempt ... ok
+test providers::executor::tests::optional_openai_tool_fields_preserve_text_and_reject_wrong_types ... ok
+test providers::executor::tests::cancelled_backoff_makes_no_second_call ... ok
+test providers::executor::tests::paginated_discovery_and_retry_keep_one_total_budget ... ok
+test imports::parser::tests::excessive_pdf_page_count_is_rejected_before_extraction ... ok
+test providers::executor::tests::malformed_tool_calls_is_invalid_without_recovery_post ... ok
+test providers::executor::tests::retry_after_and_jitter_are_bounded ... ok
+test providers::executor::tests::runner_exits_after_ok_without_outer_retries ... ok
+test providers::executor::tests::a_second_transient_failure_stops ... ok
+test imports::parser::tests::empty_and_overlarge_text_are_rejected_without_truncation ... ok
+test providers::executor::tests::retry_after_cannot_outlive_the_operation_deadline ... ok
+test providers::executor::tests::smaller_total_budget_cannot_be_reset_by_recovery ... ok
+test providers::replay::tests::google_signed_visible_parts_survive_private_round_trip ... ok
+test providers::replay::tests::malformed_private_google_state_fails_closed ... ok
+test providers::replay::tests::replay_stamp_changes_with_route_key_model_and_endpoint ... ok
+test providers::tests::anthropic_signed_turn_keeps_exact_visible_text ... ok
+test providers::tests::anthropic_system_and_required_output_limit ... ok
+test providers::tests::custom_endpoint_rejects_credentials_query_fragment_and_remote_http ... ok
+test providers::tests::fixed_provider_endpoints ... ok
+test providers::tests::google_replay_preserves_full_part_sequence_and_rejects_changed_visible_content ... ok
+test providers::executor::tests::transient_http_retries_once_with_same_body_and_auth ... ok
+test providers::executor::tests::successful_semantic_response_is_never_replayed ... ok
+test providers::tests::google_system_and_roles ... ok
+test providers::tests::google_signed_literal_text_survives_parser_to_replay ... ok
+test providers::tests::image_payload_shapes_are_preserved ... ok
+test providers::tests::invalid_inputs_and_google_path_injection_rejected ... ok
+test providers::tests::openai_compatible_output_fields ... ok
+test providers::tests::openrouter_replay_does_not_cross_profile_model_route_or_credential_revision ... ok
+test providers::tests::response_errors_are_safe_and_empty_output_is_not_success ... ok
+test providers::tests::openrouter_preserves_reasoning_and_provider_routing ... ok
+test providers::tests::response_visible_text_excludes_reasoning ... ok
+test providers::tests::usage_fields_are_preserved ... ok
+test providers::tests::image_payloads_use_provider_specific_parts_and_reject_foreign_media ... ok
+test providers::executor::tests::refusals_limits_invalid_schema_and_auth_never_replay ... ok
+test providers::transport::tests::cancellation_during_request_drops_http_future ... ok
+test providers::transport::tests::credential_rejects_header_injection_and_missing_binding ... ok
+test providers::transport::tests::credential_scope_is_independent_of_primary_scribe_route ... ok
+test providers::transport::tests::credential_mismatch_and_protocol_failure_never_dispatch ... ok
+test providers::transport::tests::cancel_after_partial_response_body ... ok
+test providers::transport::tests::chunked_body_limit_is_checked_without_content_length ... ok
+test providers::transport::tests::discovery_is_paginated_with_shared_budget ... ok
+test providers::transport::tests::declared_body_limit_is_checked ... ok
+test providers::transport::tests::http_errors_are_safe_and_not_retried ... ok
+test providers::transport::tests::discovery_rejects_repeated_models_and_missing_page_budget ... ok
+test providers::executor::tests::explicit_empty_response_can_recover ... ok
+test providers::transport::tests::fourth_incomplete_page_is_explicit_failure ... ok
+test providers::transport::tests::redirect_is_rejected_without_followup ... ok
+test providers::transport::tests::retry_after_seconds_dates_and_invalid ... ok
+test providers::transport::tests::provider_auth_headers_and_no_secret_query ... ok
+test providers::executor::tests::invalid_json_has_only_one_recovery ... ok
+test providers::transport::tests::shared_call_budget_is_atomic_under_concurrency ... ok
+test providers::transport::tests::precancellation_is_sticky_and_does_not_dispatch ... ok
+test providers::transport::tests::invalid_json_and_empty_semantic_output_fail ... ok
+test providers::transport::tests::successful_chat_uses_native_http_and_parser ... ok
+test providers::transport::tests::url_canonicalization_and_rejections ... ok
+test vault::hmac_tests::rfc4231_vector ... ok
+test providers::transport::tests::shared_budget_limits_sequential_physical_calls ... ok
+test providers::transport::tests::slow_response_body_uses_total_deadline ... ok
+test providers::executor::tests::truncated_body_has_single_recovery ... ok
+test providers::transport::tests::truncated_body_is_network_failure ... ok
+test providers::executor::tests::recovery_and_standard_retry_share_four_call_budget ... ok
+test providers::transport::tests::oversized_encoded_request_is_rejected_before_dispatch ... ok
+test providers::transport::tests::total_deadline_includes_wait_for_headers ... ok
+
+test result: ok. 79 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.59s
+
+     Running tests/chat.rs (/workspace/scratch/8e3755d5c581/step2/work/AI_Home/src-tauri/target/debug/deps/chat-d76a7e5b8aa63061)
+
+running 31 tests
+test actual_v4_database_migrates_without_changing_profile_or_preferences ... ok
+test context_overflow_never_trims_or_records_a_user_message ... ok
+test another_send_while_running_is_rejected_without_duplicate_dispatch ... ok
+test cancellation_keeps_user_and_never_commits_late_assistant ... ok
+test cancelled_document_send_retains_bound_human_sources_and_single_post ... ok
+test corrupted_document_snapshot_fails_closed_without_more_http ... ok
+test document_context_overflow_and_receipt_failure_are_atomic ... ok
+test document_retry_reuses_exact_wire_and_cannot_bind_again ... ok
+test document_scope_duplicates_and_not_ready_never_send_or_bind ... ok
+test draft_saved_during_generation_survives_answer_commit ... ok
+test image_policy_cas_scope_and_context_edit_invalidation ... ok
+test changing_vision_during_image_post_rejects_late_answer ... ok
+test document_import_preflight_send_and_next_turn_preserve_exact_source ... ok
+test final_storage_failure_does_not_commit_an_orphan_assistant ... ok
+test image_preflight_overflow_and_receipt_failure_leave_no_bound_sources ... ok
+test receipt_failure_rolls_back_chat_acceptance_without_network ... ok
+test image_cancel_and_retry_preserve_one_source_and_exact_payload ... ok
+test restart_marks_pending_chat_interrupted_without_network_replay ... ok
+test key_change_during_request_never_attaches_stale_answer ... ok
+test incomplete_output_and_authentication_failure_never_create_an_answer ... ok
+test image_migration_restart_keeps_original_policy_and_replay ... ok
+test route_revision_change_requires_fresh_context_declaration ... ok
+test scope_conflict_attachments_and_unknown_context_do_not_dispatch ... ok
+test stale_vision_save_after_endpoint_change_and_successful_retest_is_rejected ... ok
+test image_ready_without_extraction_requires_explicit_scoped_vision_before_send ... ok
+test mixed_text_and_image_sources_keep_explicit_order_and_bytes ... ok
+test retry_uses_one_budget_and_commits_only_one_answer ... ok
+test stale_vision_save_after_key_change_and_successful_retest_is_rejected ... ok
+test second_turn_contains_full_ordered_history_and_smaller_output_limit ... ok
+test successful_chat_is_atomic_durable_and_replay_is_idempotent ... ok
+test v6_migration_and_restart_keep_document_versions_without_automatic_post ... ok
+
+test result: ok. 31 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 31.00s
+
+     Running tests/connections.rs (/workspace/scratch/8e3755d5c581/step2/work/AI_Home/src-tauri/target/debug/deps/connections-2bcd1ba2943f05ce)
+
+running 24 tests
+test failed_vault_readback_rolls_back_connection_and_receipt ... ok
+test idempotency_secret_comparison_survives_without_db_secret_digest ... ok
+test hmac_receipt_survives_restart_and_missing_installation_key_fails_closed ... ok
+test foreign_keys_reject_cross_profile_route ... ok
+test keys_are_not_in_sqlite_or_public_snapshots ... ok
+test key_failure_preserves_last_connection ... ok
+test migration_from_actual_v1_preserves_preferences_and_has_valid_foreign_keys ... ok
+test failed_sql_commit_keeps_previous_key_binding_and_connection ... ok
+test opaque_profile_cursor_is_query_bound ... ok
+test profiles_are_distinct_and_memory_defaults_survive ... ok
+test profile_scope_isolation_includes_models_operations_and_routes ... ok
+test restart_recovers_pending_operations_and_preserves_receipts ... ok
+test cancellation_is_profile_scoped_idempotent_and_terminal ... ok
+test cancelling_connection_backoff_preserves_terminal_count ... ok
+test stale_revision_and_unverified_route_are_rejected ... ok
+test changed_endpoint_requires_reentry_and_does_not_dispatch ... ok
+test wrong_scope_and_unknown_fields_fail_closed ... ok
+test version_two_legacy_receipt_is_read_only_and_checks_original_secret ... ok
+test real_http_test_persists_attestation_and_models ... ok
+test safe_failure_has_durable_error_without_provider_body ... ok
+test stale_inflight_test_never_overwrites_new_key ... ok
+test primary_and_scribe_are_separate_routes_with_same_connection ... ok
+test transient_connection_test_commits_both_attempts_and_one_final_result ... ok
+test vault_rejects_legacy_and_foreign_bound_entries_before_network ... ok
+
+test result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.97s
+
+     Running tests/conversations.rs (/workspace/scratch/8e3755d5c581/step2/work/AI_Home/src-tauri/target/debug/deps/conversations-5a7e69d0fd2af563)
+
+running 10 tests
+test missing_scope_revision_unknown_fields_and_language_fail_closed ... ok
+test replay_and_changed_payload_do_not_duplicate_conversations ... ok
+test foreign_conversation_message_fk_and_corrupt_record_fail_closed ... ok
+test receipt_failure_rolls_back_draft_and_event ... ok
+test exact_unicode_draft_and_cas_are_preserved ... ok
+test actual_v3_database_without_conversation_tables_migrates ... ok
+test message_history_is_ordered_complete_and_scoped ... ok
+test restart_keeps_preferences_receipts_and_drafts ... ok
+test separate_profiles_have_distinct_conversations_and_drafts ... ok
+test list_cursor_is_profile_kind_and_limit_bound ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.45s
+
+     Running tests/foundation.rs (/workspace/scratch/8e3755d5c581/step2/work/AI_Home/src-tauri/target/debug/deps/foundation-58200729a0feed38)
+
+running 8 tests
+test rejects_corrupt_preferences ... ok
+test default_and_commands ... ok
+test concurrent_stale_writes_have_one_winner ... ok
+test validates_locale_extension_without_execution ... ok
+test failed_receipt_rolls_back_preferences_and_event ... ok
+test idempotency_and_cas ... ok
+test restart_recovers_preferences_receipts_and_events ... ok
+test frozen_fixtures ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.93s
+
+     Running tests/imports.rs (/workspace/scratch/8e3755d5c581/step2/work/AI_Home/src-tauri/target/debug/deps/imports-aa57c1e397b1c119)
+
+running 19 tests
+test more_than_twelve_files_are_rejected_without_truncating_selection ... ok
+test migration_from_v5_retains_preferences_profiles_conversations_and_integrity ... ok
+test original_integrity_is_checked_and_untrusted_paths_are_not_accepted ... ok
+test accepted_receipt_replays_after_consumption_without_duplicate_records ... ok
+test docx_and_text_pdf_reuse_harness_parsers ... ok
+test damaged_and_animated_images_fail_without_losing_their_originals ... ok
+test partial_batch_keeps_each_outcome_and_reports_read_rejections ... ok
+test final_commit_failure_rolls_back_extracted_text_and_marks_material_failed ... ok
+test previews_are_paged_on_utf8_boundaries_and_detach_uses_cas ... ok
+test cancel_pending_import_atomically_marks_material_failed_and_keeps_original ... ok
+test receipt_failure_rolls_back_originals_materials_and_operation_without_consuming_token ... ok
+test restart_preserves_originals_and_p2_results_without_dispatching_again ... ok
+test size_caps_reject_oversize_files_and_whole_oversize_batches ... ok
+test token_cannot_be_moved_to_another_profile_or_conversation ... ok
+test restart_marks_pending_material_failed_and_preserves_original ... ok
+test scanned_pdf_and_unsafe_docx_are_unreadable_but_originals_remain ... ok
+test selection_captures_original_bytes_before_the_source_file_changes ... ok
+test utf8_import_preserves_original_author_scope_and_contracts_without_a_model ... ok
+test static_images_in_mixed_batch_keep_originals_without_fictional_text ... ok
+
+test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 9.22s
+

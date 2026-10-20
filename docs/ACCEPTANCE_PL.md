@@ -1,3 +1,18 @@
+# 4B-2A krok 3 — korekta audytu, 21.10.2026
+
+Odebrany werdykt: DO KOREKTY. Nie otrzymano PASS poprawki.
+
+- [x] Wymagany pełny scopeId z vision.get jest przesyłany w vision.set i porównywany w transakcji obok routeRevision/policyRevision.
+- [x] Stary zapis po zmianie klucza + udanym re-teście odrzucony bez aktywacji.
+- [x] Stary zapis po zmianie endpointu + nowym kluczu + udanym re-teście odrzucony bez aktywacji.
+- [x] Panel odświeża unknown po konflikcie; nowa decyzja dotyczy wyłącznie świeżo odczytanego zakresu.
+- [x] CSP produkcyjne/deweloperskie jawnie dopuszcza Blob wyłącznie dla obrazów; kontrola statyczna PASS.
+- [x] 171/171 Rust headless; 115/115 frontend; build; 21/21 granice; 193/193 P2.
+- [ ] Nowe CI i ponowny niezależny audyt poprawki.
+- [ ] Rzeczywisty WebView i podgląd/CSP w desktopie; OS vault i live API — nadal otwarte.
+
+Przed przejściem do 4B-3 wymagany odbiór poprawki. Poniżej zachowane historyczne przekazanie kroku 3.
+
 # 4B-2A krok 3 — 21.10.2026, kandydat do CI i audytu
 
 - [x] Edward potwierdził zielony wynik poprzedniego kroku 2 i kontynuację.

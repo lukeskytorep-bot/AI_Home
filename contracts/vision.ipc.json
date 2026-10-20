@@ -1,6 +1,6 @@
 {
   "contractVersion": 1,
-  "note": "Explicit user declaration, not provider attestation; scoped to route and current connection/credential. Frozen P2 unchanged.",
+  "note": "Explicit user declaration, not provider attestation. Required scopeId from get identifies the full profile/route/model/connection/endpoint/credential scope; set compares it atomically. Frozen P2 unchanged.",
   "commands": {
     "chat.vision.get": {
       "scope": "profile",
@@ -41,6 +41,10 @@
               "unconfigured",
               "user_declared"
             ]
+          },
+          "scopeId": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
           }
         },
         "required": [
@@ -49,7 +53,8 @@
           "modelId",
           "policyRevision",
           "support",
-          "source"
+          "source",
+          "scopeId"
         ],
         "additionalProperties": false
       },
@@ -76,12 +81,17 @@
               "supported",
               "unsupported"
             ]
+          },
+          "scopeId": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
           }
         },
         "required": [
           "routeId",
           "policyRevision",
-          "support"
+          "support",
+          "scopeId"
         ],
         "additionalProperties": false
       },
@@ -116,6 +126,10 @@
               "unconfigured",
               "user_declared"
             ]
+          },
+          "scopeId": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
           }
         },
         "required": [
@@ -124,7 +138,8 @@
           "modelId",
           "policyRevision",
           "support",
-          "source"
+          "source",
+          "scopeId"
         ],
         "additionalProperties": false
       },

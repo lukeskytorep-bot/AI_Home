@@ -800,7 +800,7 @@ async fn imported_image(app:Application,pool:&sqlx::SqlitePool,vault:Arc<MemoryV
 }
 async fn declare_vision(app:&Application,p:&str,support:&str)->Value{
     let current=ok(app,"chat.vision.get",json!({}),Some(p),None).await;
-    ok(app,"chat.vision.set",json!({"routeId":current["routeId"],"policyRevision":current["policyRevision"],"support":support}),Some(p),current["routeRevision"].as_i64()).await
+    ok(app,"chat.vision.set",json!({"routeId":current["routeId"],"policyRevision":current["policyRevision"],"scopeId":current["scopeId"],"support":support}),Some(p),current["routeRevision"].as_i64()).await
 }
 #[tokio::test]
 async fn image_ready_without_extraction_requires_explicit_scoped_vision_before_send(){
@@ -824,7 +824,7 @@ async fn image_ready_without_extraction_requires_explicit_scoped_vision_before_s
 #[tokio::test]
 async fn image_policy_cas_scope_and_context_edit_invalidation(){
     let(app,_,_,_,p,_,connection)=configured().await;let first=declare_vision(&app,&p,"supported").await;
-    let stale=invoke(&app,"chat.vision.set",json!({"routeId":first["routeId"],"policyRevision":0,"support":"unsupported"}),Some(&p),first["routeRevision"].as_i64()).await;assert_eq!(stale["error"]["code"],"REVISION_CONFLICT");
+    let stale=invoke(&app,"chat.vision.set",json!({"routeId":first["routeId"],"policyRevision":0,"scopeId":first["scopeId"],"support":"unsupported"}),Some(&p),first["routeRevision"].as_i64()).await;assert_eq!(stale["error"]["code"],"REVISION_CONFLICT");
     let s=ok(&app,"chat.settings.get",json!({}),Some(&p),None).await;
     ok(&app,"chat.settings.set",json!({"routeId":s["routeId"],"contextTokens":65536}),Some(&p),s["routeRevision"].as_i64()).await;
     let after=ok(&app,"chat.vision.get",json!({}),Some(&p),None).await;assert_eq!(after["support"],"supported");assert_ne!(after["routeRevision"],first["routeRevision"]);
@@ -882,3 +882,32 @@ async fn mixed_text_and_image_sources_keep_explicit_order_and_bytes(){
     use base64::Engine;let encoded=body["messages"][1]["content"][1]["image_url"]["url"].as_str().unwrap().split(',').nth(1).unwrap();assert_eq!(base64::engine::general_purpose::STANDARD.decode(encoded).unwrap(),bytes);
     let h=history(&app,&p,&c).await;assert_eq!(h[0]["sourceRefs"][0]["contentSha256"],img["material"]["originalSha256"]);assert_eq!(h[0]["sourceRefs"][1]["contentSha256"],doc["material"]["extractedSha256"]);assert_eq!(sqlx::query_scalar::<_,i64>("SELECT COUNT(*) FROM message_documents").fetch_one(&pool).await.unwrap(),2);
 }
+
+async fn stale_vision_scope_after_verified_connection_change(endpoint_change:bool){
+    let(app,pool,_,_server,p,_,connection)=configured().await;
+    let old=declare_vision(&app,&p,"supported").await;
+    assert_eq!(old["scopeId"].as_str().unwrap().len(),64);
+    let new_server=server().await;
+    let mut current=connection.clone();
+    if endpoint_change {
+        current=ok(&app,"connection.update",json!({"connectionId":current["id"],"connection":{"providerKind":"custom_openai","endpoint":new_server.endpoint,"label":"New endpoint"}}),Some(&p),current["revision"].as_i64()).await;
+    }
+    current=ok(&app,"connection.credential.set",json!({"connectionId":current["id"],"credential":{"secret":"replacement-credential"}}),Some(&p),current["revision"].as_i64()).await;
+    let a=ok(&app,"connection.test",json!({"connectionId":current["id"]}),Some(&p),current["revision"].as_i64()).await;
+    assert_eq!(finished(&app,&p,&a["operation"]["id"]).await["status"],"succeeded");
+    let fresh=ok(&app,"chat.vision.get",json!({}),Some(&p),None).await;
+    assert_eq!(fresh["support"],"unknown");assert_ne!(fresh["scopeId"],old["scopeId"]);
+    assert_eq!(fresh["routeRevision"],old["routeRevision"]);assert_eq!(fresh["policyRevision"],old["policyRevision"]);
+    let before:i64=sqlx::query_scalar("SELECT COUNT(*) FROM profile_events").fetch_one(&pool).await.unwrap();
+    let rejected=invoke(&app,"chat.vision.set",json!({"routeId":old["routeId"],"policyRevision":old["policyRevision"],"scopeId":old["scopeId"],"support":"supported"}),Some(&p),old["routeRevision"].as_i64()).await;
+    assert_eq!(rejected["error"]["code"],"REVISION_CONFLICT","{rejected}");assert!(schema::dto("ResultEnvelope",&rejected));
+    assert_eq!(ok(&app,"chat.vision.get",json!({}),Some(&p),None).await,fresh);
+    assert_eq!(sqlx::query_scalar::<_,i64>("SELECT COUNT(*) FROM profile_events").fetch_one(&pool).await.unwrap(),before);
+    // Only a fresh explicit decision may authorize the new exact connection scope.
+    let accepted=ok(&app,"chat.vision.set",json!({"routeId":fresh["routeId"],"policyRevision":fresh["policyRevision"],"scopeId":fresh["scopeId"],"support":"supported"}),Some(&p),fresh["routeRevision"].as_i64()).await;
+    assert_eq!(accepted["support"],"supported");assert_eq!(accepted["scopeId"],fresh["scopeId"]);
+}
+#[tokio::test]
+async fn stale_vision_save_after_key_change_and_successful_retest_is_rejected(){stale_vision_scope_after_verified_connection_change(false).await;}
+#[tokio::test]
+async fn stale_vision_save_after_endpoint_change_and_successful_retest_is_rejected(){stale_vision_scope_after_verified_connection_change(true).await;}

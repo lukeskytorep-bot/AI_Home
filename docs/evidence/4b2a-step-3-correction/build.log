@@ -1,0 +1,19 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> ai-home@0.0.1 build
+> npm run typecheck && vite build
+
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> ai-home@0.0.1 typecheck
+> tsc --noEmit
+
+vite v8.2.1 building client environment for production...
+[2Ktransforming...✓ 37 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.34 kB │ gzip:  0.25 kB
+dist/assets/index-BWhBRq1F.css    6.55 kB │ gzip:  1.97 kB
+dist/assets/index-BvDG6JxF.js   349.05 kB │ gzip: 90.68 kB
+
+✓ built in 493ms

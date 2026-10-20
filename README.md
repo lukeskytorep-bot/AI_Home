@@ -1,6 +1,6 @@
 # AI Home
 
-Stan 21.10.2026: kandydat 4B-2A krok 3 — dokumenty i statyczne obrazy w czacie Primary. Edward potwierdził zielony wynik kroku 2; krok 3 wymaga nowego CI i audytu.
+Stan 21.10.2026: korekta audytu 4B-2A kroku 3. Audyt zwrócił DO KOREKTY z błędem spóźnionego zapisu vision po zmianie połączenia. Poprawka wymaga nowego CI i ponownego audytu.
 
 Aplikacja ma osobne profile, połączenia i trasy Primary/Scribe, trwałe rozmowy i szkice, historię, operacje oraz STOP. Import TXT/MD/DOCX/tekstowego PDF zachowuje oryginały, odczytany tekst i osobne autorstwo/importera. Zaznaczone gotowe dokumenty są wysyłane w całości jako niezaufane dane użytkownika wraz z metadanymi pochodzenia do skonfigurowanego dostawcy. Oryginały dokumentów pozostają lokalne. Dla obrazów wysyłane są oryginalne bajty (wraz z ewentualnymi metadanymi), bez lokalnej konwersji lub OCR. Dostarczone dokumenty zostają związane z wiadomością; kolejne tury uwzględniają je z historii także po restarcie. Referencje są dowodem przekazania źródeł, nie zweryfikowanymi cytowaniami odpowiedzi. Nie ma automatycznej promocji do pamięci.
 
@@ -28,13 +28,13 @@ Niepewna próba wysyłania zachowuje ID, tekst i wybór do rozliczenia; nowszy s
 
 ## Dowody i stan
 
-169/169 Rust Linux headless, 113/113 frontend, TypeScript/Vite, 21/21 granice i 193/193 kontrole referencyjne P2 PASS. Pełny Rust jest wykonany w domyślnym trybie równoległym. Wcześniejsze nieudane uruchomienia i poprawki fixture/asercji zachowano w dowodach. Natywny WebView/Windows, rzeczywisty vault i live API pozostają nieodebrane.
+171/171 Rust Linux headless, 115/115 frontend, TypeScript/Vite, 21/21 granice i 193/193 kontrole referencyjne P2 PASS. Pełny Rust jest wykonany w domyślnym trybie równoległym. Wcześniejsze nieudane uruchomienia i poprawki fixture/asercji zachowano w dowodach. Natywny WebView/Windows, rzeczywisty vault i live API pozostają nieodebrane.
 
-Raport: `docs/AI_HOME_4B2A_KROK_3_RAPORT_PL.md`; aktualny plan: `docs/AI_HOME_4B_ETAPY_PRACY_v1.0_PL.md` (treść 1.22); odbiór: `docs/ACCEPTANCE_PL.md`; logi: `docs/evidence/4b2a-step-3/`. Starsze raporty i logi są historyczne.
+Raport: `docs/AI_HOME_4B2A_KROK_3_AUDIT_FIX_RAPORT_PL.md`; aktualny plan: `docs/AI_HOME_4B_ETAPY_PRACY_v1.0_PL.md` (treść 1.23); odbiór: `docs/ACCEPTANCE_PL.md`; logi: `docs/evidence/4b2a-step-3-correction/`. Starsze raporty i logi są historyczne.
 
 ## Kontrakty i przekazanie
 
-Zamrożone P2/foundation i wcześniejsze katalogi poza własnym document-chat.ipc.json pozostają bajtowo zgodne z bazą. document-chat.ipc.json rozszerza wynik preflight o obrazy; vision.ipc.json dodaje osobne polecenia deklaracji. `contracts/document-chat.ipc.json` dodaje tylko odczyt `chat.preflight`; `chat.send` wykorzystuje istniejące P2 attachmentIds. Szablony żądań providerów i vault pozostają bez zmian; walidator protokołu odrzuca obce MIME/role i wadliwe base64. Dodano image =0.25.10 z kodekami PNG/JPEG/GIF/WebP. Zależności frontendu i uprawnienia są bez zmian. Parsery importu i ich MIT pochodzą z adaptacji Harness w kroku 1; szczegóły w docs/reuse.
+Zamrożone P2/foundation i wcześniejsze katalogi poza własnym vision.ipc.json pozostają bajtowo zgodne z bazą kroku 3. document-chat.ipc.json rozszerza wynik preflight o obrazy; vision.ipc.json dodaje osobne polecenia deklaracji. `contracts/document-chat.ipc.json` dodaje tylko odczyt `chat.preflight`; `chat.send` wykorzystuje istniejące P2 attachmentIds. Szablony żądań providerów i vault pozostają bez zmian; walidator protokołu odrzuca obce MIME/role i wadliwe base64. Dodano image =0.25.10 z kodekami PNG/JPEG/GIF/WebP. Zależności frontendu i uprawnienia są bez zmian. Parsery importu i ich MIT pochodzą z adaptacji Harness w kroku 1; szczegóły w docs/reuse.
 
 `snapshots/p2-v1.1` przechowuje pełne P2; `python3 check_contracts.py` wykonuje 193 kontrole. 119 i 145 są wynikami innych historycznych rewizji, nie tego samego zestawu. Migawki nie są odnawiane wraz z kodem aplikacji.
 
@@ -49,3 +49,9 @@ Import: do 10 MiB/obraz, 16 384 px/bok i 40 mln pikseli, dodatkowo limity dekode
 Preflight obrazu ma metodę `utf8_bytes_and_image_reserve_estimate`: długość base64 +8192 +4*ceil(piksele/256) dla każdego obrazu, plus istniejący tekst/replay/wyjście/rezerwa. To heurystyka, nie licznik dostawcy ani gwarancja pojemności modelu. Pomiar wskazuje ID i rewizję trasy oraz rewizję deklaracji vision. W całym żądaniu jest najwyżej 20 obrazów, także z historii; nic nie jest po cichu pomijane. Google GIF jest odrzucany przed POST. Natywny Anthropic ma dodatkowy limit 8000 px/bok i 10 000 000 bajtów base64. Inne ograniczenia konkretnego modelu/endpointu mogą wymagać osobnego odbioru.
 
 Po CI/audycie kroku 3 kolejnym etapem funkcjonalnym jest 4B-3 — Scribe i Working Context. Nie zamknięto bramek realnego vault/API ani desktopu.
+
+## Korekta deklaracji vision
+
+vision.get zwraca wymagany scopeId — niejawny w UI, publiczny identyfikator pełnego bieżącego zakresu. vision.set wymaga go wraz z policyRevision i expectedRevision trasy. Hash obejmuje wersjonowaną tożsamość profilu, trasy/modelu, połączenia/endpointu i rewizji klucza; nie zawiera surowego klucza. Native porównuje identyfikator w transakcji przed zapisem. Stary panel po zmianie połączenia/klucza i udanym ponownym teście dostaje REVISION_CONFLICT; nie może przenieść deklaracji na nowy zakres. Po konflikcie UI odświeża deklarację i wymaga nowej decyzji. Stary payload bez scopeId jest niepoprawny; nie zgadujemy aktualnego zakresu. Baza, dane i starsze snapshoty nie wymagają migracji.
+
+W CSP i devCsp dodano blob: tylko do img-src dla podglądu obrazu. Test sprawdza konfigurację; nie dowodzi renderowania w realnym WebView. Nie rozszerzono script-src/connect-src ani capabilities. Raporty/logi z pierwotnego kroku 3 pozostają historyczne.

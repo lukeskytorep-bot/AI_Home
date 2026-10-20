@@ -12,6 +12,7 @@ use crate::{
     },
 };
 use serde_json::{json, Value};
+use sha2::{Digest,Sha256};
 use sqlx::Row;
 #[path="document_context.rs"]
 mod document_context;
@@ -66,19 +67,23 @@ pub(super) async fn settings(
     Ok(settings_dto(&route, &p, size.unwrap_or(0)))
 }
 fn vision_scope(route:&Value,c:&Value)->Value{json!({"routeId":route["id"],"routeRevision":route["revision"],"connectionId":c["id"],"connectionRevision":c["revision"],"credentialRevision":c["credentialRevision"],"providerKind":c["providerKind"],"endpoint":c["normalizedEndpoint"],"modelId":route["modelId"]})}
+// Optimistic identity of the exact scope the user saw; not a secret or an API attestation.
+fn vision_scope_id(profile:&str,route:&Value,c:&Value)->String{
+    format!("{:x}",Sha256::digest(json!(["ai-home-vision-scope:v1",profile,vision_scope(route,c)]).to_string().as_bytes()))
+}
 async fn vision_dto(tx:&mut Tx<'_>,profile:&str,route:&Value,c:&Value)->Result<Value,Failure>{
     let row=sqlx::query("SELECT revision,route_revision,scope,support FROM chat_vision_policies WHERE profile_id=? AND route_id=?").bind(profile).bind(route["id"].as_str().unwrap()).fetch_optional(&mut **tx).await.map_err(|_|"STORAGE_ERROR")?;
     let mut support="unknown".to_string();let mut policy_revision=0i64;
     if let Some(row)=row{policy_revision=row.get("revision");let scope:Value=serde_json::from_str(row.get("scope")).map_err(|_|"STORAGE_ERROR")?;
         if row.get::<i64,_>("route_revision")==revision(route)?&&scope==vision_scope(route,c){support=row.get("support");if !["supported","unsupported"].contains(&support.as_str()){return Err("STORAGE_ERROR")}}
     }
-    Ok(json!({"routeId":route["id"],"routeRevision":route["revision"],"modelId":route["modelId"],"policyRevision":policy_revision,"support":support,"source":if support=="unknown"{"unconfigured"}else{"user_declared"}}))
+    Ok(json!({"routeId":route["id"],"routeRevision":route["revision"],"modelId":route["modelId"],"policyRevision":policy_revision,"scopeId":vision_scope_id(profile,route,c),"support":support,"source":if support=="unknown"{"unconfigured"}else{"user_declared"}}))
 }
 pub(super) async fn vision(tx:&mut Tx<'_>,command:&str,profile:&str,payload:&Value,expected:i64)->Result<Value,Failure>{
     let(_,route)=primary(tx,profile).await?;let c=get(tx,"connections",profile,route["connectionId"].as_str().unwrap()).await?;
     let current=vision_dto(tx,profile,&route,&c).await?;
     if command=="chat.vision.set" {
-        if route["id"]!=payload["routeId"]||revision(&route)?!=expected||current["policyRevision"]!=payload["policyRevision"]{return Err("REVISION_CONFLICT")}
+        if route["id"]!=payload["routeId"]||revision(&route)?!=expected||current["policyRevision"]!=payload["policyRevision"]||current["scopeId"]!=payload["scopeId"]{return Err("REVISION_CONFLICT")}
         if !verified(&c){return Err("CONNECTION_UNVERIFIED")}
         let rev=current["policyRevision"].as_i64().unwrap().checked_add(1).filter(|n|*n<=9_007_199_254_740_991).ok_or("STORAGE_ERROR")?;
         sqlx::query("INSERT INTO chat_vision_policies(profile_id,route_id,route_revision,revision,scope,support) VALUES(?,?,?,?,?,?) ON CONFLICT(profile_id,route_id) DO UPDATE SET route_revision=excluded.route_revision,revision=excluded.revision,scope=excluded.scope,support=excluded.support")
