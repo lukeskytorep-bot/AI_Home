@@ -1,5 +1,8 @@
 //! Local user-selected files. No caller-supplied paths, network or model calls.
 mod parser;
+pub(crate) mod image;
+pub(crate) enum ParsedMaterial {Document(ParsedDocument), Image(image::ParsedImage)}
+pub(crate) fn parse_material(name:&str,bytes:&[u8])->Result<ParsedMaterial,String>{if image::is_image(name){image::parse(name,bytes).map(ParsedMaterial::Image)}else{parse(name,bytes).map(ParsedMaterial::Document)}}
 pub(crate) use parser::{parse, ParsedDocument};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
@@ -32,7 +35,7 @@ impl FilePicker for DesktopPicker {
             tauri::async_runtime::spawn_blocking(move || {
                 app.dialog()
                     .file()
-                    .add_filter("TXT / MD / DOCX / PDF", &["txt", "md", "docx", "pdf"])
+                    .add_filter("Documents / Images", &["txt", "md", "docx", "pdf", "png", "jpg", "jpeg", "webp", "gif"])
                     .blocking_pick_files()
                     .unwrap_or_default()
                     .into_iter()
@@ -98,12 +101,13 @@ impl ImportService {
                         return Err("IMPORT_UNREADABLE");
                     }
                     let lower = name.to_lowercase();
-                    if ![".txt", ".md", ".docx", ".pdf"]
+                    if ![".txt", ".md", ".docx", ".pdf", ".png", ".jpg", ".jpeg", ".webp", ".gif"]
                         .iter()
                         .any(|ext| lower.ends_with(ext))
                     {
                         return Err("IMPORT_UNREADABLE");
                     }
+                    if !std::fs::metadata(&path).map_err(|_|"IMPORT_UNREADABLE")?.is_file(){return Err("IMPORT_UNREADABLE");}
                     let file = std::fs::File::open(&path).map_err(|_| "IMPORT_UNREADABLE")?;
                     let meta = file.metadata().map_err(|_| "IMPORT_UNREADABLE")?;
                     if !meta.is_file() || meta.len() == 0 {
@@ -194,7 +198,9 @@ impl ImportService {
     }
 }
 pub(crate) fn parse_error(message: &str) -> &'static str {
-    if message.contains("no text layer") {
+    if message.contains("animation unsupported") {
+        "IMAGE_ANIMATION_UNSUPPORTED"
+    } else if message.contains("no text layer") {
         "PDF_NO_TEXT"
     } else if message.contains("encrypted") || message.contains("password") {
         "ENCRYPTED_OR_DAMAGED"

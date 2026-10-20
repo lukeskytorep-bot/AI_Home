@@ -1,5 +1,6 @@
 //! Native provider protocols and bounded HTTP. No keyring or frontend IPC yet.
 use serde_json::Value;
+use base64::Engine;
 pub(crate) mod replay;
 mod adapters;
 mod request_builders;
@@ -81,6 +82,10 @@ fn validate_request(r:&ProviderChatRequest,base:&str)->Result<(),ProtocolError>{
         if !regex::Regex::new(r"^[A-Za-z0-9._-]+$").unwrap().is_match(model){return Err(ProtocolError::InvalidRequest)}
     }
     for m in &r.messages {
+        if !m.images.is_empty() && (m.role!="user"||m.images.len()>12){return Err(ProtocolError::InvalidRequest)}
+        for image in &m.images {
+            if !["image/png","image/jpeg","image/webp","image/gif"].contains(&image.mime_type.as_str())||image.data_base64.is_empty()||image.data_base64.len()>14*1024*1024||base64::engine::general_purpose::STANDARD.decode(&image.data_base64).is_err(){return Err(ProtocolError::InvalidRequest)}
+        }
         if let Some(state)=&m.continuation_state {
             let replay_size=match state{ProviderContinuationState::OpenRouter(s)=>serde_json::to_string(&s.reasoning_details).unwrap().len(),ProviderContinuationState::Google(s)=>s.parts.iter().map(|p|p.text.len()+p.thought_signature.as_ref().map(|x|x.len()).unwrap_or(0)).sum(),ProviderContinuationState::Anthropic(s)=>serde_json::to_string(&s.blocks).unwrap().len()};
             if replay_size>2*1024*1024{return Err(ProtocolError::InvalidRequest)}

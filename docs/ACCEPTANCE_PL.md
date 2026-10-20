@@ -1,3 +1,17 @@
+# 4B-2A krok 3 — 21.10.2026, kandydat do CI i audytu
+
+- [x] Edward potwierdził zielony wynik poprzedniego kroku 2 i kontynuację.
+- [x] Import i podgląd statycznego PNG/JPEG/WebP/GIF; sygnatura, rozszerzenie, dekoder, rozmiar, wymiary, hash; animacje jawnie odrzucone.
+- [x] Obraz ready bez fikcyjnego tekstu/OCR; dokumenty i obrazy w jednej wiadomości.
+- [x] SourceRefs i snapshoty odtwarzają te same bajty w kolejnych turach i po restarcie.
+- [x] Jawna deklaracja vision, CAS, izolacja i unieważnianie po zmianie trasy/połączenia/klucza; unknown i unsupported blokują także obrazy w historii.
+- [x] Szacowany kontekst obrazów, limity dostawców, brak cichego usuwania/konwersji/obcinania; STOP i idempotencja.
+- [x] SQLite v7 → v8; 169/169 Rust headless, 113/113 frontend, build, 21/21 granice, 193/193 P2 PASS.
+- [ ] Nowe CI i niezależny audyt kroku 3.
+- [ ] Rzeczywisty vault, live API oraz native desktop/Windows/WebView — odbiory nadal otwarte.
+
+Całe 4B-2A pozostaje otwarte. Nie dodano OCR, RAG ani generowania obrazów. Następny etap funkcjonalny po odbiorze: 4B-3 — Scribe i Working Context. Wyniki początkowych nieudanych uruchomień zachowano w docs/evidence/4b2a-step-3. Poniższe odbiory są historyczne.
+
 # 4B-2A krok 2 — 21.10.2026, kandydat do CI i audytu
 
 - [x] Edward potwierdził zielone CI kroku 1; brak nowego werdyktu audytu i numeru przebiegu.

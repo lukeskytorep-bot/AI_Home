@@ -14,13 +14,14 @@ impl Store {
         let pool=SqlitePoolOptions::new().max_connections(1).connect_with(options).await?;
         let mut tx=pool.begin().await?;
         let version:i64=sqlx::query_scalar("PRAGMA user_version").fetch_one(&mut *tx).await?;
-        if version>7{return Err(sqlx::Error::Protocol("unsupported storage version".into()))}
+        if version>8{return Err(sqlx::Error::Protocol("unsupported storage version".into()))}
         sqlx::query("CREATE TABLE IF NOT EXISTS preferences (id INTEGER PRIMARY KEY CHECK(id=1), revision INTEGER NOT NULL, body TEXT NOT NULL)").execute(&mut *tx).await?;
         sqlx::query("CREATE TABLE IF NOT EXISTS receipts (request_id TEXT PRIMARY KEY, fingerprint TEXT NOT NULL, response TEXT NOT NULL)").execute(&mut *tx).await?;
         sqlx::query("CREATE TABLE IF NOT EXISTS app_events (sequence INTEGER PRIMARY KEY AUTOINCREMENT, body TEXT NOT NULL)").execute(&mut *tx).await?;
         let d:Value=serde_json::from_str(include_str!("../../contracts/defaults.json")).unwrap();
         sqlx::query("INSERT OR IGNORE INTO preferences(id,revision,body) VALUES(1,1,?)").bind(d["appPreferences"].to_string()).execute(&mut *tx).await?;
         for statement in [
+            "CREATE TABLE IF NOT EXISTS chat_vision_policies (profile_id TEXT NOT NULL, route_id TEXT NOT NULL, route_revision INTEGER NOT NULL, revision INTEGER NOT NULL, scope TEXT NOT NULL, support TEXT NOT NULL, PRIMARY KEY(profile_id,route_id), FOREIGN KEY(profile_id,route_id) REFERENCES routes(profile_id,id))",
             "CREATE TABLE IF NOT EXISTS message_documents (profile_id TEXT NOT NULL, message_id TEXT NOT NULL, ordinal INTEGER NOT NULL, attachment_id TEXT NOT NULL, material_id TEXT NOT NULL, body TEXT NOT NULL, PRIMARY KEY(profile_id,message_id,ordinal), UNIQUE(profile_id,attachment_id), FOREIGN KEY(profile_id,message_id) REFERENCES messages(profile_id,id), FOREIGN KEY(profile_id,attachment_id) REFERENCES attachments(profile_id,id), FOREIGN KEY(profile_id,material_id) REFERENCES import_materials(profile_id,id))",
             "CREATE TABLE IF NOT EXISTS import_blobs (profile_id TEXT NOT NULL REFERENCES profiles(id), id TEXT NOT NULL, sha256 TEXT NOT NULL, bytes BLOB NOT NULL, PRIMARY KEY(profile_id,id))",
             "CREATE TABLE IF NOT EXISTS import_materials (profile_id TEXT NOT NULL, id TEXT NOT NULL, conversation_id TEXT NOT NULL, operation_id TEXT NOT NULL, original_blob_id TEXT NOT NULL, extracted_blob_id TEXT, revision INTEGER NOT NULL, body TEXT NOT NULL, PRIMARY KEY(profile_id,id), UNIQUE(profile_id,id,conversation_id), FOREIGN KEY(profile_id,conversation_id) REFERENCES conversations(profile_id,id), FOREIGN KEY(profile_id,operation_id) REFERENCES operations(profile_id,id), FOREIGN KEY(profile_id,original_blob_id) REFERENCES import_blobs(profile_id,id), FOREIGN KEY(profile_id,extracted_blob_id) REFERENCES import_blobs(profile_id,id))",
@@ -59,7 +60,7 @@ impl Store {
         // Imported originals survive a crash; interrupted extraction is never presented as ready.
         sqlx::query("UPDATE import_materials SET revision=revision+1,body=json_set(body,'$.revision',revision+1,'$.parseState','failed','$.errorCode','OPERATION_INTERRUPTED') WHERE json_extract(body,'$.parseState')='pending'").execute(&mut *tx).await?;
         sqlx::query("UPDATE attachments SET revision=revision+1,body=json_set(body,'$.revision',revision+1,'$.state','failed') WHERE EXISTS(SELECT 1 FROM import_materials m WHERE m.profile_id=attachments.profile_id AND m.id=attachments.material_id AND json_extract(m.body,'$.errorCode')='OPERATION_INTERRUPTED') AND json_extract(body,'$.state')='staged'").execute(&mut *tx).await?;
-        sqlx::query("PRAGMA user_version=7").execute(&mut *tx).await?;tx.commit().await?;
+        sqlx::query("PRAGMA user_version=8").execute(&mut *tx).await?;tx.commit().await?;
         let store=Self{pool};store.preferences().await?;Ok(store)
     }
     pub async fn preferences(&self)->Result<Value,sqlx::Error>{

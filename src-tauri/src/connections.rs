@@ -23,7 +23,7 @@ type Failure = &'static str;
 type Tx<'a> = Transaction<'a, Sqlite>;
 const COMMANDS: &[&str] = &[
     "material.select", "material.import", "material.get", "material.text.read", "material.original.read", "conversation.materials.list", "conversation.import.latest", "attachment.detach",
-    "chat.send", "chat.preflight",
+    "chat.send", "chat.preflight", "chat.vision.get", "chat.vision.set",
     "chat.settings.get",
     "chat.settings.set",
     "conversation.chat.latest",
@@ -235,6 +235,7 @@ impl Connections {
             serde_json::from_str(include_str!("../../contracts/chat.ipc.json")).unwrap();
         let imports:Value=serde_json::from_str(include_str!("../../contracts/imports.ipc.json")).unwrap();
         let context:Value=serde_json::from_str(include_str!("../../contracts/document-chat.ipc.json")).unwrap();
+        let vision:Value=serde_json::from_str(include_str!("../../contracts/vision.ipc.json")).unwrap();
         let contract = catalog["commands"]
             .get(command)
             .or_else(|| extra["commands"].get(command))
@@ -242,6 +243,7 @@ impl Connections {
             .or_else(|| chat["commands"].get(command))
             .or_else(|| imports["commands"].get(command))
             .or_else(|| context["commands"].get(command))
+            .or_else(|| vision["commands"].get(command))
             .ok_or("UNKNOWN_COMMAND")?;
         if !schema::dto("CommandEnvelope", r)
             || !schema::valid(&r["payload"], &contract["payload"])
@@ -402,6 +404,7 @@ impl Connections {
                     "conversation.chat.latest" => {
                         chat_runtime::latest(&mut tx, profile, payload).await?
                     }
+                    "chat.vision.get"|"chat.vision.set"=>chat_runtime::vision(&mut tx,command,profile,payload,expected).await?,
                     "chat.preflight" => chat_runtime::preflight(&mut tx,&p,payload,expected).await?,
                     "chat.send" => {
                         let (job, op) =

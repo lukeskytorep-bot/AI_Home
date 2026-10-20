@@ -1,0 +1,56 @@
+{
+  "removedOrUpdatedPreviousPackageEntries": [],
+  "addedPackageEntries": [
+    [
+      "byteorder-lite",
+      "0.1.0",
+      "registry+https://github.com/rust-lang/crates.io-index"
+    ],
+    [
+      "color_quant",
+      "1.1.0",
+      "registry+https://github.com/rust-lang/crates.io-index"
+    ],
+    [
+      "gif",
+      "0.14.2",
+      "registry+https://github.com/rust-lang/crates.io-index"
+    ],
+    [
+      "image",
+      "0.25.10",
+      "registry+https://github.com/rust-lang/crates.io-index"
+    ],
+    [
+      "image-webp",
+      "0.2.4",
+      "registry+https://github.com/rust-lang/crates.io-index"
+    ],
+    [
+      "moxcms",
+      "0.8.1",
+      "registry+https://github.com/rust-lang/crates.io-index"
+    ],
+    [
+      "pxfm",
+      "0.1.30",
+      "registry+https://github.com/rust-lang/crates.io-index"
+    ],
+    [
+      "quick-error",
+      "2.0.1",
+      "registry+https://github.com/rust-lang/crates.io-index"
+    ],
+    [
+      "zune-core",
+      "0.5.3",
+      "registry+https://github.com/rust-lang/crates.io-index"
+    ],
+    [
+      "zune-jpeg",
+      "0.5.15",
+      "registry+https://github.com/rust-lang/crates.io-index"
+    ]
+  ],
+  "frontendDependenciesChanged": false
+}

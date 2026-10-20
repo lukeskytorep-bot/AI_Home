@@ -144,7 +144,8 @@ pub(super) async fn accept(
         let aid = id();
         let bid = id();
         let lower = file.name.to_lowercase();
-        let mime = if lower.ends_with(".pdf") {
+        let is_image=imports::image::is_image(&file.name);
+        let mime = if is_image {if lower.ends_with(".png"){"image/png"}else if lower.ends_with(".webp"){"image/webp"}else if lower.ends_with(".gif"){"image/gif"}else{"image/jpeg"}} else if lower.ends_with(".pdf") {
             "application/pdf"
         } else if lower.ends_with(".docx") {
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -153,11 +154,11 @@ pub(super) async fn accept(
         } else {
             "text/plain"
         };
-        let m = json!({"schemaVersion":1,"id":mid,"profileId":profile,"revision":1,"createdAt":time,"fileName":file.name,"mimeType":mime,"originalBlobId":bid,"originalSha256":file.sha256,"originalSizeBytes":file.bytes.len(),"purpose":"conversation","conversationId":cid,"author":payload["author"],"importer":{"kind":"human","localActorId":"local-user"},"importedAt":time,"mediaKind":"document","parseState":"pending"});
+        let m = json!({"schemaVersion":1,"id":mid,"profileId":profile,"revision":1,"createdAt":time,"fileName":file.name,"mimeType":mime,"originalBlobId":bid,"originalSha256":file.sha256,"originalSizeBytes":file.bytes.len(),"purpose":"conversation","conversationId":cid,"author":payload["author"],"importer":{"kind":"human","localActorId":"local-user"},"importedAt":time,"mediaKind":if is_image{"image"}else{"document"},"parseState":"pending"});
         validate(&m, "ImportedMaterial")?;
         insert_blob(tx, profile, &bid, &file.sha256, &file.bytes).await?;
         sqlx::query("INSERT INTO import_materials(profile_id,id,conversation_id,operation_id,original_blob_id,revision,body) VALUES(?,?,?,?,?,1,?)").bind(profile).bind(&mid).bind(cid).bind(&opid).bind(&bid).bind(m.to_string()).execute(&mut **tx).await.map_err(|_|"STORAGE_ERROR")?;
-        let a = json!({"schemaVersion":1,"id":aid,"profileId":profile,"revision":1,"createdAt":time,"conversationId":cid,"materialId":mid,"kind":"document","state":"staged"});
+        let a = json!({"schemaVersion":1,"id":aid,"profileId":profile,"revision":1,"createdAt":time,"conversationId":cid,"materialId":mid,"kind":if is_image{"image"}else{"document"},"state":"staged"});
         validate(&a, "Attachment")?;
         sqlx::query("INSERT INTO attachments(profile_id,id,conversation_id,material_id,revision,body) VALUES(?,?,?,?,1,?)").bind(profile).bind(&aid).bind(cid).bind(&mid).bind(a.to_string()).execute(&mut **tx).await.map_err(|_|"STORAGE_ERROR")?;
         op["recordRefs"]
@@ -259,7 +260,7 @@ pub(super) async fn read(
                 return Err("NOT_FOUND");
             }
             let original = command == "material.original.read";
-            if !original && m["parseState"] != "ready" {
+            if !original && (m["parseState"] != "ready"||m["mediaKind"]!="document") {
                 return Err("IMPORT_UNREADABLE");
             }
             let bid = m[if original {
@@ -308,7 +309,7 @@ pub(super) async fn read(
         _ => Err("UNKNOWN_COMMAND"),
     }
 }
-type Outcome = (String, Result<imports::ParsedDocument, String>);
+type Outcome = (String, Result<imports::ParsedMaterial, String>);
 pub(super) async fn run(
     service: &Connections,
     job: ImportJob,
@@ -341,7 +342,7 @@ pub(super) async fn run(
             if worker_cancel.ensure_active().is_err() {
                 break;
             }
-            outcomes.push((mid, imports::parse(&f.name, &f.bytes)));
+            outcomes.push((mid, imports::parse_material(&f.name, &f.bytes)));
         }
         outcomes
     });
@@ -391,7 +392,12 @@ async fn commit(
         }
         m["revision"] = json!(m["revision"].as_i64().unwrap() + 1);
         match outcome {
-            Ok(parsed) => {
+            Ok(imports::ParsedMaterial::Image(parsed)) => {
+                m["mimeType"]=json!(parsed.mime);m["parseState"]=json!("ready");
+                m["imageMetadata"]=json!({"format":parsed.format,"width":parsed.width,"height":parsed.height});
+                ready+=1;
+            }
+            Ok(imports::ParsedMaterial::Document(parsed)) => {
                 if m["originalSizeBytes"].as_u64() != Some(parsed.size_bytes as u64) {
                     return Err("STORAGE_ERROR");
                 };

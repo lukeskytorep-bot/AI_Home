@@ -1,0 +1,33 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> ai-home@0.0.1 test
+> vitest run
+
+
+ RUN  v4.1.10 /workspace/scratch/8e3755d5c581/step3/work/AI_Home
+
+ ❯ tests/imports-ui.test.tsx (14 tests | 1 failed) 553ms
+   × bound images stay visible but cannot be selected or detached and preview URLs are revoked on unmount 34ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/imports-ui.test.tsx > bound images stay visible but cannot be selected or detached and preview URLs are revoked on unmount
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/imports-ui.test.tsx:45:605
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 7 passed (8)
+      Tests  1 failed | 112 passed (113)
+   Start at  03:06:08
+   Duration  4.74s (transform 3.35s, setup 0ms, import 5.68s, tests 4.68s, environment 12.04s)
+

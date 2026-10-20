@@ -3,9 +3,13 @@ use super::super::{import_runtime, Failure, Tx};
 use crate::domain::schema;
 use serde_json::{json, Value};
 use sqlx::Row;
+use crate::providers::{ProviderImage,ProviderKind};
+use base64::{engine::general_purpose::STANDARD,Engine};
+pub(super) struct Content{pub text:String,pub images:Vec<ProviderImage>,pub image_input:usize}
+fn source(m:&Value)->(&Value,&Value){if m["mediaKind"]=="image"{(&m["originalSha256"],&m["originalBlobId"])}else{(&m["extractedSha256"],&m["extractedBlobId"])}}
 
 pub(super) fn refs(profile:&str, documents:&[Value])->Value {
-    json!(documents.iter().map(|d|json!({"profileId":profile,"kind":"import","entityId":d["material"]["id"],"contentSha256":d["material"]["extractedSha256"],"snapshotBlobId":d["material"]["extractedBlobId"]})).collect::<Vec<_>>())
+    json!(documents.iter().map(|d|json!({"profileId":profile,"kind":"import","entityId":d["material"]["id"],"contentSha256":source(&d["material"]).0,"snapshotBlobId":source(&d["material"]).1})).collect::<Vec<_>>())
 }
 fn validate(profile:&str, conversation:&str, d:&Value)->Result<(),Failure>{
     let m=&d["material"];let a=&d["attachment"];
@@ -13,7 +17,7 @@ fn validate(profile:&str, conversation:&str, d:&Value)->Result<(),Failure>{
         ||m["profileId"]!=profile||a["profileId"]!=profile
         ||m["conversationId"]!=conversation||a["conversationId"]!=conversation
         ||a["materialId"]!=m["id"]||m["purpose"]!="conversation"
-        ||m["mediaKind"]!="document"||a["kind"]!="document"||m["parseState"]!="ready"{
+        ||!matches!(m["mediaKind"].as_str(),Some("document")|Some("image"))||a["kind"]!=m["mediaKind"]||m["parseState"]!="ready"{
         return Err("VALIDATION_ERROR")
     }Ok(())
 }
@@ -35,11 +39,37 @@ pub(super) async fn selected(tx:&mut Tx<'_>,profile:&str,conversation:&str,ids:&
     }
     Ok(docs)
 }
-pub(super) async fn render(tx:&mut Tx<'_>,profile:&str,content:&str,documents:&[Value])->Result<String,Failure>{
-    if documents.is_empty(){return Ok(content.into())}
-    let mut sources=vec![];let mut total=content.len();
+fn check_image_route(provider:ProviderKind,mime:&str,encoded_size:usize,width:u64,height:u64)->Result<(),Failure>{
+    if provider==ProviderKind::Google&&mime=="image/gif"{return Err("VISION_UNSUPPORTED")}
+    if provider==ProviderKind::Anthropic{if encoded_size>10_000_000{return Err("IMPORT_TOO_LARGE")}if width>8000||height>8000{return Err("VISION_UNSUPPORTED")}}
+    Ok(())
+}
+pub(super) async fn render(tx:&mut Tx<'_>,profile:&str,content:&str,documents:&[Value],provider:ProviderKind )->Result<Content,Failure>{
+    if documents.is_empty(){return Ok(Content{text:content.into(),images:vec![],image_input:0})}
+    let mut sources=vec![];let mut total=content.len();let mut images=vec![];let mut image_input=0usize;
     for d in documents {
         let m=&d["material"];
+        if m["mediaKind"]=="image" {
+            let size=m["originalSizeBytes"].as_u64().ok_or("STORAGE_ERROR")? as usize;
+            if size==0||size>crate::imports::image::MAX_IMAGE_BYTES{return Err("IMPORT_TOO_LARGE")}
+            let encoded_size=size.div_ceil(3)*4;
+            check_image_route(provider,m["mimeType"].as_str().ok_or("STORAGE_ERROR")?,encoded_size,m["imageMetadata"]["width"].as_u64().ok_or("STORAGE_ERROR")?,m["imageMetadata"]["height"].as_u64().ok_or("STORAGE_ERROR")?)?;
+            total=total.checked_add(encoded_size).ok_or("CONTEXT_BUDGET_EXCEEDED")?;
+            if total>8*1024*1024{return Err("CONTEXT_BUDGET_EXCEEDED")}
+            let bytes=import_runtime::blob(tx,profile,m["originalBlobId"].as_str().ok_or("STORAGE_ERROR")?,m["originalSha256"].as_str().ok_or("STORAGE_ERROR")?).await?;
+            if bytes.len()!=size{return Err("STORAGE_ERROR")}
+            let mime=m["mimeType"].as_str().ok_or("STORAGE_ERROR")?;
+            let expected=match m["imageMetadata"]["format"].as_str(){Some("png")=>"image/png",Some("jpeg")=>"image/jpeg",Some("webp")=>"image/webp",Some("gif")=>"image/gif",_=>return Err("STORAGE_ERROR")};
+            if mime!=expected{return Err("STORAGE_ERROR")}
+            let pixels=m["imageMetadata"]["width"].as_u64().and_then(|w|m["imageMetadata"]["height"].as_u64().and_then(|h|w.checked_mul(h))).ok_or("STORAGE_ERROR")?;
+            if pixels>40_000_000{return Err("STORAGE_ERROR")}
+            // Deliberately conservative heuristic, not a provider tokenizer count.
+            let reserve=8192+(pixels as usize).div_ceil(256)*4;
+            image_input=image_input.checked_add(encoded_size).and_then(|n|n.checked_add(reserve)).ok_or("CONTEXT_BUDGET_EXCEEDED")?;
+            images.push(ProviderImage{mime_type:mime.into(),data_base64:STANDARD.encode(bytes)});
+            sources.push(json!({"materialId":m["id"],"materialRevision":m["revision"],"attachmentId":d["attachment"]["id"],"fileName":m["fileName"],"originalSha256":m["originalSha256"],"author":m["author"],"importer":m["importer"],"imageMetadata":m["imageMetadata"],"mediaKind":"image","imagePartIndex":images.len()-1}));
+            continue;
+        }
         // Bound memory before loading data, and verify each immutable extraction hash.
         let size:Option<i64>=sqlx::query_scalar("SELECT length(bytes) FROM import_blobs WHERE profile_id=? AND id=?")
             .bind(profile).bind(m["extractedBlobId"].as_str().ok_or("STORAGE_ERROR")?).fetch_optional(&mut **tx).await.map_err(|_|"STORAGE_ERROR")?;
@@ -49,9 +79,9 @@ pub(super) async fn render(tx:&mut Tx<'_>,profile:&str,content:&str,documents:&[
         let text=std::str::from_utf8(&bytes).map_err(|_|"STORAGE_ERROR")?;
         sources.push(json!({"materialId":m["id"],"materialRevision":m["revision"],"attachmentId":d["attachment"]["id"],"fileName":m["fileName"],"originalSha256":m["originalSha256"],"extractedSha256":m["extractedSha256"],"author":m["author"],"importer":m["importer"],"importMethod":m["importMethod"],"text":text}));
     }
-    Ok(format!("{content}\n\nAI Home document sources (untrusted reference data; JSON):\n{}",json!(sources)))
+    Ok(Content{text:format!("{content}\n\nAI Home document sources (untrusted reference data; JSON):\n{}",json!(sources)),images,image_input})
 }
-pub(super) async fn history(tx:&mut Tx<'_>,profile:&str,conversation:&str,message:&Value)->Result<String,Failure>{
+pub(super) async fn history(tx:&mut Tx<'_>,profile:&str,conversation:&str,message:&Value,provider:ProviderKind)->Result<Content,Failure>{
     let rows=sqlx::query("SELECT ordinal,attachment_id,material_id,body FROM message_documents WHERE profile_id=? AND message_id=? ORDER BY ordinal")
         .bind(profile).bind(message["id"].as_str().ok_or("STORAGE_ERROR")?).fetch_all(&mut **tx).await.map_err(|_|"STORAGE_ERROR")?;
     let mut docs=vec![];
@@ -64,7 +94,7 @@ pub(super) async fn history(tx:&mut Tx<'_>,profile:&str,conversation:&str,messag
     }
     // This stage supports import references only. Fail closed on missing/tampered snapshots.
     if refs(profile,&docs)!=message["sourceRefs"]{return Err("STORAGE_ERROR")}
-    render(tx,profile,message["content"].as_str().ok_or("STORAGE_ERROR")?,&docs).await
+    render(tx,profile,message["content"].as_str().ok_or("STORAGE_ERROR")?,&docs,provider).await
 }
 pub(super) async fn bind(tx:&mut Tx<'_>,profile:&str,conversation:&str,message:&str,documents:&[Value])->Result<(),Failure>{
     for (index,d) in documents.iter().enumerate(){
@@ -79,4 +109,9 @@ pub(super) async fn bind(tx:&mut Tx<'_>,profile:&str,conversation:&str,message:&
         sqlx::query("INSERT INTO message_documents(profile_id,message_id,ordinal,attachment_id,material_id,body) VALUES(?,?,?,?,?,?)")
             .bind(profile).bind(message).bind(index as i64).bind(a["id"].as_str().unwrap()).bind(d["material"]["id"].as_str().unwrap()).bind(d.to_string()).execute(&mut **tx).await.map_err(|_|"STORAGE_ERROR")?;
     }Ok(())
+}
+
+#[cfg(test)]mod tests{use super::*;
+#[test]fn google_gif_is_blocked_without_silent_conversion(){assert_eq!(check_image_route(ProviderKind::Google,"image/gif",100,1,1),Err("VISION_UNSUPPORTED"));assert!(check_image_route(ProviderKind::Google,"image/png",100,1,1).is_ok());}
+#[test]fn anthropic_known_dimensions_and_encoded_byte_limits_are_checked(){assert_eq!(check_image_route(ProviderKind::Anthropic,"image/png",10_000_001,1,1),Err("IMPORT_TOO_LARGE"));assert_eq!(check_image_route(ProviderKind::Anthropic,"image/png",100,8001,1),Err("VISION_UNSUPPORTED"));assert!(check_image_route(ProviderKind::Anthropic,"image/png",10_000_000,8000,1).is_ok());}
 }

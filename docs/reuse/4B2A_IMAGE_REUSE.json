@@ -1,0 +1,27 @@
+{
+  "harnessArchive": "AI-RV-Harness-ai-rv-2 (3).zip",
+  "harnessArchiveSha256": "c772a795bab3d3f11fad1c1b67890e1f2290917cfb8461f77d9162f1b156124f",
+  "license": "docs/reuse/HARNESS_DOCUMENT_IMPORT_LICENSE.txt",
+  "sources": [
+    {
+      "path": "src-tauri/src/documents.rs",
+      "sha256": "e4d5f219eb70be3dd7fede2ac1532c8eb36f124ede0027b14717b1b9ea30fba7",
+      "reused": "image signatures, dimensions, extension matching, image byte/pixel limits, codec validation concepts",
+      "destination": "src-tauri/src/imports/image.rs",
+      "destinationSha256": "dd9e79e93cb878d6a2239a0feea93f2ab26314ef8b610871f86385add35ca48c",
+      "adaptation": "bounded image-rs codec decode, explicit animation rejection, durable original-only image state; no base64 in IPC DTO"
+    }
+  ],
+  "alreadyReusedProviderBuilders": {
+    "path": "src-tauri/src/providers/request_builders.rs",
+    "sha256": "6bb42d269cd7758f5612fb78d914741440d07eb223596519051da0b0aa5888e5",
+    "status": "byte-identical to accepted step2 base; all five protocol paths exercised"
+  },
+  "notCopied": [
+    "RV workflows",
+    "embedded RV resources",
+    "image generation",
+    "OCR",
+    "provider auto-capability guesses"
+  ]
+}

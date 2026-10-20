@@ -69,7 +69,22 @@
             "minLength": 1
           },
           "measurement": {
-            "const": "utf8_bytes_estimate"
+            "enum": [
+              "utf8_bytes_estimate",
+              "utf8_bytes_and_image_reserve_estimate"
+            ]
+          },
+          "imageCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "imageInputTokens": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "visionPolicyRevision": {
+            "type": "integer",
+            "minimum": 0
           }
         },
         "required": [

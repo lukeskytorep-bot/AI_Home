@@ -1,0 +1,136 @@
+{
+  "contractVersion": 1,
+  "note": "Explicit user declaration, not provider attestation; scoped to route and current connection/credential. Frozen P2 unchanged.",
+  "commands": {
+    "chat.vision.get": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "routeId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "routeRevision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "modelId": {
+            "type": "string"
+          },
+          "policyRevision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "support": {
+            "enum": [
+              "unknown",
+              "supported",
+              "unsupported"
+            ]
+          },
+          "source": {
+            "enum": [
+              "unconfigured",
+              "user_declared"
+            ]
+          }
+        },
+        "required": [
+          "routeId",
+          "routeRevision",
+          "modelId",
+          "policyRevision",
+          "support",
+          "source"
+        ],
+        "additionalProperties": false
+      },
+      "mutates": false,
+      "requiresExpectedRevision": false,
+      "async": false
+    },
+    "chat.vision.set": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "routeId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "policyRevision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "support": {
+            "enum": [
+              "supported",
+              "unsupported"
+            ]
+          }
+        },
+        "required": [
+          "routeId",
+          "policyRevision",
+          "support"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "routeId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "routeRevision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "modelId": {
+            "type": "string"
+          },
+          "policyRevision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "support": {
+            "enum": [
+              "unknown",
+              "supported",
+              "unsupported"
+            ]
+          },
+          "source": {
+            "enum": [
+              "unconfigured",
+              "user_declared"
+            ]
+          }
+        },
+        "required": [
+          "routeId",
+          "routeRevision",
+          "modelId",
+          "policyRevision",
+          "support",
+          "source"
+        ],
+        "additionalProperties": false
+      },
+      "mutates": true,
+      "requiresExpectedRevision": true,
+      "async": false
+    }
+  }
+}

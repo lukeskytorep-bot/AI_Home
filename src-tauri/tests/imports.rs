@@ -597,6 +597,7 @@ async fn migration_from_v5_retains_preferences_profiles_conversations_and_integr
     .await;
     let prefs = dispatch(&f.app, req("app.preferences.get", json!({}), None, None)).await;
     for statement in [
+        "DROP TABLE chat_vision_policies",
         "DROP TABLE message_documents",
         "DROP TABLE attachments",
         "DROP TABLE import_materials",
@@ -627,7 +628,7 @@ async fn migration_from_v5_retains_preferences_profiles_conversations_and_integr
             .fetch_one(&pool)
             .await
             .unwrap(),
-        7
+        8
     );
     assert_eq!(
         sqlx::query_scalar::<_, String>("PRAGMA integrity_check")
@@ -784,4 +785,32 @@ async fn size_caps_reject_oversize_files_and_whole_oversize_batches() {
             .unwrap(),
         0
     );
+}
+#[tokio::test]
+async fn static_images_in_mixed_batch_keep_originals_without_fictional_text(){
+    let f=Fixture::new().await;let mut paths=vec![];
+    for(ext,format) in [("png",image::ImageFormat::Png),("jpeg",image::ImageFormat::Jpeg),("webp",image::ImageFormat::WebP),("gif",image::ImageFormat::Gif)]{
+        let path=f.dir.join(format!("photo.{ext}"));let mut b=Cursor::new(vec![]);image::DynamicImage::new_rgb8(2,3).write_to(&mut b,format).unwrap();std::fs::write(&path,b.into_inner()).unwrap();paths.push(path);
+    }
+    let text=f.dir.join("notes.txt");std::fs::write(&text,b"Document text").unwrap();paths.push(text);
+    f.picker.0.lock().unwrap().push_back(paths.clone());let selected=call(&f.app,"material.select",json!({"conversationId":f.c}),&f.p).await;
+    let a=call(&f.app,"material.import",json!({"selectionToken":selected["selectionToken"],"purpose":"conversation","conversationId":f.c,"author":{"kind":"unknown","label":"","assertedBy":"importer","verified":false}}),&f.p).await;
+    let op=f.wait(&a["operation"]).await;assert_eq!(op["status"],"succeeded","{op}");
+    let list=call(&f.app,"conversation.materials.list",json!({"conversationId":f.c,"limit":100}),&f.p).await;assert_eq!(list["items"].as_array().unwrap().len(),5);
+    for item in list["items"].as_array().unwrap(){let m=&item["material"];assert!(schema::dto("ImportedMaterial",m));assert_eq!(m["parseState"],"ready");
+        if m["mediaKind"]=="image"{assert!(m.get("extractedBlobId").is_none());assert!(m.get("importMethod").is_none());assert_eq!(m["imageMetadata"]["height"],3);let rejected=dispatch(&f.app,req("material.text.read",json!({"conversationId":f.c,"materialId":m["id"],"offset":0,"limit":100}),Some(&f.p),None)).await;assert_eq!(rejected["error"]["code"],"IMPORT_UNREADABLE");}
+        let original=call(&f.app,"material.original.read",json!({"conversationId":f.c,"materialId":m["id"],"offset":0,"limit":65536}),&f.p).await;assert_eq!(STANDARD.decode(original["dataBase64"].as_str().unwrap()).unwrap(),std::fs::read(f.dir.join(m["fileName"].as_str().unwrap())).unwrap());
+    }
+    assert_eq!(sqlx::query_scalar::<_,i64>("SELECT COUNT(*) FROM import_blobs").fetch_one(&f.pool).await.unwrap(),6);
+}
+#[tokio::test]
+async fn damaged_and_animated_images_fail_without_losing_their_originals(){
+    let f=Fixture::new().await;let mut animation=vec![];{let mut e=image::codecs::gif::GifEncoder::new(&mut animation);for _ in 0..2{e.encode_frame(image::Frame::new(image::RgbaImage::new(2,2))).unwrap();}}
+    let damaged=f.dir.join("broken.png");std::fs::write(&damaged,b"not an image").unwrap();let animated=f.dir.join("animation.gif");std::fs::write(&animated,&animation).unwrap();f.picker.0.lock().unwrap().push_back(vec![damaged,animated]);
+    let s=call(&f.app,"material.select",json!({"conversationId":f.c}),&f.p).await;let a=call(&f.app,"material.import",json!({"selectionToken":s["selectionToken"],"purpose":"conversation","conversationId":f.c,"author":{"kind":"unknown","label":"","assertedBy":"importer","verified":false}}),&f.p).await;
+    let op=f.wait(&a["operation"]).await;assert_eq!(op["status"],"failed");
+    let list=call(&f.app,"conversation.materials.list",json!({"conversationId":f.c,"limit":100}),&f.p).await;assert_eq!(list["items"].as_array().unwrap().len(),2);
+    for item in list["items"].as_array().unwrap(){assert_eq!(item["material"]["parseState"],"unreadable");assert_eq!(item["attachment"]["state"],"failed");assert!(schema::dto("ImportedMaterial",&item["material"]));}
+    assert!(list["items"].as_array().unwrap().iter().any(|i|i["material"]["errorCode"]=="IMAGE_ANIMATION_UNSUPPORTED"));
+    assert_eq!(sqlx::query_scalar::<_,i64>("SELECT COUNT(*) FROM import_blobs").fetch_one(&f.pool).await.unwrap(),2);
 }

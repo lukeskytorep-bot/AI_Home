@@ -582,6 +582,7 @@ async fn actual_v4_database_migrates_without_changing_profile_or_preferences() {
     let p = profile(&app, "Legacy").await;
     let pref = ok(&app, "app.preferences.get", json!({}), None, None).await;
     for statement in [
+        "DROP TABLE chat_vision_policies",
         "DROP TABLE message_documents",
         "DROP TABLE chat_replay",
         "DROP TABLE chat_runs",
@@ -608,7 +609,7 @@ async fn actual_v4_database_migrates_without_changing_profile_or_preferences() {
             .fetch_one(&pool)
             .await
             .unwrap(),
-        7
+        8
     );
     assert!(sqlx::query("PRAGMA foreign_key_check")
         .fetch_all(&pool)
@@ -759,10 +760,10 @@ async fn v6_migration_and_restart_keep_document_versions_without_automatic_post(
     let store=Store::open(&path).await.unwrap();let pool=store.pool.clone();let vault=Arc::new(MemoryVault::default());
     let app=Application::with_vault(store,Vault::with_backend(vault.clone()));
     let(app,pool,vault,s,p,c,_)=configure(app,pool,vault).await;let(app,item)=imported(app,&pool,vault.clone(),&p,&c,"Persisted source").await;
-    sqlx::query("DROP TABLE message_documents").execute(&pool).await.unwrap();sqlx::query("PRAGMA user_version=6").execute(&pool).await.unwrap();
+    sqlx::query("DROP TABLE chat_vision_policies").execute(&pool).await.unwrap();sqlx::query("DROP TABLE message_documents").execute(&pool).await.unwrap();sqlx::query("PRAGMA user_version=6").execute(&pool).await.unwrap();
     drop(app);pool.close().await;
     let store=Store::open(&path).await.unwrap();let pool=store.pool.clone();let app=Application::with_vault(store,Vault::with_backend(vault.clone()));
-    assert_eq!(sqlx::query_scalar::<_,i64>("PRAGMA user_version").fetch_one(&pool).await.unwrap(),7);
+    assert_eq!(sqlx::query_scalar::<_,i64>("PRAGMA user_version").fetch_one(&pool).await.unwrap(),8);
     assert!(s.wires.lock().unwrap().is_empty());
     let r=with_document(&p,&c,&item,"First");let a=app.dispatch(r.clone()).await.response;assert_eq!(a["ok"],true,"{a}");let op=finished(&app,&p,&a["result"]["operation"]["id"]).await;assert_eq!(op["status"],"succeeded");
     let first=last_wire(&s)["messages"][1]["content"].clone();drop(app);pool.close().await;
@@ -784,4 +785,100 @@ async fn document_retry_reuses_exact_wire_and_cannot_bind_again() {
     let c=ok(&app,"conversation.get",json!({"conversationId":c["id"]}),Some(&p),None).await;
     let r=app.dispatch(with_document(&p,&c,&item,"Bind again")).await.response;assert_eq!(r["error"]["code"],"POLICY_DENIED");
     assert_eq!(s.wires.lock().unwrap().len(),2);assert_eq!(history(&app,&p,&c).await.as_array().unwrap().len(),2);
+}
+
+async fn imported_image(app:Application,pool:&sqlx::SqlitePool,vault:Arc<MemoryVault>,p:&str,c:&Value)->(Application,Value,Vec<u8>){
+    let mut encoded=std::io::Cursor::new(vec![]);image::DynamicImage::new_rgb8(3,2).write_to(&mut encoded,image::ImageFormat::Png).unwrap();let bytes=encoded.into_inner();
+    let path=std::env::temp_dir().join(format!("aihome-chat-image-{}.png",uuid::Uuid::new_v4()));std::fs::write(&path,&bytes).unwrap();drop(app);
+    let app=Application::with_file_picker(Store{pool:pool.clone()},Vault::with_backend(vault),Arc::new(DocumentPicker(path.clone())));
+    let s=ok(&app,"material.select",json!({"conversationId":c["id"]}),Some(p),None).await;
+    let a=ok(&app,"material.import",json!({"selectionToken":s["selectionToken"],"purpose":"conversation","conversationId":c["id"],"author":{"kind":"human","label":"Photo author","assertedBy":"importer","verified":false}}),Some(p),None).await;
+    let op=finished(&app,p,&a["operation"]["id"]).await;assert_eq!(op["status"],"succeeded","{op}");std::fs::remove_file(path).unwrap();
+    let list=ok(&app,"conversation.materials.list",json!({"conversationId":c["id"],"limit":100}),Some(p),None).await;
+    let item=list["items"].as_array().unwrap().iter().find(|i|i["material"]["mediaKind"]=="image").unwrap().clone();
+    (app,item,bytes)
+}
+async fn declare_vision(app:&Application,p:&str,support:&str)->Value{
+    let current=ok(app,"chat.vision.get",json!({}),Some(p),None).await;
+    ok(app,"chat.vision.set",json!({"routeId":current["routeId"],"policyRevision":current["policyRevision"],"support":support}),Some(p),current["routeRevision"].as_i64()).await
+}
+#[tokio::test]
+async fn image_ready_without_extraction_requires_explicit_scoped_vision_before_send(){
+    let(app,pool,vault,s,p,c,_)=configured().await;let(app,item,bytes)=imported_image(app,&pool,vault,&p,&c).await;
+    assert!(schema::dto("ImportedMaterial",&item["material"]));assert!(item["material"].get("extractedBlobId").is_none());assert_eq!(item["material"]["imageMetadata"]["width"],3);
+    let r=with_document(&p,&c,&item,"What is shown?");
+    let blocked=app.dispatch(r.clone()).await.response;assert_eq!(blocked["error"]["code"],"MODEL_CAPABILITY_UNKNOWN");assert!(schema::dto("ResultEnvelope",&blocked));
+    assert!(s.wires.lock().unwrap().is_empty());assert!(history(&app,&p,&c).await.as_array().unwrap().is_empty());
+    declare_vision(&app,&p,"unsupported").await;let blocked=app.dispatch(r.clone()).await.response;assert_eq!(blocked["error"]["code"],"VISION_UNSUPPORTED");
+    let policy=declare_vision(&app,&p,"supported").await;assert_eq!(policy["source"],"user_declared");
+    let preflight=ok(&app,"chat.preflight",r["payload"].clone(),Some(&p),Some(1)).await;assert_eq!(preflight["measurement"],"utf8_bytes_and_image_reserve_estimate");assert_eq!(preflight["imageCount"],1);assert!(preflight["imageInputTokens"].as_u64().unwrap()>8192);
+    let a=app.dispatch(r.clone()).await.response;assert_eq!(a["ok"],true,"{a}");assert_eq!(finished(&app,&p,&a["result"]["operation"]["id"]).await["status"],"succeeded");
+    let body=last_wire(&s);let part=&body["messages"][1]["content"][1];use base64::Engine;let expected=format!("data:image/png;base64,{}",base64::engine::general_purpose::STANDARD.encode(bytes));assert_eq!(part["image_url"]["url"],expected);
+    let human=history(&app,&p,&c).await[0].clone();assert_eq!(human["sourceRefs"][0]["contentSha256"],item["material"]["originalSha256"]);assert_eq!(human["sourceRefs"][0]["snapshotBlobId"],item["material"]["originalBlobId"]);
+    assert_eq!(app.dispatch(r).await.response,a);assert_eq!(s.wires.lock().unwrap().len(),1);
+    let c=ok(&app,"conversation.get",json!({"conversationId":c["id"]}),Some(&p),None).await;
+    let a=app.dispatch(send_request(&p,&c,"Follow up")).await.response;assert_eq!(finished(&app,&p,&a["result"]["operation"]["id"]).await["status"],"succeeded");assert_eq!(last_wire(&s)["messages"][1]["content"][1],*part);
+    declare_vision(&app,&p,"unsupported").await;let blocked=app.dispatch(send_request(&p,&c,"Do not silently drop history image")).await.response;assert_eq!(blocked["error"]["code"],"REVISION_CONFLICT");
+    let c=ok(&app,"conversation.get",json!({"conversationId":c["id"]}),Some(&p),None).await;let blocked=app.dispatch(send_request(&p,&c,"Do not silently drop history image")).await.response;assert_eq!(blocked["error"]["code"],"VISION_UNSUPPORTED");assert_eq!(s.wires.lock().unwrap().len(),2);
+}
+#[tokio::test]
+async fn image_policy_cas_scope_and_context_edit_invalidation(){
+    let(app,_,_,_,p,_,connection)=configured().await;let first=declare_vision(&app,&p,"supported").await;
+    let stale=invoke(&app,"chat.vision.set",json!({"routeId":first["routeId"],"policyRevision":0,"support":"unsupported"}),Some(&p),first["routeRevision"].as_i64()).await;assert_eq!(stale["error"]["code"],"REVISION_CONFLICT");
+    let s=ok(&app,"chat.settings.get",json!({}),Some(&p),None).await;
+    ok(&app,"chat.settings.set",json!({"routeId":s["routeId"],"contextTokens":65536}),Some(&p),s["routeRevision"].as_i64()).await;
+    let after=ok(&app,"chat.vision.get",json!({}),Some(&p),None).await;assert_eq!(after["support"],"supported");assert_ne!(after["routeRevision"],first["routeRevision"]);
+    ok(&app,"connection.credential.set",json!({"connectionId":connection["id"],"credential":{"secret":"changed"}}),Some(&p),Some(1)).await;
+    assert_eq!(ok(&app,"chat.vision.get",json!({}),Some(&p),None).await["support"],"unknown");
+}
+#[tokio::test]
+async fn changing_vision_during_image_post_rejects_late_answer(){
+    let(app,pool,vault,s,p,c,_)=configured().await;let(app,item,_)=imported_image(app,&pool,vault,&p,&c).await;declare_vision(&app,&p,"supported").await;
+    s.hold.store(true,Ordering::SeqCst);let a=app.dispatch(with_document(&p,&c,&item,"Look")).await.response;received(&s).await;
+    declare_vision(&app,&p,"unsupported").await;s.release.add_permits(1);let op=finished(&app,&p,&a["result"]["operation"]["id"]).await;assert_eq!(op["status"],"failed");assert_eq!(op["error"]["code"],"REVISION_CONFLICT");assert_eq!(history(&app,&p,&c).await.as_array().unwrap().len(),1);
+}
+#[tokio::test]
+async fn image_preflight_overflow_and_receipt_failure_leave_no_bound_sources(){
+    let(app,pool,vault,s,p,c,_)=configured().await;let(app,item,_)=imported_image(app,&pool,vault,&p,&c).await;declare_vision(&app,&p,"supported").await;
+    sqlx::query("UPDATE chat_policies SET context_tokens=8192").execute(&pool).await.unwrap();
+    let r=with_document(&p,&c,&item,"Look");assert_eq!(app.dispatch(r.clone()).await.response["error"]["code"],"CONTEXT_BUDGET_EXCEEDED");
+    sqlx::query("UPDATE chat_policies SET context_tokens=32768").execute(&pool).await.unwrap();
+    sqlx::query("CREATE TRIGGER reject_image_receipt BEFORE INSERT ON receipts WHEN NEW.request_id='fault-image' BEGIN SELECT RAISE(ABORT,'fault'); END").execute(&pool).await.unwrap();let mut r=r;r["requestId"]=json!("fault-image");assert_eq!(app.dispatch(r).await.response["error"]["code"],"STORAGE_ERROR");
+    assert!(s.wires.lock().unwrap().is_empty());assert!(history(&app,&p,&c).await.as_array().unwrap().is_empty());assert_eq!(sqlx::query_scalar::<_,i64>("SELECT COUNT(*) FROM message_documents").fetch_one(&pool).await.unwrap(),0);
+    let list=ok(&app,"conversation.materials.list",json!({"conversationId":c["id"],"limit":100}),Some(&p),None).await;assert_eq!(list["items"][0]["attachment"]["state"],"staged");
+}
+#[tokio::test]
+async fn image_migration_restart_keeps_original_policy_and_replay(){
+    let path=std::env::temp_dir().join(format!("aihome-image-restart-{}.db",uuid::Uuid::new_v4()));let store=Store::open(&path).await.unwrap();let pool=store.pool.clone();let vault=Arc::new(MemoryVault::default());let app=Application::with_vault(store,Vault::with_backend(vault.clone()));
+    let(app,pool,vault,s,p,c,_)=configure(app,pool,vault).await;let prefs=ok(&app,"app.preferences.get",json!({}),None,None).await;
+    sqlx::query("DROP TABLE chat_vision_policies").execute(&pool).await.unwrap();sqlx::query("PRAGMA user_version=7").execute(&pool).await.unwrap();drop(app);pool.close().await;
+    let store=Store::open(&path).await.unwrap();let pool=store.pool.clone();let app=Application::with_vault(store,Vault::with_backend(vault.clone()));
+    assert_eq!(sqlx::query_scalar::<_,i64>("PRAGMA user_version").fetch_one(&pool).await.unwrap(),8);assert_eq!(ok(&app,"app.preferences.get",json!({}),None,None).await,prefs);
+    assert_eq!(ok(&app,"chat.vision.get",json!({}),Some(&p),None).await["support"],"unknown");
+    let(app,item,_)=imported_image(app,&pool,vault.clone(),&p,&c).await;let policy=declare_vision(&app,&p,"supported").await;
+    let r=with_document(&p,&c,&item,"Describe");let a=app.dispatch(r.clone()).await.response;assert_eq!(a["ok"],true,"{a}");assert_eq!(finished(&app,&p,&a["result"]["operation"]["id"]).await["status"],"succeeded");let first=last_wire(&s)["messages"][1]["content"].clone();drop(app);pool.close().await;
+    let store=Store::open(&path).await.unwrap();let pool=store.pool.clone();let app=Application::with_vault(store,Vault::with_backend(vault));
+    assert_eq!(s.wires.lock().unwrap().len(),1);assert_eq!(ok(&app,"chat.vision.get",json!({}),Some(&p),None).await,policy);assert_eq!(app.dispatch(r).await.response,a);
+    let c=ok(&app,"conversation.get",json!({"conversationId":c["id"]}),Some(&p),None).await;let a=app.dispatch(send_request(&p,&c,"After restart")).await.response;assert_eq!(finished(&app,&p,&a["result"]["operation"]["id"]).await["status"],"succeeded");assert_eq!(last_wire(&s)["messages"][1]["content"],first);
+    sqlx::query("UPDATE import_blobs SET bytes=X'00' WHERE id=?").bind(item["material"]["originalBlobId"].as_str().unwrap()).execute(&pool).await.unwrap();
+    let c=ok(&app,"conversation.get",json!({"conversationId":c["id"]}),Some(&p),None).await;assert_eq!(app.dispatch(send_request(&p,&c,"Corrupted source")).await.response["error"]["code"],"STORAGE_ERROR");assert_eq!(s.wires.lock().unwrap().len(),2);
+    assert!(sqlx::query("PRAGMA foreign_key_check").fetch_all(&pool).await.unwrap().is_empty());drop(app);pool.close().await;std::fs::remove_file(path).unwrap();
+}
+#[tokio::test]
+async fn image_cancel_and_retry_preserve_one_source_and_exact_payload(){
+    let(app,pool,vault,s,p,c,_)=configured().await;let(app,item,_)=imported_image(app,&pool,vault,&p,&c).await;declare_vision(&app,&p,"supported").await;
+    s.responses.lock().unwrap().push_back((503,"private".into()));let r=with_document(&p,&c,&item,"Retry image");let a=app.dispatch(r.clone()).await.response;let op=finished(&app,&p,&a["result"]["operation"]["id"]).await;assert_eq!(op["status"],"succeeded");assert_eq!(op["physicalCallCount"],2);{let w=s.wires.lock().unwrap();assert_eq!(w.len(),2);assert_eq!(w[0],w[1]);}
+    assert_eq!(app.dispatch(r).await.response,a);assert_eq!(sqlx::query_scalar::<_,i64>("SELECT COUNT(*) FROM message_documents").fetch_one(&pool).await.unwrap(),1);
+    let c=ok(&app,"conversation.get",json!({"conversationId":c["id"]}),Some(&p),None).await;s.hold.store(true,Ordering::SeqCst);let a=app.dispatch(send_request(&p,&c,"Cancel follow-up with retained image")).await.response;
+    tokio::time::timeout(std::time::Duration::from_secs(30),async{while s.wires.lock().unwrap().len()<3{tokio::time::sleep(std::time::Duration::from_millis(25)).await;}}).await.unwrap();
+    let op=ok(&app,"operation.cancel",json!({"operationId":a["result"]["operation"]["id"]}),Some(&p),None).await;assert_eq!(op["status"],"cancelled");s.release.add_permits(1);
+    assert_eq!(history(&app,&p,&c).await.as_array().unwrap().len(),3);assert_eq!(sqlx::query_scalar::<_,i64>("SELECT COUNT(*) FROM message_documents").fetch_one(&pool).await.unwrap(),1);
+}
+#[tokio::test]
+async fn mixed_text_and_image_sources_keep_explicit_order_and_bytes(){
+    let(app,pool,vault,s,p,c,_)=configured().await;let(app,doc)=imported(app,&pool,vault.clone(),&p,&c,"Mixed source text 🪐").await;let(app,img,bytes)=imported_image(app,&pool,vault,&p,&c).await;declare_vision(&app,&p,"supported").await;
+    let mut r=send_request(&p,&c,"Compare these");r["payload"]["attachmentIds"]=json!([img["attachment"]["id"],doc["attachment"]["id"]]);let a=app.dispatch(r).await.response;assert_eq!(a["ok"],true,"{a}");assert_eq!(finished(&app,&p,&a["result"]["operation"]["id"]).await["status"],"succeeded");
+    let body=last_wire(&s);let text=body["messages"][1]["content"][0]["text"].as_str().unwrap();let sources:Value=serde_json::from_str(text.split("JSON):\n").nth(1).unwrap()).unwrap();assert_eq!(sources[0]["materialId"],img["material"]["id"]);assert_eq!(sources[0]["imagePartIndex"],0);assert_eq!(sources[1]["text"],"Mixed source text 🪐");
+    use base64::Engine;let encoded=body["messages"][1]["content"][1]["image_url"]["url"].as_str().unwrap().split(',').nth(1).unwrap();assert_eq!(base64::engine::general_purpose::STANDARD.decode(encoded).unwrap(),bytes);
+    let h=history(&app,&p,&c).await;assert_eq!(h[0]["sourceRefs"][0]["contentSha256"],img["material"]["originalSha256"]);assert_eq!(h[0]["sourceRefs"][1]["contentSha256"],doc["material"]["extractedSha256"]);assert_eq!(sqlx::query_scalar::<_,i64>("SELECT COUNT(*) FROM message_documents").fetch_one(&pool).await.unwrap(),2);
 }

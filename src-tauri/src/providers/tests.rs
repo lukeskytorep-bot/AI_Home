@@ -51,3 +51,12 @@ fn google_signed_literal_text_survives_parser_to_replay() {
         assert_eq!(replay.body["contents"][1]["parts"], json!(original_parts));
     }
 }
+
+#[test]fn image_payloads_use_provider_specific_parts_and_reject_foreign_media(){
+ for p in [ProviderKind::Openai,ProviderKind::Openrouter,ProviderKind::CustomOpenai,ProviderKind::Google,ProviderKind::Anthropic]{
+  let mut r=request(p);r.messages[1].images.push(ProviderImage{mime_type:"image/png".into(),data_base64:"aGVsbG8=".into()});let body=prepare(&r).body;
+  match p{ProviderKind::Google=>{assert_eq!(body["contents"][0]["parts"][1],json!({"inlineData":{"mimeType":"image/png","data":"aGVsbG8="}}));},ProviderKind::Anthropic=>{assert_eq!(body["messages"][0]["content"][1],json!({"type":"image","source":{"type":"base64","media_type":"image/png","data":"aGVsbG8="}}));},_=>assert_eq!(body["messages"][1]["content"][1],json!({"type":"image_url","image_url":{"url":"data:image/png;base64,aGVsbG8="}}))}
+  r.messages[1].images[0].mime_type="image/svg+xml".into();assert!(prepare_chat(&r,&r.scope.normalized_endpoint).is_err());
+  r.messages[1].images[0].mime_type="image/png".into();r.messages[1].images[0].data_base64="https://untrusted/remote.png".into();assert!(prepare_chat(&r,&r.scope.normalized_endpoint).is_err());
+ }
+}

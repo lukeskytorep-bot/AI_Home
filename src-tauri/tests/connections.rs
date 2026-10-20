@@ -657,7 +657,7 @@ async fn migration_from_actual_v1_preserves_preferences_and_has_valid_foreign_ke
             .fetch_one(&store.pool)
             .await
             .unwrap(),
-        7
+        8
     );
     assert!(sqlx::query("PRAGMA foreign_key_check")
         .fetch_all(&store.pool)
@@ -945,7 +945,7 @@ async fn version_two_legacy_receipt_is_read_only_and_checks_original_secret() {
             .fetch_one(&pool)
             .await
             .unwrap(),
-        7
+        8
     );
     assert_eq!(app.dispatch(r.clone()).await.response, original);
     let mut changed = r.clone();

@@ -19,6 +19,7 @@ tauri-build = { version = "=2.6.3", features = [] }
 tauri-utils = "=2.9.3"
 tauri-codegen = "=2.6.3"
 [dependencies]
+image = { version = "=0.25.10", default-features = false, features = ["png", "jpeg", "gif", "webp"] }
 tauri = { version = "=2.11.5", features = [], optional = true }
 # Avoid selecting the newer runtime family before the first committed Cargo.lock.
 tauri-macros = { version = "=2.6.3", optional = true }

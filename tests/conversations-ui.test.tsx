@@ -1,4 +1,4 @@
-import imports from '../contracts/imports.ipc.json';
+import imports from '../contracts/imports.ipc.json';import vision from '../contracts/vision.ipc.json';
 import chat from '../contracts/chat.ipc.json';
 import catalog from '../contracts/ipc.catalog.json';
 import extra from '../contracts/conversations.ipc.json';
@@ -10,14 +10,14 @@ let chatEnabled:boolean,historyFails:boolean,sendGate:Promise<void>|undefined,re
 let root:Root,host:HTMLDivElement,calls:Request[],conflict:boolean,ambiguous:boolean,paginated:boolean,records:Record<string,any>,deferred:Promise<void>|undefined,release:(()=>void)|undefined;
 const fake:Transport={mode:'desktop',subscribe:async()=>()=>{},dispatch:async<T,>(r:Request):Promise<Response<T>>=>{
  calls.push(r);
- const contract=({...catalog.commands,...extra.commands,...chat.commands,...imports.commands} as Record<string,{payload:JsonSchema;scope:string;requiresExpectedRevision:boolean}>)[r.command];
+ const contract=({...catalog.commands,...extra.commands,...chat.commands,...imports.commands,...vision.commands} as Record<string,{payload:JsonSchema;scope:string;requiresExpectedRevision:boolean}>)[r.command];
  expect(contract,'known command '+r.command).toBeDefined();
  expect(validDto('CommandEnvelope',r),'command envelope '+r.command).toBe(true);
  expect(valid(r.payload,contract.payload),'contract payload '+r.command).toBe(true);
  expect(Boolean(r.profileId),'profile scope '+r.command).toBe(contract.scope==='profile');
  if(contract.requiresExpectedRevision)expect(r.expectedRevision).toBeGreaterThan(0);
  let result:any;switch(r.command){case 'profile.list':result=paginated?(r.payload.cursor?{items:[{id:'p2',displayName:'Two'}],nextCursor:''}:{items:[{id:'p1',displayName:'One'}],nextCursor:'page-2'}):{items:[{id:'p1',displayName:'One'},{id:'p2',displayName:'Two'}],nextCursor:''};break;
- case 'chat.settings.get':result={routeId:'r1',routeRevision:1,modelId:'model',contextTokens:chatEnabled?32768:0,source:'user_declared',measurement:'utf8_bytes_estimate',outputTokens:1024,inputReserveTokens:512};break;
+ case 'chat.vision.get':result={routeId:'r1',routeRevision:1,modelId:'mock-model',policyRevision:0,support:'unknown',source:'unconfigured'};break;case 'chat.settings.get':result={routeId:'r1',routeRevision:1,modelId:'model',contextTokens:chatEnabled?32768:0,source:'user_declared',measurement:'utf8_bytes_estimate',outputTokens:1024,inputReserveTokens:512};break;
  case 'conversation.chat.latest':case 'conversation.import.latest':result={found:false};break;
  case 'conversation.materials.list':result={items:[],nextAfterId:''};break;
  case 'conversation.messages.list':if(historyFails)throw Error('History unavailable');result={items:[],nextCursor:''};break;
