@@ -320,7 +320,7 @@ async fn restart_keeps_preferences_receipts_and_drafts() {
             .fetch_one(&pool)
             .await
             .unwrap(),
-        5
+        6
     );
     assert!(sqlx::query("PRAGMA foreign_key_check")
         .fetch_all(&pool)
@@ -370,7 +370,7 @@ async fn actual_v3_database_without_conversation_tables_migrates() {
             .fetch_one(&pool)
             .await
             .unwrap(),
-        5
+        6
     );
     let c = create(&app, &p, "After migration").await;
     assert_eq!(c["draftText"], "");

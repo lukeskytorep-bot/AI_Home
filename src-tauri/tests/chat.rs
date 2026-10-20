@@ -148,8 +148,9 @@ async fn server() -> Server {
         task,
     }
 }
+// Fixture watchdog only: tolerate shared CI scheduling without changing provider budgets.
 async fn finished(app: &Application, p: &str, id: &Value) -> Value {
-    tokio::time::timeout(std::time::Duration::from_secs(8), async {
+    tokio::time::timeout(std::time::Duration::from_secs(30), async {
         loop {
             let op = ok(
                 app,
@@ -163,7 +164,7 @@ async fn finished(app: &Application, p: &str, id: &Value) -> Value {
                 assert!(schema::dto("Operation", &op), "{op}");
                 return op;
             }
-            tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+            tokio::time::sleep(std::time::Duration::from_millis(25)).await;
         }
     })
     .await
@@ -242,7 +243,7 @@ async fn history(app: &Application, p: &str, c: &Value) -> Value {
         .clone()
 }
 async fn received(s: &Server) {
-    tokio::time::timeout(std::time::Duration::from_secs(5), async {
+    tokio::time::timeout(std::time::Duration::from_secs(30), async {
         while s.wires.lock().unwrap().is_empty() {
             tokio::time::sleep(std::time::Duration::from_millis(2)).await;
         }
@@ -603,7 +604,7 @@ async fn actual_v4_database_migrates_without_changing_profile_or_preferences() {
             .fetch_one(&pool)
             .await
             .unwrap(),
-        5
+        6
     );
     assert!(sqlx::query("PRAGMA foreign_key_check")
         .fetch_all(&pool)

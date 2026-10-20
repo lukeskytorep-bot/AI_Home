@@ -17,9 +17,12 @@ use tokio::sync::Mutex;
 mod chat_runtime;
 #[path = "conversations.rs"]
 mod conversation_storage;
+#[path = "import_runtime.rs"]
+mod import_runtime;
 type Failure = &'static str;
 type Tx<'a> = Transaction<'a, Sqlite>;
 const COMMANDS: &[&str] = &[
+    "material.select", "material.import", "material.get", "material.text.read", "material.original.read", "conversation.materials.list", "conversation.import.latest", "attachment.detach",
     "chat.send",
     "chat.settings.get",
     "chat.settings.set",
@@ -197,6 +200,7 @@ async fn event(tx: &mut Tx<'_>, profile: &str, typ: &str, payload: &Value) -> Re
 #[derive(Clone)]
 pub struct Connections {
     pool: SqlitePool,
+    imports: crate::imports::ImportService,
     vault: Vault,
     gate: Arc<Mutex<()>>,
     active: Arc<Mutex<HashMap<String, (Cancellation, CallBudget)>>>,
@@ -205,11 +209,13 @@ impl Connections {
     pub fn new(pool: SqlitePool, vault: Vault) -> Self {
         Self {
             pool,
+            imports: crate::imports::ImportService::new(None),
             vault,
             gate: Arc::new(Mutex::new(())),
             active: Arc::new(Mutex::new(HashMap::new())),
         }
     }
+    pub fn with_picker(pool:SqlitePool,vault:Vault,picker:Arc<dyn crate::imports::FilePicker>)->Self{let mut service=Self::new(pool,vault);service.imports=crate::imports::ImportService::new(Some(picker));service}
     pub async fn dispatch(&self, r: Value) -> Value {
         match self.execute(&r).await {
             Ok(v) => v,
@@ -227,11 +233,13 @@ impl Connections {
             serde_json::from_str(include_str!("../../contracts/conversations.ipc.json")).unwrap();
         let chat: Value =
             serde_json::from_str(include_str!("../../contracts/chat.ipc.json")).unwrap();
+        let imports:Value=serde_json::from_str(include_str!("../../contracts/imports.ipc.json")).unwrap();
         let contract = catalog["commands"]
             .get(command)
             .or_else(|| extra["commands"].get(command))
             .or_else(|| conversations["commands"].get(command))
             .or_else(|| chat["commands"].get(command))
+            .or_else(|| imports["commands"].get(command))
             .ok_or("UNKNOWN_COMMAND")?;
         if !schema::dto("CommandEnvelope", r)
             || !schema::valid(&r["payload"], &contract["payload"])
@@ -250,6 +258,16 @@ impl Connections {
         }
         let payload = &r["payload"];
         let expected = r["expectedRevision"].as_i64().unwrap_or(0);
+        if command=="material.select" {
+            let mut tx=self.pool.begin().await.map_err(|_|"STORAGE_ERROR")?;
+            let p=get(&mut tx,"profiles","",profile).await?;let c=get(&mut tx,"conversations",profile,payload["conversationId"].as_str().unwrap()).await?;
+            if p["status"]=="archived"||c["status"]!="open"{return Err("POLICY_DENIED")}
+            tx.commit().await.map_err(|_|"STORAGE_ERROR")?;drop(_guard);
+            let result=self.imports.select(profile,payload["conversationId"].as_str().unwrap()).await?;
+            if !schema::valid(&result,&contract["result"]){return Err("STORAGE_ERROR")}
+            return Ok(success(r,result))
+        }
+
         let mut fingerprint_payload = payload.clone();
         fingerprint_payload
             .as_object_mut()
@@ -314,6 +332,7 @@ impl Connections {
         }
         let mut launch = None;
         let mut chat_launch = None;
+        let mut import_launch = None;
         let mut cancel_after = Vec::new();
         let result = match command {
             "profile.create" => {
@@ -373,6 +392,8 @@ impl Connections {
                     return Err("POLICY_DENIED");
                 }
                 match command {
+                    "material.import" => {let (job,op)=import_runtime::accept(&mut tx,self,profile,payload).await?;import_launch=Some((job,op.clone()));json!({"operation":op})}
+                    "material.get"|"material.text.read"|"material.original.read"|"conversation.materials.list"|"conversation.import.latest"|"attachment.detach" => import_runtime::read(&mut tx,command,profile,payload,expected).await?,
                     "chat.settings.get" | "chat.settings.set" => {
                         chat_runtime::settings(&mut tx, command, profile, payload, expected).await?
                     }
@@ -691,6 +712,7 @@ impl Connections {
                             }
                             let old = revision(&op)?;
                             terminal(&mut op, "cancelled", "OPERATION_CANCELLED")?;
+                            if op["kind"]=="import"{import_runtime::cancel_pending(&mut tx,profile,op["id"].as_str().unwrap(),"OPERATION_CANCELLED").await?;}
                             put(&mut tx, "operations", &op, false, old).await?;
                             event(&mut tx, profile, "operation.changed", &op).await?;
                         }
@@ -726,6 +748,12 @@ impl Connections {
                     cancel.cancel();
                 }
             }
+        }
+        if let Some((job,op))=import_launch {
+            self.imports.consume(&job.token).await;
+            let cancel=Cancellation::default();let budget=CallBudget::new(std::time::Duration::from_secs(30),1,cancel.clone()).map_err(|_|"VALIDATION_ERROR")?;
+            self.active.lock().await.insert(op["id"].as_str().unwrap().into(),(cancel,budget.clone()));
+            let service=self.clone();tokio::spawn(async move {let profile=op["profileId"].as_str().unwrap().to_string();let opid=op["id"].as_str().unwrap().to_string();if import_runtime::run(&service,job,op,budget).await.is_err(){let _=import_runtime::failed(&service,&profile,&opid,"STORAGE_ERROR").await;}service.active.lock().await.remove(&opid);});
         }
         if let Some((c, op)) = launch {
             let cancel = Cancellation::default();

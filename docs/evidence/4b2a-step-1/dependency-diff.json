@@ -1,0 +1,115 @@
+{
+  "removedOrUpgradedBaselineVersions": [],
+  "addedPackages": [
+    {
+      "name": "arbitrary",
+      "version": "1.5.0"
+    },
+    {
+      "name": "bytecount",
+      "version": "0.6.9"
+    },
+    {
+      "name": "core_detect",
+      "version": "1.0.0"
+    },
+    {
+      "name": "derive_arbitrary",
+      "version": "1.5.0"
+    },
+    {
+      "name": "ecb",
+      "version": "0.1.2"
+    },
+    {
+      "name": "encoding_rs",
+      "version": "0.8.42"
+    },
+    {
+      "name": "lopdf",
+      "version": "0.36.0"
+    },
+    {
+      "name": "md-5",
+      "version": "0.10.6"
+    },
+    {
+      "name": "multiversion_no_op",
+      "version": "1.0.0"
+    },
+    {
+      "name": "nom",
+      "version": "8.0.0"
+    },
+    {
+      "name": "nom_locate",
+      "version": "5.0.0"
+    },
+    {
+      "name": "rand",
+      "version": "0.9.5"
+    },
+    {
+      "name": "rand_chacha",
+      "version": "0.9.0"
+    },
+    {
+      "name": "rand_core",
+      "version": "0.9.5"
+    },
+    {
+      "name": "rangemap",
+      "version": "1.8.0"
+    },
+    {
+      "name": "rfd",
+      "version": "0.16.0"
+    },
+    {
+      "name": "roxmltree",
+      "version": "0.20.0"
+    },
+    {
+      "name": "stringprep",
+      "version": "0.1.5"
+    },
+    {
+      "name": "tauri-plugin",
+      "version": "2.6.3"
+    },
+    {
+      "name": "tauri-plugin-dialog",
+      "version": "2.7.2"
+    },
+    {
+      "name": "tauri-plugin-fs",
+      "version": "2.5.2"
+    },
+    {
+      "name": "unicode-bidi",
+      "version": "0.3.18"
+    },
+    {
+      "name": "unicode-normalization",
+      "version": "0.1.26"
+    },
+    {
+      "name": "unicode-properties",
+      "version": "0.1.4"
+    },
+    {
+      "name": "weezl",
+      "version": "0.1.12"
+    },
+    {
+      "name": "zip",
+      "version": "2.4.2"
+    },
+    {
+      "name": "zopfli",
+      "version": "0.8.4"
+    }
+  ],
+  "oldPackageEntries": 573,
+  "newPackageEntries": 600
+}

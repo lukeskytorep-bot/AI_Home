@@ -1,0 +1,355 @@
+{
+  "schemaVersion": 1,
+  "note": "Supplementary local selection, paging and preview commands; P2 material.import/get remain unchanged. No UI paths or file bytes accepted.",
+  "commands": {
+    "material.select": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "conversationId"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "cancelled": {
+            "type": "boolean"
+          },
+          "selectionToken": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 128
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "fileName": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512
+                },
+                "accepted": {
+                  "type": "boolean"
+                },
+                "sizeBytes": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 15728640
+                },
+                "errorCode": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                }
+              },
+              "required": [
+                "fileName",
+                "accepted"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "cancelled",
+          "selectionToken",
+          "items"
+        ],
+        "additionalProperties": false
+      },
+      "mutates": false,
+      "requiresExpectedRevision": false,
+      "async": false,
+      "firstImplementationStage": "4B-2A step1"
+    },
+    "conversation.materials.list": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "afterId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "conversationId",
+          "limit"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "material": {
+                  "$ref": "#/$defs/ImportedMaterial"
+                },
+                "attachment": {
+                  "$ref": "#/$defs/Attachment"
+                }
+              },
+              "required": [
+                "material",
+                "attachment"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "nextAfterId": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "items",
+          "nextAfterId"
+        ],
+        "additionalProperties": false
+      },
+      "mutates": false,
+      "requiresExpectedRevision": false,
+      "async": false,
+      "firstImplementationStage": "4B-2A step1"
+    },
+    "material.text.read": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "materialId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 65536
+          }
+        },
+        "required": [
+          "conversationId",
+          "materialId",
+          "offset",
+          "limit"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "nextOffset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "totalBytes": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "text",
+          "nextOffset",
+          "totalBytes"
+        ],
+        "additionalProperties": false
+      },
+      "mutates": false,
+      "requiresExpectedRevision": false,
+      "async": false,
+      "firstImplementationStage": "4B-2A step1"
+    },
+    "material.original.read": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "materialId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 65536
+          }
+        },
+        "required": [
+          "conversationId",
+          "materialId",
+          "offset",
+          "limit"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "dataBase64": {
+            "type": "string"
+          },
+          "nextOffset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "totalBytes": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "fileName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          },
+          "mimeType": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
+        "required": [
+          "dataBase64",
+          "nextOffset",
+          "totalBytes",
+          "fileName",
+          "mimeType",
+          "sha256"
+        ],
+        "additionalProperties": false
+      },
+      "mutates": false,
+      "requiresExpectedRevision": false,
+      "async": false,
+      "firstImplementationStage": "4B-2A step1"
+    },
+    "attachment.detach": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "attachmentId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "conversationId",
+          "attachmentId"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "removed": {
+            "const": true
+          }
+        },
+        "required": [
+          "removed"
+        ],
+        "additionalProperties": false
+      },
+      "mutates": true,
+      "requiresExpectedRevision": true,
+      "async": false,
+      "firstImplementationStage": "4B-2A step1"
+    },
+    "conversation.import.latest": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "conversationId"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "found": {
+            "type": "boolean"
+          },
+          "operation": {
+            "$ref": "#/$defs/Operation"
+          }
+        },
+        "required": [
+          "found"
+        ],
+        "additionalProperties": false
+      },
+      "mutates": false,
+      "requiresExpectedRevision": false,
+      "async": false,
+      "firstImplementationStage": "4B-2A step1"
+    }
+  }
+}

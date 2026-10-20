@@ -4,6 +4,7 @@ pub mod kernel;
 pub mod persistence;
 pub mod providers;
 pub mod vault;
+pub mod imports;
 mod connections;
 #[cfg(feature="desktop")]
 mod desktop {
@@ -20,10 +21,10 @@ mod desktop {
         Ok(outcome.response)
     }
     pub fn run(){
-        tauri::Builder::default().setup(|app|{
+        tauri::Builder::default().plugin(tauri_plugin_dialog::init()).setup(|app|{
             let directory=app.path().app_data_dir()?;std::fs::create_dir_all(&directory)?;
             let store=tauri::async_runtime::block_on(Store::open(&directory.join("foundation.sqlite3")))?;
-            app.manage(Application::new(store));Ok(())
+            app.manage(Application::with_file_picker(store,crate::vault::Vault::os(),std::sync::Arc::new(crate::imports::DesktopPicker(app.handle().clone()))));Ok(())
         }).invoke_handler(tauri::generate_handler![home_dispatch])
           .run(tauri::generate_context!()).expect("AI Home startup failed");
     }

@@ -1,6 +1,6 @@
 # AI Home — profiles, conversations and saved drafts
 
-Stan 19.10.2026: korekta audytu 4B-2 krok 2, przed ponownym CI/audytem. Profile i rozmowy mają trwałe szkice, wykonywalny czat tekstowy z modelem Primary, historię, status operacji i STOP. Po wybraniu Primary/zweryfikowanego połączenia użytkownik musi zadeklarować okno kontekstu modelu. Pamięć, załączniki i streaming nie są jeszcze dostępne. AI Home nie wymaga forum.
+Stan 20.10.2026: kandydat 4B-2A krok 1 — lokalny import dokumentów, przed nowym CI/audytem. Profile i rozmowy mają trwałe szkice, wykonywalny czat tekstowy z modelem Primary, historię, status operacji i STOP. Po wybraniu Primary/zweryfikowanego połączenia użytkownik musi zadeklarować okno kontekstu modelu. Dokumenty TXT/MD/DOCX/tekstowy PDF można importować i przeglądać lokalnie w rozmowie. Treści plików NIE są jeszcze dołączane do wywołań modelu. Obrazy, OCR, pamięć i streaming pozostają kolejnymi etapami. AI Home nie wymaga forum.
 
 EN jest domyślny przy pierwszym uruchomieniu; zapisany język jest zachowany. Skórki Orbital/Aurora obsługują light/dark/system. Browser preview nie zapisuje kluczy i nie wykonuje połączeń dostawców. Conscious pozostaje niedostępny.
 
@@ -20,7 +20,7 @@ Natywny wykonawca ma ograniczony retry/recovery na jednym budżecie (4 wywołani
 
 ## Aktualne dowody
 
-Rust Linux 125/125 PASS lokalnie bez desktop feature. Frontend: 93/93 frontend, TypeScript/build, 20/20 granice i P2 193/193 PASS. Rzeczywisty OS vault, płatne API, Windows/Tauri/WebView i renderowanie Chromium pozostają niewykonane lokalnie. Wynik 4B-2 kroku 2 wymaga nowego CI oraz audytu. Całe 4B-1 i otwarte bramki Windows/WebView 4B-0 pozostają otwarte.
+Aktualny 4B-2A krok 1: Rust Linux 146/146 PASS bez desktop feature; frontend 103/103 PASS, TypeScript/build, 21/21 granice i P2 193/193 PASS. Rzeczywisty OS vault, płatne API, Windows/Tauri/WebView i renderowanie Chromium pozostają niewykonane lokalnie. Edward potwierdził CI korekty 4B-2 kroku 2; ponowny audyt nadal otwarty. Nowy krok 4B-2A wymaga CI i audytu. Całe 4B-1 i otwarte bramki Windows/WebView 4B-0 pozostają otwarte.
 
 Raport: `docs/AI_HOME_4B2_KROK_2_RAPORT_PL.md`; plan: `docs/AI_HOME_4B_ETAPY_PRACY_v1.0_PL.md`; bramki: `docs/ACCEPTANCE_PL.md`. Dawne raporty 4B-1 kroków 1–4 i logi w `docs/evidence` zachowują stan swoich historycznych przekazań. Edward potwierdził zielone CI poprzednich kroków; nie przekazał identyfikatorów przebiegów ani zakresu platform.
 
@@ -35,3 +35,5 @@ P2 i foundation zachowano bajtowo. contracts/conversations.ipc.json dodaje tylko
 `docs/evidence/manifest.sha256.json` i `SHA256SUMS.txt` opisują komplet aktualnego przekazania. W Windows: `py -3 scripts/verify-source.py .`; Linux: `python3 scripts/verify-source.py .`. Weryfikator przyjmuje także pełny SOURCE.zip pod dowolną nazwą. Po zmianach odnowić manifest przy kolejnym przekazaniu; dawne hashe nie są dowodem nowego stanu.
 
 Korekta audytu: Accepted rozlicza szkic także po przełączeniu rozmowy lub błędzie historii; polling zachowuje aktualną rewizję. Załączniki pozostają niedostępne i zwracają kontraktowy VALIDATION_ERROR. Aktualne logi: `docs/evidence/4b2-step-2-correction/`.
+
+Import dokumentów: natywny wybór, oryginał i tekst w SQLite v6, osobne autorstwo/importer, hash, podgląd, pobranie, odłączenie i trwała operacja ze STOP/restartem. Raport: `docs/AI_HOME_4B2A_KROK_1_RAPORT_PL.md`; aktualne logi: `docs/evidence/4b2a-step-1/`. Zależności importu i Cargo.lock dodano bez usuwania wcześniejszych wersji pakietów. Dotychczasowy workflow pozostaje bez zmian.

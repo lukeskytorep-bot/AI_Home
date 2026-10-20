@@ -1,0 +1,21 @@
+{
+  "sourceArchive": "AI-RV-Harness-ai-rv-2 (3).zip",
+  "sourceArchiveSha256": "c772a795bab3d3f11fad1c1b67890e1f2290917cfb8461f77d9162f1b156124f",
+  "license": "MIT; upstream text retained in HARNESS_DOCUMENT_IMPORT_LICENSE.txt",
+  "files": [
+    {
+      "source": "src-tauri/src/documents.rs",
+      "sourceSha256": "e4d5f219eb70be3dd7fede2ac1532c8eb36f124ede0027b14717b1b9ea30fba7",
+      "destination": "src-tauri/src/imports/parser.rs",
+      "destinationSha256": "30bf63702a4243942c224a4a265ee5552016f7c586db02273064b26af290aacc",
+      "adaptation": "Document parsers and DOCX/PDF safety guards. Removed bundled RV documents, image branch and direct Tauri command. Preserve indentation; normalize text line endings separately from immutable originals. Independent original/text hashes."
+    },
+    {
+      "source": "src-tauri/src/dialogs.rs",
+      "sourceSha256": "59eb3919a82c05afdd75f0b105f345cb67817b5824ff16a4673826eb9f8c2624",
+      "destination": "src-tauri/src/imports/mod.rs",
+      "destinationSha256": "8625e73e0f2929959084905e3a1f7612505f7a730f10f05927dcc4f7546ba90a",
+      "adaptation": "Rust-only native picker via tauri-plugin-dialog. Added opaque, scoped, expiring immutable selections and bounded reads. Reject excess count/batch explicitly; per-file rejection notices. No paths accepted from UI."
+    }
+  ]
+}

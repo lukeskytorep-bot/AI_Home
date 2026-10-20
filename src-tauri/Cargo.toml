@@ -12,7 +12,7 @@ path = "src/main.rs"
 required-features = ["desktop"]
 [features]
 default = ["desktop"]
-desktop = ["dep:tauri", "dep:tauri-runtime", "dep:tauri-runtime-wry", "dep:tauri-macros"]
+desktop = ["dep:tauri", "dep:tauri-runtime", "dep:tauri-runtime-wry", "dep:tauri-macros", "dep:tauri-plugin-dialog"]
 [build-dependencies]
 tauri-build = { version = "=2.6.3", features = [] }
 # Keep Tauri's generated-code/build family on the audited compatible graph.
@@ -32,6 +32,12 @@ sqlx = { version = "=0.8.6", default-features = false, features = ["runtime-toki
 tokio = { version = "=1.53.1", features = ["sync", "rt-multi-thread", "macros", "time", "net", "io-util"] }
 reqwest = { version = "=0.13.5", default-features = false, features = ["json", "rustls"] }
 uuid = { version = "=1.28.0", features = ["v4"] }
+# Document import dependencies adapted from the audited Harness snapshot.
+base64 = "=0.22.1"
+zip = { version = "=2.4.2", default-features = false, features = ["deflate"] }
+roxmltree = "=0.20.0"
+lopdf = { version = "=0.36.0", default-features = false }
+tauri-plugin-dialog = { version = "=2.7.2", optional = true }
 [target.'cfg(target_os = "windows")'.dependencies]
 keyring = { version = "=3.6.3", default-features = false, features = ["windows-native"] }
 [target.'cfg(target_os = "macos")'.dependencies]

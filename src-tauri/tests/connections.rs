@@ -157,7 +157,7 @@ async fn server(status: &str, blocked: bool) -> Server {
     }
 }
 async fn received(s: &Server) {
-    tokio::time::timeout(std::time::Duration::from_secs(3), async {
+    tokio::time::timeout(std::time::Duration::from_secs(30), async {
         while s.calls.load(Ordering::SeqCst) == 0 {
             tokio::time::sleep(std::time::Duration::from_millis(2)).await;
         }
@@ -178,7 +178,7 @@ async fn test(app: &Application, p: &str, c: &Value) -> Value {
     result["operation"].clone()
 }
 async fn finished(app: &Application, p: &str, op: &Value) -> Value {
-    tokio::time::timeout(std::time::Duration::from_secs(4), async {
+    tokio::time::timeout(std::time::Duration::from_secs(30), async {
         loop {
             let v = ok(
                 app,
@@ -192,7 +192,7 @@ async fn finished(app: &Application, p: &str, op: &Value) -> Value {
                 assert!(schema::dto("Operation", &v));
                 return v;
             }
-            tokio::time::sleep(std::time::Duration::from_millis(2)).await;
+            tokio::time::sleep(std::time::Duration::from_millis(25)).await;
         }
     })
     .await
@@ -657,7 +657,7 @@ async fn migration_from_actual_v1_preserves_preferences_and_has_valid_foreign_ke
             .fetch_one(&store.pool)
             .await
             .unwrap(),
-        5
+        6
     );
     assert!(sqlx::query("PRAGMA foreign_key_check")
         .fetch_all(&store.pool)
@@ -945,7 +945,7 @@ async fn version_two_legacy_receipt_is_read_only_and_checks_original_secret() {
             .fetch_one(&pool)
             .await
             .unwrap(),
-        5
+        6
     );
     assert_eq!(app.dispatch(r.clone()).await.response, original);
     let mut changed = r.clone();

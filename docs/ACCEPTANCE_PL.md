@@ -1,3 +1,18 @@
+# 4B-2A krok 1 — 20.10.2026, kandydat
+
+- [x] TXT/MD/DOCX/tekstowy PDF: lokalny wybór, przechwycenie oryginału i ekstrakcja.
+- [x] Profil/rozmowa, autor osobno od importera, P2 DTO, atomowy zapis i idempotencja.
+- [x] Trwała operacja, STOP, restart/interrupted, oryginały i hash.
+- [x] Panel EN/PL, podgląd tekstu, pobranie oryginału i odłączenie z CAS.
+- [x] Jawny lokalny zakres: pliki nie są jeszcze wysyłane przez chat.send.
+- [x] 146/146 Rust headless, 103/103 frontend, build, 21/21 granice, 193/193 P2.
+- [ ] Nowe CI i audyt tej paczki.
+- [ ] Rzeczywisty natywny dialog, pobieranie i Windows/Tauri/WebView.
+- [ ] Podłączenie dokumentów do modelu — kolejny krok 4B-2A; potem obrazy.
+- [ ] OCR, wiedza profilu i pamięć — późniejsze etapy.
+
+Edward potwierdził zielone CI poprzedniej korekty 4B-2 kroku 2. Nie dostarczono PASS jej ponownego audytu. 4B-2A pozostaje otwarte. Wyniki testów i wcześniejszy timing FAIL są jawne w raporcie oraz logach. Poniżej historyczne odbiory.
+
 # Korekta audytu 4B-2 krok 2 — 19.10.2026
 
 - [x] Accepted rozlicza szkic również po zmianie rozmowy i przy błędzie historii; nowszy tekst jest zachowany.
