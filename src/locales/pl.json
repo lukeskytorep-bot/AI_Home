@@ -152,7 +152,7 @@
     "chat.outputLimit": "Limit tokenów odpowiedzi",
     "chat.inputReserve": "Rezerwa wejścia",
     "files.title": "Dokumenty rozmowy",
-    "files.localOnly": "W tym kroku zapis wyłącznie lokalny. Treść dokumentów NIE jest jeszcze wysyłana do modelu; czat pozostaje tekstowy.",
+    "files.localOnly": "Import zapisuje pliki lokalnie. Wybierz gotowe dokumenty do następnej wiadomości. Wysłanie przekazuje odczytany tekst i pochodzenie dostawcy modelu; oryginały pozostają lokalne.",
     "files.formats": "TXT, Markdown, DOCX, tekstowy PDF. Do 12 plików, 15 MiB na plik i 30 MiB na wybór. Wybór wygasa po 5 minutach. Odczytany tekst: do 2 MiB; PDF: do 200 stron.",
     "files.choose": "Wybierz dokumenty",
     "files.selected": "Wybrany do lokalnego importu",
@@ -191,7 +191,17 @@
     "files.error.STORAGE_ERROR": "Błąd zapisu uniemożliwił zakończenie. Oryginał pozostaje dostępny, jeśli przyjęcie zostało zapisane.",
     "files.error.POLICY_DENIED": "Import zatrzymano, ponieważ rozmowa lub profil nie są już aktywne.",
     "files.error.OPERATION_BUDGET_EXCEEDED": "Import przekroczył budżet przetwarzania. Oryginał został zachowany.",
-    "files.detachNotice": "Odłączenie usuwa dokument z tej listy i zachowuje zapisany oryginał.",
-    "files.docxNotice": "DOCX: odczytywana jest główna treść dokumentu. Nagłówki, przypisy, komentarze i osadzone obiekty nie są uwzględniane."
+    "files.detachNotice": "Odłączenie niewysłanego załącznika zachowuje oryginał lokalnie. Wysłane załączniki pozostają przy wiadomości i nie można ich tutaj odłączyć.",
+    "files.docxNotice": "DOCX: odczytywana jest główna treść dokumentu. Nagłówki, przypisy, komentarze i osadzone obiekty nie są uwzględniane.",
+    "chat.documentsNotice": "Wybrane dokumenty są wysyłane w całości jako materiały użytkownika. Wysłane wcześniej dokumenty pozostają w historii rozmowy. Kontekst jest sprawdzany przed każdym wysłaniem, bez cichego skracania.",
+    "chat.selectedDocuments": "Wybrane dokumenty",
+    "chat.unresolved": "Wynik wysłania jest niepewny. Ponowienie rozliczy tę samą poprzednią wiadomość i dokumenty. Nowy tekst i wybór pozostają do następnej wiadomości.",
+    "chat.retrySend": "Rozlicz poprzednie wysłanie",
+    "chat.preflight": "Sprawdź kontekst",
+    "chat.estimate": "Szacowane wejście + wyjście + rezerwa / kontekst",
+    "chat.route": "Trasa modelu / rewizja",
+    "chat.sourcesNotice": "Dokumenty przekazane z tą wiadomością (hashe ekstrakcji; nie są zweryfikowanymi cytowaniami odpowiedzi).",
+    "files.useDocument": "Użyj w następnej wiadomości",
+    "files.bound": "Wysłano · zachowany w historii wiadomości"
   }
 }

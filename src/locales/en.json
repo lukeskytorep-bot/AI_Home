@@ -152,7 +152,7 @@
     "chat.outputLimit": "Reply token limit",
     "chat.inputReserve": "Input reserve",
     "files.title": "Conversation documents",
-    "files.localOnly": "Stored locally only in this step. Document contents are NOT sent to the model yet; chat remains text-only.",
+    "files.localOnly": "Import stores files locally. Select ready documents for the next message. Sending transmits their extracted text and provenance to the configured provider; originals stay local.",
     "files.formats": "TXT, Markdown, DOCX, text PDF. Up to 12 files, 15 MiB each and 30 MiB per selection. Selections expire after 5 minutes. Extracted text: up to 2 MiB; PDF: up to 200 pages.",
     "files.choose": "Choose documents",
     "files.selected": "Selected for local import",
@@ -191,7 +191,17 @@
     "files.error.STORAGE_ERROR": "Storage prevented completion. The original remains available if acceptance was committed.",
     "files.error.POLICY_DENIED": "Import stopped because the conversation or profile is no longer active.",
     "files.error.OPERATION_BUDGET_EXCEEDED": "Import exceeded its processing budget. The original is preserved.",
-    "files.detachNotice": "Detaching removes the document from this list and keeps the stored original.",
-    "files.docxNotice": "DOCX: extracts the main document body. Headers, footnotes, comments and embedded objects are not included."
+    "files.detachNotice": "Removing an unsent attachment keeps the original stored locally. Sent attachments are retained with their message and cannot be removed here.",
+    "files.docxNotice": "DOCX: extracts the main document body. Headers, footnotes, comments and embedded objects are not included.",
+    "chat.documentsNotice": "Selected documents are sent in full as user reference data. Previously sent documents remain in this conversation history. Context is checked again before each send; nothing is silently shortened.",
+    "chat.selectedDocuments": "Selected documents",
+    "chat.unresolved": "Delivery is uncertain. Retry resolves the same previous message and document selection. New text and selections are preserved for a later message.",
+    "chat.retrySend": "Resolve previous send",
+    "chat.preflight": "Check context",
+    "chat.estimate": "Estimated input + output + reserve / context",
+    "chat.route": "Model route / revision",
+    "chat.sourcesNotice": "Documents supplied with this message (extraction hashes; these are not verified citations for the answer).",
+    "files.useDocument": "Use in next message",
+    "files.bound": "Already sent · retained in message history"
   }
 }

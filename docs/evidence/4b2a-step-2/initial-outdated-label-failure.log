@@ -1,0 +1,30 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> ai-home@0.0.1 test
+> vitest run
+
+
+ RUN  v4.1.10 /workspace/scratch/8e3755d5c581/step2/work/AI_Home
+
+ ❯ tests/imports-ui.test.tsx (10 tests | 1 failed) 646ms
+   × renders Polish controls without changing the conversation scope 31ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/imports-ui.test.tsx > renders Polish controls without changing the conversation scope
+AssertionError: expected 'Dokumenty rozmowyImport zapisuje plik…' to contain 'NIE jest jeszcze wysyłana'
+
+Expected: "NIE jest jeszcze wysyłana"
+Received: "Dokumenty rozmowyImport zapisuje pliki lokalnie. Wybierz gotowe dokumenty do następnej wiadomości. Wysłanie przekazuje odczytany tekst i pochodzenie dostawcy modelu; oryginały pozostają lokalne.TXT, Markdown, DOCX, tekstowy PDF. Do 12 plików, 15 MiB na plik i 30 MiB na wybór. Wybór wygasa po 5 minutach. Odczytany tekst: do 2 MiB; PDF: do 200 stron.Odłączenie niewysłanego załącznika zachowuje oryginał lokalnie. Wysłane załączniki pozostają przy wiadomości i nie można ich tutaj odłączyć.Wybierz dokumentyOdśwież dokumentyBrak dołączonych dokumentów."
+
+ ❯ tests/imports-ui.test.tsx:37:123
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 7 passed (8)
+      Tests  1 failed | 105 passed (106)
+   Start at  02:07:45
+   Duration  6.14s (transform 5.46s, setup 0ms, import 10.20s, tests 5.74s, environment 14.33s)
+

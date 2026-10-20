@@ -1,0 +1,93 @@
+{
+  "contractVersion": 1,
+  "note": "Read-only preflight; chat.send repeats the same preparation atomically before accepting. Does not reserve budget or send HTTP. Frozen P2 unchanged.",
+  "commands": {
+    "chat.preflight": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1
+          },
+          "language": {
+            "type": "string",
+            "minLength": 1
+          },
+          "attachmentIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          }
+        },
+        "required": [
+          "conversationId",
+          "content",
+          "language",
+          "attachmentIds"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "modelRouteRevision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "estimatedInputTokens": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "outputTokens": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "inputReserveTokens": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "contextTokens": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "attachmentCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "modelRouteId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "measurement": {
+            "const": "utf8_bytes_estimate"
+          }
+        },
+        "required": [
+          "modelRouteRevision",
+          "estimatedInputTokens",
+          "outputTokens",
+          "inputReserveTokens",
+          "contextTokens",
+          "attachmentCount",
+          "modelRouteId",
+          "measurement"
+        ],
+        "additionalProperties": false
+      },
+      "firstImplementationStage": "4B-2",
+      "mutates": false,
+      "requiresExpectedRevision": true,
+      "async": false
+    }
+  }
+}

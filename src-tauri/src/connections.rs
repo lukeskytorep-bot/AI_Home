@@ -23,7 +23,7 @@ type Failure = &'static str;
 type Tx<'a> = Transaction<'a, Sqlite>;
 const COMMANDS: &[&str] = &[
     "material.select", "material.import", "material.get", "material.text.read", "material.original.read", "conversation.materials.list", "conversation.import.latest", "attachment.detach",
-    "chat.send",
+    "chat.send", "chat.preflight",
     "chat.settings.get",
     "chat.settings.set",
     "conversation.chat.latest",
@@ -234,12 +234,14 @@ impl Connections {
         let chat: Value =
             serde_json::from_str(include_str!("../../contracts/chat.ipc.json")).unwrap();
         let imports:Value=serde_json::from_str(include_str!("../../contracts/imports.ipc.json")).unwrap();
+        let context:Value=serde_json::from_str(include_str!("../../contracts/document-chat.ipc.json")).unwrap();
         let contract = catalog["commands"]
             .get(command)
             .or_else(|| extra["commands"].get(command))
             .or_else(|| conversations["commands"].get(command))
             .or_else(|| chat["commands"].get(command))
             .or_else(|| imports["commands"].get(command))
+            .or_else(|| context["commands"].get(command))
             .ok_or("UNKNOWN_COMMAND")?;
         if !schema::dto("CommandEnvelope", r)
             || !schema::valid(&r["payload"], &contract["payload"])
@@ -400,6 +402,7 @@ impl Connections {
                     "conversation.chat.latest" => {
                         chat_runtime::latest(&mut tx, profile, payload).await?
                     }
+                    "chat.preflight" => chat_runtime::preflight(&mut tx,&p,payload,expected).await?,
                     "chat.send" => {
                         let (job, op) =
                             chat_runtime::accept(&mut tx, &p, payload, expected).await?;

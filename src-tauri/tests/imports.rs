@@ -597,6 +597,7 @@ async fn migration_from_v5_retains_preferences_profiles_conversations_and_integr
     .await;
     let prefs = dispatch(&f.app, req("app.preferences.get", json!({}), None, None)).await;
     for statement in [
+        "DROP TABLE message_documents",
         "DROP TABLE attachments",
         "DROP TABLE import_materials",
         "DROP TABLE import_blobs",
@@ -626,7 +627,7 @@ async fn migration_from_v5_retains_preferences_profiles_conversations_and_integr
             .fetch_one(&pool)
             .await
             .unwrap(),
-        6
+        7
     );
     assert_eq!(
         sqlx::query_scalar::<_, String>("PRAGMA integrity_check")

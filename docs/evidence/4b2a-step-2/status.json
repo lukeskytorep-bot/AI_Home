@@ -1,0 +1,54 @@
+{
+  "stage": "4B-2A step2 document chat",
+  "date": "2026-10-21",
+  "baseSourceSha256": "d3d4327971f3af1a7dde232caf3054aae3428fcf2bf4869358677c2c87c81fe8",
+  "userConfirmation": "CI green for step1, no run/platform IDs or new independent audit verdict supplied",
+  "rustTests": 153,
+  "rustSuites": {
+    "unitProviderVaultAndParsers": 72,
+    "chat": 22,
+    "connections": 24,
+    "conversations": 10,
+    "foundation": 8,
+    "imports": 17
+  },
+  "rustFinalMode": "no-default-features all-targets locked offline; default parallel",
+  "frontendTests": 109,
+  "boundaries": 21,
+  "p2Checks": 193,
+  "databaseVersion": 7,
+  "dependenciesChanged": false,
+  "lockfilesChanged": false,
+  "workflowsChanged": false,
+  "capabilitiesChanged": false,
+  "providersAndVaultChanged": false,
+  "frozenContractsChanged": false,
+  "documentChatImplemented": true,
+  "imagesVisionImplemented": false,
+  "ocrImplemented": false,
+  "retrievalImplemented": false,
+  "liveApi": "NOT RUN; loopback only",
+  "realOsVault": "NOT RUN; injected backend",
+  "nativeDesktopWindowsWebView": "NOT RUN",
+  "newCI": "REQUIRED",
+  "newIndependentAudit": "REQUIRED",
+  "4B2A": "OPEN",
+  "projectSourcesReviewed": [
+    {
+      "fileName": "01-Farsight_AI_Agent_Community_Technical_Implementation_Guide_v1.0.docx",
+      "sha256": "3455cebcc55e95f54f1bb9befa220ce78db11a52b2afef25a9d2c77bfe3d2e44"
+    },
+    {
+      "fileName": "03-AI_Agent_Community_Network_Document_4B_Agent_Home_Modular_Runtime_Plan_v1.3.docx",
+      "sha256": "7be7d58d14a8ef061d2ed6b604e15269c7de16438a7f0b82e374b3b53dd28a76"
+    },
+    {
+      "fileName": "02-AI_Agent_Community_Network_Concept_and_Technical_Architecture_v2.0.pdf",
+      "sha256": "fefd352d95d970d48bf3f21fdb2cdf4dc4c7e6010b7a982f3bd85e545f82e5eb"
+    }
+  ],
+  "initialFailures": [
+    "1 restart fixture using VACUUM INTO from in-memory fixture produced empty copied state; changed to actual file DB from creation, no runtime change",
+    "1 old UI assertion expected previous local-only warning; replaced with current explicit dispatch notice"
+  ]
+}

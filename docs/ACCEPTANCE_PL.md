@@ -1,3 +1,17 @@
+# 4B-2A krok 2 — 21.10.2026, kandydat do CI i audytu
+
+- [x] Edward potwierdził zielone CI kroku 1; brak nowego werdyktu audytu i numeru przebiegu.
+- [x] Wybór dokumentów, jawne wysyłanie tekstu/pochodzenia do dostawcy, oryginały lokalne.
+- [x] Wspólny preflight i send, pełna historia i dokumenty, bez cichego skracania.
+- [x] Trwałe SourceRefs i snapshoty wersji, atomowy bind/receipt/op, izolacja i walidacja hashy.
+- [x] Migracja v6 → v7, restart bez POST, idempotencja, STOP i ochrona nowszego szkicu/wyboru.
+- [x] 153/153 Rust headless; 109/109 frontend; build; 21/21 granice; 193/193 P2.
+- [ ] Nowy wynik CI i niezależny audyt kroku 2.
+- [ ] Natywny desktop/WebView/Windows oraz rzeczywisty OS vault i live API — nadal osobne odbiory.
+- [ ] Obrazy/vision — kolejny krok; OCR i retrieval nie są częścią tego przekazania.
+
+4B-2A pozostaje otwarte. Szczegóły i początkowe błędy fixture/asercji w raporcie kroku 2 oraz docs/evidence/4b2a-step-2. Poniżej historyczne odbiory; ich wyniki dotyczą wcześniejszych drzew.
+
 # 4B-2A krok 1 — 20.10.2026, kandydat
 
 - [x] TXT/MD/DOCX/tekstowy PDF: lokalny wybór, przechwycenie oryginału i ekstrakcja.

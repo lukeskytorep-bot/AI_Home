@@ -21,7 +21,7 @@ fn validate(v: &Value, name: &str) -> Result<(), Failure> {
         Err("STORAGE_ERROR")
     }
 }
-async fn material(tx: &mut Tx<'_>, profile: &str, mid: &str) -> Result<Value, Failure> {
+pub(super) async fn material(tx: &mut Tx<'_>, profile: &str, mid: &str) -> Result<Value, Failure> {
     let row=sqlx::query("SELECT revision,body,conversation_id,original_blob_id,extracted_blob_id FROM import_materials WHERE profile_id=? AND id=?").bind(profile).bind(mid).fetch_optional(&mut **tx).await.map_err(|_|"STORAGE_ERROR")?.ok_or("NOT_FOUND")?;
     let v: Value = serde_json::from_str(row.get("body")).map_err(|_| "STORAGE_ERROR")?;
     validate(&v, "ImportedMaterial")?;
@@ -65,7 +65,7 @@ async fn attachments_failed(tx: &mut Tx<'_>, profile: &str, mid: &str) -> Result
     }
     Ok(())
 }
-async fn blob(
+pub(super) async fn blob(
     tx: &mut Tx<'_>,
     profile: &str,
     bid: &str,
@@ -234,10 +234,13 @@ pub(super) async fn read(
         }
         "attachment.detach" => {
             let aid = p["attachmentId"].as_str().unwrap();
-            let row=sqlx::query("SELECT revision,material_id FROM attachments WHERE profile_id=? AND conversation_id=? AND id=?").bind(profile).bind(cid).bind(aid).fetch_optional(&mut **tx).await.map_err(|_|"STORAGE_ERROR")?.ok_or("NOT_FOUND")?;
+            let row=sqlx::query("SELECT revision,material_id,body FROM attachments WHERE profile_id=? AND conversation_id=? AND id=?").bind(profile).bind(cid).bind(aid).fetch_optional(&mut **tx).await.map_err(|_|"STORAGE_ERROR")?.ok_or("NOT_FOUND")?;
             if row.get::<i64, _>("revision") != expected {
                 return Err("REVISION_CONFLICT");
             };
+            let a:Value=serde_json::from_str(row.get("body")).map_err(|_|"STORAGE_ERROR")?;
+            validate(&a,"Attachment")?;
+            if a["state"]=="bound" || a.get("messageId").is_some(){return Err("POLICY_DENIED");}
             let m = material(tx, profile, row.get("material_id")).await?;
             if m["parseState"] == "pending" {
                 return Err("POLICY_DENIED");

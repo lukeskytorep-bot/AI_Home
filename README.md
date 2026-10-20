@@ -1,39 +1,41 @@
-# AI Home — profiles, conversations and saved drafts
+# AI Home
 
-Stan 20.10.2026: kandydat 4B-2A krok 1 — lokalny import dokumentów, przed nowym CI/audytem. Profile i rozmowy mają trwałe szkice, wykonywalny czat tekstowy z modelem Primary, historię, status operacji i STOP. Po wybraniu Primary/zweryfikowanego połączenia użytkownik musi zadeklarować okno kontekstu modelu. Dokumenty TXT/MD/DOCX/tekstowy PDF można importować i przeglądać lokalnie w rozmowie. Treści plików NIE są jeszcze dołączane do wywołań modelu. Obrazy, OCR, pamięć i streaming pozostają kolejnymi etapami. AI Home nie wymaga forum.
+Stan 21.10.2026: kandydat 4B-2A krok 2 — rozmowa z Primary o zaimportowanych dokumentach. Edward potwierdził zielone CI kroku 1; krok 2 wymaga nowego CI i audytu.
 
-EN jest domyślny przy pierwszym uruchomieniu; zapisany język jest zachowany. Skórki Orbital/Aurora obsługują light/dark/system. Browser preview nie zapisuje kluczy i nie wykonuje połączeń dostawców. Conscious pozostaje niedostępny.
+Aplikacja ma osobne profile, połączenia i trasy Primary/Scribe, trwałe rozmowy i szkice, historię, operacje oraz STOP. Import TXT/MD/DOCX/tekstowego PDF zachowuje oryginały, odczytany tekst i osobne autorstwo/importera. Zaznaczone gotowe dokumenty są wysyłane w całości jako niezaufane dane użytkownika wraz z metadanymi pochodzenia do skonfigurowanego dostawcy. Oryginały pozostają lokalne. Dostarczone dokumenty zostają związane z wiadomością; kolejne tury uwzględniają je z historii także po restarcie. Referencje są dowodem przekazania źródeł, nie zweryfikowanymi cytowaniami odpowiedzi. Nie ma automatycznej promocji do pamięci.
+
+EN jest domyślny; PL i skórki Orbital/Aurora pozostają dostępne. AI Home działa niezależnie od forum. Browser preview nie wykonuje połączeń dostawców ani natywnego importu. Obrazy/vision, OCR, RAG, pamięć, streaming i Conscious są dalszymi etapami.
 
 ## Uruchomienie i kontrole
 
 Node.js 24: `npm ci`, `npm test`, `npm run verify:boundaries`, `npm run build`.
 Browser preview: `npm run dev`, http://127.0.0.1:1420.
-Desktop: Rust stable i wymagania systemowe Tauri, https://v2.tauri.app/start/prerequisites/ ; `npm run tauri dev`.
-Natywne testy wraz z Tauri: `cargo test --manifest-path src-tauri/Cargo.toml --all-targets --locked`.
-Headless Rust/SQLite: ten sam command z `--no-default-features`; nie sprawdza WebView ani desktop feature.
+Desktop: Rust stable i wymagania Tauri https://v2.tauri.app/start/prerequisites/ ; `npm run tauri dev`.
+Rust/SQLite/Tauri: `cargo test --manifest-path src-tauri/Cargo.toml --all-targets --locked`.
+Headless: ten sam command z `--no-default-features`; nie sprawdza desktop feature/WebView.
 
-Cargo.lock jest dołączony i należy go commitować. Zwykłe CI sprawdza frontend i Rust/SQLite/Tauri na Ubuntu, bez tworzenia instalatorów. Istniejące ręczne `check_windows=true` dodaje Windows, a `build_desktop=true` przygotowuje pliki do odbioru desktopu. Nie publikuje release. Ta nakładka nie wymaga Prepare Cargo lockfile.
+Istniejące CI na push sprawdza frontend i Rust/SQLite/Tauri na Ubuntu. Workflow i Cargo.lock pozostają bez zmian. Nie są potrzebne Prepare Cargo lockfile, nowy release ani instalatory. Ręczne `check_windows=true` dodaje kontrolę Windows; `build_desktop=true` służy oddzielnemu odbiorowi desktopu.
 
-Linuxowy vault wymaga dostępnego i odblokowanego Secret Service; Windows używa Credential Manager, macOS Keychain. Błąd magazynu nie uruchamia fallbacku do pliku ani localStorage. Test połączenia pobiera modele; nie potwierdza jeszcze działania konkretnego modelu w czacie.
+Klucze korzystają z OS vault, bez fallbacku do pliku/localStorage. Linux wymaga odblokowanego Secret Service. Test połączenia pobiera modele; użycie konkretnego modelu wymaga jeszcze sprawdzenia czatu. Testy używają wstrzykiwanego vault i loopback HTTP, bez płatnych API.
 
-Natywny wykonawca ma ograniczony retry/recovery na jednym budżecie (4 wywołania/180 s). Test połączenia używa go przy pobieraniu modeli. Biblioteka czatu odrzuca odpowiedź uciętą limitem lub refusal; nie dopisuje kontynuacji. Organizacja rozmów i zapis szkiców są dostępne; wysyłanie do modelu jest dostępne w kroku 2.
+## Kontekst i trwałość
 
-## Aktualne dowody
+Użytkownik jawnie deklaruje okno kontekstu dla ID/rewizji trasy Primary. `chat.preflight` pokazuje szacunek wejścia oraz limit wyjścia i rezerwę. `chat.send` powtarza dokładnie tę samą walidację przed zapisem/HTTP. Liczone są wszystkie wiadomości, pełny tekst dokumentów, metadane i prywatny replay. Pomiar to bajty UTF-8 z narzutem, nie tokenizer modelu. Przekroczenie limitu zatrzymuje wysyłkę; nic nie jest cicho obcinane.
 
-Aktualny 4B-2A krok 1: Rust Linux 146/146 PASS bez desktop feature; frontend 103/103 PASS, TypeScript/build, 21/21 granice i P2 193/193 PASS. Rzeczywisty OS vault, płatne API, Windows/Tauri/WebView i renderowanie Chromium pozostają niewykonane lokalnie. Edward potwierdził CI korekty 4B-2 kroku 2; ponowny audyt nadal otwarty. Nowy krok 4B-2A wymaga CI i audytu. Całe 4B-1 i otwarte bramki Windows/WebView 4B-0 pozostają otwarte.
+SQLite v7 dodaje `message_documents` do v6. Snapshoty metadanych materiału zawierają rewizję, blob i hash ekstrakcji; Message.sourceRefs pozostają zgodne z P2. Odczyt historii weryfikuje zgodność snapshotów i hashy. Związanych załączników nie można odłączyć tym panelem ani przypiąć ponownie. Niewysłane można odłączyć, zachowując oryginał. SQLite przechowuje treści jawnie; szyfrowanie i permanentne usuwanie nie są tutaj implementowane.
 
-Raport: `docs/AI_HOME_4B2_KROK_2_RAPORT_PL.md`; plan: `docs/AI_HOME_4B_ETAPY_PRACY_v1.0_PL.md`; bramki: `docs/ACCEPTANCE_PL.md`. Dawne raporty 4B-1 kroków 1–4 i logi w `docs/evidence` zachowują stan swoich historycznych przekazań. Edward potwierdził zielone CI poprzednich kroków; nie przekazał identyfikatorów przebiegów ani zakresu platform.
+Niepewna próba wysyłania zachowuje ID, tekst i wybór do rozliczenia; nowszy szkic i wybór nie zmieniają starej próby. STOP zachowuje wiadomość człowieka i źródła; restart nie ponawia sieci. Istniejące ograniczenia retry/budżetu pozostają bez zmian.
 
-Nowa baza v4 → v5 dodaje trwałe operacje czatu i prywatny replay. contracts/chat.ipc.json dodaje jawne ustawienia kontekstu i odczyt ostatniego chat. Pomiar kontekstu jest szacowany, limit zadeklarowany przez użytkownika. Cała historia jest uwzględniana albo żądanie odrzucone; nic nie jest cicho skracane. Efektywne wyjście to minimum limitu trasy i profilu (domyślnie 1024), widoczne w panelu. Restart nie ponawia płatnych wywołań.
+## Dowody i stan
 
-## Kontrakty i inwentarz
+153/153 Rust Linux headless, 109/109 frontend, TypeScript/Vite, 21/21 granice i 193/193 kontrole referencyjne P2 PASS. Pełny Rust jest wykonany w domyślnym trybie równoległym. Wcześniejsze nieudane uruchomienia i poprawki fixture/asercji zachowano w dowodach. Natywny WebView/Windows, rzeczywisty vault i live API pozostają nieodebrane.
 
-P2 i foundation zachowano bajtowo. contracts/conversations.ipc.json dodaje tylko scoped odczyty conversation.get/list. Baza v3 → v4 dodaje rozmowy, wiadomości i cursory, zachowując wcześniejsze dane. `contracts/connections.ipc.json` dodaje tylko scoped odczyty cache modeli i ostatniego testu. Lokalna baza 1 → 2 dodaje konfigurację i trwałe operacje; 2 → 3 dodaje wyłącznie referencję klucza instalacji HMAC. Preferencje, profile, połączenia i receipts są zachowane. Nowe polecenia zapisujące klucz mają HMAC z lokalnym kluczem w vault; stare receipts są sprawdzane z oryginalnym sekretem i nie wykonują zapisu ponownie. Źródła Harness i adaptacje identyfikują pliki w `docs/reuse`, z zachowanym MIT notice.
+Raport: `docs/AI_HOME_4B2A_KROK_2_RAPORT_PL.md`; aktualny plan: `docs/AI_HOME_4B_ETAPY_PRACY_v1.0_PL.md` (treść 1.21); odbiór: `docs/ACCEPTANCE_PL.md`; logi: `docs/evidence/4b2a-step-2/`. Starsze raporty i logi są historyczne.
 
-`snapshots/p2-v1.1` jest pełnym zamrożonym przekazaniem P2 1.1. `python3 check_contracts.py` wykonuje jego 193 kontrole; 119 jest wynikiem historycznego P2, a 145 wynikało z wcześniejszego checkera na późniejszych kontraktach. Nie są to wyniki jednego zestawu. `snapshots/p2-legacy-mixed` jest historią.
+## Kontrakty i przekazanie
 
-`docs/evidence/manifest.sha256.json` i `SHA256SUMS.txt` opisują komplet aktualnego przekazania. W Windows: `py -3 scripts/verify-source.py .`; Linux: `python3 scripts/verify-source.py .`. Weryfikator przyjmuje także pełny SOURCE.zip pod dowolną nazwą. Po zmianach odnowić manifest przy kolejnym przekazaniu; dawne hashe nie są dowodem nowego stanu.
+Zamrożone P2/foundation i dotychczasowe katalogi pozostają bajtowo zgodne z bazą. `contracts/document-chat.ipc.json` dodaje tylko odczyt `chat.preflight`; `chat.send` wykorzystuje istniejące P2 attachmentIds. Providerzy, vault, zależności, lockfile i uprawnienia są bez zmian. Parsery importu i ich MIT pochodzą z adaptacji Harness w kroku 1; szczegóły w docs/reuse.
 
-Korekta audytu: Accepted rozlicza szkic także po przełączeniu rozmowy lub błędzie historii; polling zachowuje aktualną rewizję. Załączniki pozostają niedostępne i zwracają kontraktowy VALIDATION_ERROR. Aktualne logi: `docs/evidence/4b2-step-2-correction/`.
+`snapshots/p2-v1.1` przechowuje pełne P2; `python3 check_contracts.py` wykonuje 193 kontrole. 119 i 145 są wynikami innych historycznych rewizji, nie tego samego zestawu. Migawki nie są odnawiane wraz z kodem aplikacji.
 
-Import dokumentów: natywny wybór, oryginał i tekst w SQLite v6, osobne autorstwo/importer, hash, podgląd, pobranie, odłączenie i trwała operacja ze STOP/restartem. Raport: `docs/AI_HOME_4B2A_KROK_1_RAPORT_PL.md`; aktualne logi: `docs/evidence/4b2a-step-1/`. Zależności importu i Cargo.lock dodano bez usuwania wcześniejszych wersji pakietów. Dotychczasowy workflow pozostaje bez zmian.
+Aktualne `docs/evidence/manifest.sha256.json` i `SHA256SUMS.txt` opisują komplet tego przekazania. Opcjonalnie: Windows `py -3 scripts/verify-source.py .`, Linux `python3 scripts/verify-source.py .`. Skrypt akceptuje również pełny SOURCE.zip pod dowolną nazwą. Po własnych zmianach stare hashe nie są dowodem nowego drzewa.
