@@ -1,0 +1,47 @@
+{
+  "contractVersion": 1,
+  "commands": {
+    "memory.version.get": {
+      "scope": "profile",
+      "mutates": false,
+      "requiresExpectedRevision": false,
+      "async": false,
+      "payload": {
+        "type": "object",
+        "properties": {
+          "recordId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "versionId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "recordId",
+          "versionId"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "$ref": "#/$defs/MemoryVersion"
+          },
+          "decision": {
+            "$ref": "#/$defs/MemoryDecisionReceipt"
+          }
+        },
+        "required": [
+          "version",
+          "decision"
+        ],
+        "additionalProperties": false
+      }
+    }
+  }
+}

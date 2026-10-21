@@ -1,3 +1,26 @@
+# 4B-4 krok 1 — historia i wyłączenie L2, 21.10.2026
+
+Edward potwierdził zielony wynik poprzedniego kroku (bez danych przebiegu i nowego tekstu audytu). Bieżący krok wykonano lokalnie; do nowego CI/audytu.
+
+- [x] Pełna historia i szczegóły wersji/receipt, tylko we własnym profilu i rekordzie.
+- [x] Paginacja z granicą początku odczytu, bez duplikatów po dopisaniu wersji; działa po restarcie.
+- [x] Odczyt bez modelu, HTTP, nowych receipts/events i wymogu działającego vault.
+- [x] CAS rekordu przy active↔outdated; bez kasowania/zmiany wersji i bez nowego approval.
+- [x] Ponowne włączenie tylko tej samej wersji z poprawnym hashem/receipt/committed operation.
+- [x] Exact receipt replay, dwa równoczesne CAS, no-op, rollback błędu receipt i zdarzenia.
+- [x] Wyłączenie podczas chat/memory update blokuje spóźniony commit.
+- [x] UI EN/PL: dwa pełne teksty, metadane/źródła, historyczny pomiar, aktualny/wyłączony stan.
+- [x] Spóźnione odczyty, podwójny paging, konflikt, niepewna odpowiedź i awaria reload nie kasują szkiców ani nie aktywują innej treści.
+- [x] 264/264 Rust, 154/154 frontend, build, 24/24 granice, 193/193 P2.
+- [x] Frozen P2/foundation, SQLite v9/migracje, dependencies/lockfiles/provider/vault/koordynator pamięci/workflow/capabilities bez zmian. Brak usunięć.
+- [ ] Nowe CI i audyt kroku 1; całe 4B-4 pozostaje otwarte.
+- [ ] Dalsze kroki: restore z Primary, inne rekordy/retrieval i pozostałe przeznaczenia importu.
+- [ ] Wcześniejsze odbiory realnych API/systemowego vault/Windows/Tauri/WebView.
+
+---
+
+## Historyczne kryteria wcześniejszych przekazań
+
 # 4B-3 krok 3 — Working Context w czacie, 21.10.2026
 
 Korekta kroku 2 ma potwierdzenie zielonego wyniku Edwarda (bez identyfikatora/platform i nowego tekstu audytu). Krok 3 wykonano lokalnie.

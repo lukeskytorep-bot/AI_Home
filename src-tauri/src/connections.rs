@@ -21,9 +21,12 @@ mod conversation_storage;
 mod import_runtime;
 #[path = "memory_runtime.rs"]
 mod memory_runtime;
+#[path = "memory_history.rs"]
+mod memory_history;
 type Failure = &'static str;
 type Tx<'a> = Transaction<'a, Sqlite>;
 const COMMANDS: &[&str] = &[
+    "memory.versions.list", "memory.version.get", "memory.outdated.set",
     "memory.working.get", "memory.working.sources", "memory.settings.set", "memory.update.request",
     "material.select", "material.import", "material.get", "material.text.read", "material.original.read", "conversation.materials.list", "conversation.import.latest", "attachment.detach",
     "chat.send", "chat.preflight", "chat.vision.get", "chat.vision.set",
@@ -243,6 +246,7 @@ impl Connections {
         let vision:Value=serde_json::from_str(include_str!("../../contracts/vision.ipc.json")).unwrap();
         let memory:Value=serde_json::from_str(include_str!("../../contracts/memory.ipc.json")).unwrap();
         let memory_chat:Value=serde_json::from_str(include_str!("../../contracts/memory-chat.ipc.json")).unwrap();
+        let history:Value=serde_json::from_str(include_str!("../../contracts/memory-history.ipc.json")).unwrap();
         let contract = catalog["commands"]
             .get(command)
             .or_else(|| extra["commands"].get(command))
@@ -253,6 +257,7 @@ impl Connections {
             .or_else(|| vision["commands"].get(command))
             .or_else(|| memory["commands"].get(command))
             .or_else(|| memory_chat["commands"].get(command))
+            .or_else(|| history["commands"].get(command))
             .ok_or("UNKNOWN_COMMAND")?;
         if !schema::dto("CommandEnvelope", r)
             || !schema::valid(&r["payload"], &contract["payload"])
@@ -407,6 +412,8 @@ impl Connections {
                     return Err("POLICY_DENIED");
                 }
                 match command {
+                    "memory.versions.list"|"memory.version.get" => memory_history::read(&mut tx,command,profile,payload).await?,
+                    "memory.outdated.set" => memory_history::outdated(&mut tx,profile,payload,expected).await?,
                     "memory.working.get" => memory_runtime::view(&mut tx,profile).await?,
                     "memory.working.sources" => memory_runtime::sources(&mut tx,profile,payload).await?,
                     "memory.settings.set" => memory_runtime::settings(&mut tx,&mut p,payload,expected).await?,

@@ -13,21 +13,7 @@ pub(super) async fn capture(tx: &mut Tx<'_>, profile: &str) -> Result<Value, Fai
         if record["state"] == "empty" && record.get("activeVersionId").is_some() { return Err("STORAGE_ERROR"); }
         return Ok(json!({"schemaVersion":1,"record":record,"version":null,"decision":null}));
     }
-    let version = get(tx, "memory_versions", profile, record["activeVersionId"].as_str().ok_or("STORAGE_ERROR")?).await?;
-    let content = version["content"].as_str().ok_or("STORAGE_ERROR")?;
-    if content.len()>8*1024*1024 { return Err("CONTEXT_BUDGET_EXCEEDED"); }
-    let digest = format!("{:x}", Sha256::digest(content.as_bytes()));
-    if version["recordId"] != record["id"] || version["contentSha256"] != digest || version["origin"] != "agent_decision" { return Err("STORAGE_ERROR"); }
-    let decision = get(tx,"memory_decisions",profile,version["decisionReceiptId"].as_str().ok_or("STORAGE_ERROR")?).await?;
-    let operation = get(tx,"operations",profile,decision["operationId"].as_str().ok_or("STORAGE_ERROR")?).await?;
-    if !matches!(decision["decision"].as_str(),Some("accept" | "modify"))
-        || decision["candidateSha256"] != version["contentSha256"]
-        || decision["candidateMeasurement"] != version["measurement"]
-        || decision["primaryRouteId"] != version["measurement"]["modelRouteId"]
-        || decision["routeRevision"] != version["measurement"]["modelRouteRevision"]
-        || operation["kind"] != "memory_update" || operation["status"] != "succeeded"
-        || operation["result"]["outcome"] != "committed" || operation["result"]["versionId"] != version["id"]
-        || operation["result"]["recordId"] != record["id"] { return Err("STORAGE_ERROR"); }
+    let (version,decision)=super::super::memory_history::approved(tx,profile,&record,record["activeVersionId"].as_str().ok_or("STORAGE_ERROR")?).await?;
     Ok(json!({"schemaVersion":1,"record":record,"version":version,"decision":decision}))
 }
 

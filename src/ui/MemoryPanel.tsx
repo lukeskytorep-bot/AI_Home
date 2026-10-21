@@ -1,3 +1,4 @@
+import {MemoryHistory} from './MemoryHistory';
 import {useEffect,useRef,useState} from 'react';
 import {Client} from '../ipc/client';
 import {t} from '../domain/packs';
@@ -13,7 +14,7 @@ interface View{record:RecordDto;version?:Version;profileRevision:number;capacity
 export interface MemoryAttempt{id:string;payload:{recordId:string;sourceRefs:unknown[]};expected:number}
 const running=(op?:Operation)=>Boolean(op&&['queued','running'].includes(op.status));
 export function MemoryPanel({client,locale,profileId,conversationId,attempts,refreshToken=0,onAttemptsChange,onContextChange}:{client:Client;locale:string;profileId:string;conversationId:string;attempts:Map<string,MemoryAttempt>;refreshToken?:number;onAttemptsChange?:()=>void;onContextChange?:(key:string)=>void}){
- const text=(k:string)=>t(locale,k);const [view,setView]=useState<View>();const [busy,setBusy]=useState(false);const [error,setError]=useState('');
+ const text=(k:string)=>t(locale,k);const [view,setView]=useState<View>();const [showHistory,setShowHistory]=useState(false);const [busy,setBusy]=useState(false);const [error,setError]=useState('');
  const [capacity,setCapacity]=useState('300');const [unlimited,setUnlimited]=useState(false);const [mode,setMode]=useState('automatic');const [primary,setPrimary]=useState('');const [scribe,setScribe]=useState('');
  const active=useRef(false);const dirty=useRef(false);const settingsBase=useRef<View|undefined>(undefined);const refreshGeneration=useRef(0);
  function apply(v:View,reset=false){if(!active.current)return;setView(v);onContextChange?.(JSON.stringify([v.record.id,v.record.revision,v.record.state,v.version?.id]));if(reset||!dirty.current){settingsBase.current=v;setCapacity(String(v.capacityPolicy.tokens??300));setUnlimited(v.capacityPolicy.kind==='unlimited');setMode(v.scribeMode);setPrimary(v.primary?.contextTokens?String(v.primary.contextTokens):'');setScribe(v.scribe?.contextTokens?String(v.scribe.contextTokens):'');dirty.current=false;}}
@@ -32,6 +33,7 @@ export function MemoryPanel({client,locale,profileId,conversationId,attempts,ref
   const r=await client.call<{operation:Operation}>('memory.update.request',pending.payload,pending.expected,profileId,pending.id);
   if(!r.ok){attempts.delete(profileId);onAttemptsChange?.();await load();throw Error(r.error.messageKey);}if(attempts.get(profileId)===pending){attempts.delete(profileId);onAttemptsChange?.();}if(active.current)await load();
  }
+ async function toggleOutdated(){const base=view;if(!base)return;const r=await client.call<RecordDto>('memory.outdated.set',{recordId:base.record.id,outdated:base.record.state==='active'},base.record.revision,profileId);if(!r.ok){await load();throw Error(r.error.messageKey);}if(active.current)apply({...base,record:r.result});await load();}
  const validWindow=(s:string)=>Number.isSafeInteger(Number(s))&&Number(s)>=1024&&Number(s)<=2000000;
  const unresolved=attempts.has(profileId);const live=running(view?.latestOperation);
  const configured=Boolean(view?.primary?.verified&&view.primary.contextTokens>=1024&&(view.scribeMode==='disabled'||(view.scribe?.verified&&view.scribe.contextTokens>=1024)));
@@ -52,6 +54,7 @@ export function MemoryPanel({client,locale,profileId,conversationId,attempts,ref
  <ul>{view?.attempts.map(a=><li key={a.id}>{text('memory.attempt')} {a.attemptNumber}/2: {text('memory.'+a.result)} · {a.candidateMeasurement.value} / {a.capacityPolicySnapshot.kind==='unlimited'?text('memory.unlimited'):a.capacityPolicySnapshot.tokens}</li>)}</ul>
  {!!view?.decisions.length&&<div><h4>{text('memory.decisions')}</h4>{view?.decisions.map(d=><p key={d.id}>{text('memory.'+d.decision)} — {d.reason}</p>)}</div>}
  {view?.version?<article><h4>{text('memory.saved')} · {view.version.language} · {text('memory.state.'+view.record.state)}</h4>{view.record.state!=='active'&&<p role="status">{text('memory.excludedNotice')}</p>}<div className="message-text">{view.version.content}</div><small>SHA-256: {view.version.contentSha256} · {view.version.measurement.value}</small></article>:<p>{text('memory.empty')}</p>}
+ {view&&<><p className="muted">{text('history.toggleNotice')}</p><button disabled={busy||!view.record.activeVersionId||!['active','outdated'].includes(view.record.state)} onClick={()=>void action(toggleOutdated)}>{text(view.record.state==='outdated'?'history.enable':'history.exclude')}</button><button onClick={()=>setShowHistory(v=>!v)}>{text(showHistory?'history.hide':'history.show')}</button>{showHistory&&<MemoryHistory key={profileId+':'+view.record.id} client={client} locale={locale} profileId={profileId} record={view.record}/>}</>}
  {!!view?.proposals.length&&<details><summary>{text('memory.proposals')}</summary>{view.proposals.map(p=><article key={p.id}><strong>{p.proposerRole} · {p.language}</strong><div className="message-text">{p.content}</div><ul>{p.sources.map(s=><li key={s.entityId}>{s.entityId} · SHA-256: {s.contentSha256}</li>)}</ul></article>)}</details>}
  {error&&<p role="alert" className="error">{text(error)}</p>}</section>;
 }

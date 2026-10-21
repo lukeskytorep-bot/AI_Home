@@ -1,3 +1,15 @@
+# Bieżące przekazanie: 4B-4 krok 1 — historia i wyłączenie pamięci
+
+Historia L2, pełne porównanie dwóch wersji i ich pochodzenia/Primary receipt. Wyłączenie z czatu zachowuje wersje; ponowne włączenie dotyczy tej samej zatwierdzonej wersji. CAS i transakcja chronią stary widok, spóźniony wynik, receipt oraz zdarzenie. Odczyt historii nie potrzebuje modelu lub dostępnego vault i nie wykonuje HTTP.
+
+264/264 Rust Linux headless, 154/154 UI, build, 24/24 granice i 193/193 P2 PASS lokalnie. Raport: docs/AI_HOME_4B4_KROK_1_RAPORT_PL.md. Plan: treść 1.28. Krok 1 do CI/audytu; całe 4B-4 otwarte. Restore starszej wersji, inne warstwy/retrieval oraz pozostałe przeznaczenia importu są w dalszym planie.
+
+Bez zmian SQLite v9/migracji, frozen P2/foundation, dependencies/lockfile, providerów/vault, koordynatora pamięci, CI/uprawnień. Nakładka, commit i push; niczego nie usuwać. Realne API/vault/Windows/Tauri/WebView nadal wymagają osobnych odbiorów.
+
+---
+
+## Historyczne przekazania
+
 # Bieżące przekazanie: 4B-3 krok 3 — pamięć w czacie
 
 Aktywny, zatwierdzony Working Context trafia do preflight/send jako pojedynczy blok danych user/JSON. Pełna historia i załączniki pozostają. Snapshot jest sprawdzany przed każdym POST i commit; historia UI pokazuje przechwyconą wersję, również po restarcie. Pusta/outdated/archived pamięć jest wyłączona. Unlimited nie omija okna modelu.
