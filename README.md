@@ -1,3 +1,15 @@
+# Bieżący krok: 4B-3 krok 1 — protokół pamięci
+
+Dodano czysty silnik Rust dla propozycji Scribe i decyzji Primary (ACCEPT/MODIFY/REJECT), dwóch prób pojemności i jednej naprawy formatu. Gdy Scribe jest wyłączony, Primary proponuje i podejmuje osobną decyzję. Obsługiwane 300/500/800/1000/własna pojemność i unlimited. Pomiar jest szacunkiem UTF-8 bytes, związanym z ID/rewizją Primary; nie jest tokenizerem.
+
+**To krok przygotowawczy: pamięć nie jest jeszcze podłączona do UI, HTTP ani trwałej bazy.** Nie zmieniono dotychczasowego działania czatu/vision. Silnik daje tylko kandydaturę, nie aktywną wersję. Trwałe operacje, atomowy commit i panel powstaną w kroku 2; później aktywny L2 wejdzie do preflight/send.
+
+200/200 Rust Linux headless (29 nowych testów pamięci), 115/115 frontend, TypeScript/Vite, 22/22 granice, 193/193 P2 PASS. Raport: docs/AI_HOME_4B3_KROK_1_RAPORT_PL.md; logi docs/evidence/4b3-step-1; plan treść 1.24. Kontrakty, SQLite v8, zależności/lockfile, workflow i capabilities bez zmian. Wystarcza istniejące CI; bez nowych release/instalatorów. Realne API/vault/Windows/WebView pozostają osobnymi odbiorami.
+
+Poniżej opis funkcjonalnej bazy 4B-2A; wcześniejsze wyniki/liczniki dotyczą tamtego przekazania.
+
+---
+
 # AI Home
 
 Stan 21.10.2026: korekta audytu 4B-2A kroku 3. Audyt zwrócił DO KOREKTY z błędem spóźnionego zapisu vision po zmianie połączenia. Poprawka wymaga nowego CI i ponownego audytu.

@@ -8,4 +8,10 @@ for(const f of walk('src').filter(f=>/\.(ts|tsx)$/.test(f)&&!f.startsWith('src/i
 const cap=JSON.parse(fs.readFileSync('src-tauri/capabilities/main.json'));check(JSON.stringify(cap.windows)==='["main"]','unscoped window permission');check(JSON.stringify(cap.permissions)==='["allow-home-dispatch","core:event:allow-listen","core:event:allow-unlisten"]','unexpected capability');check(!cap.remote,'remote capability');
 const en=JSON.parse(fs.readFileSync('src/locales/en.json'));const pl=JSON.parse(fs.readFileSync('src/locales/pl.json'));check(JSON.stringify(Object.keys(en.strings).sort())===JSON.stringify(Object.keys(pl.strings).sort()),'missing translations');
 check(JSON.parse(fs.readFileSync('contracts/defaults.json')).appPreferences.locale==='en','default language');
+
+
+// 4B-3 step 1 stays a pure protocol; runtime integration belongs to the coordinator.
+const memoryProtocol=fs.readFileSync("src-tauri/src/memory/mod.rs","utf8");
+check(!/\b(?:sqlx|reqwest|tauri|tokio)\b/.test(memoryProtocol),"memory protocol contains runtime infrastructure");
+
 console.log(`${checks} boundary checks PASS`);

@@ -5,6 +5,7 @@ pub mod persistence;
 pub mod providers;
 pub mod vault;
 pub mod imports;
+pub mod memory;
 mod connections;
 #[cfg(feature="desktop")]
 mod desktop {

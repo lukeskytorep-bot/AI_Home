@@ -1,0 +1,22 @@
+{
+  "stage": "4B-3 step 1 pure protocol",
+  "date": "2026-10-21",
+  "baseZip": "AI_HOME_4B2A_KROK_3_AUDIT_FIX_SOURCE.zip",
+  "baseSha256": "5e744d54b89920d7343003a3d21d1aaa9ec70109b22a9504795323911eda04bb",
+  "rustHeadless": {
+    "passed": 200,
+    "memoryTests": 29,
+    "desktopFeature": false
+  },
+  "frontend": 115,
+  "boundaries": 22,
+  "p2": 193,
+  "typecheckBuild": "PASS",
+  "workingMemoryRuntimeImplemented": false,
+  "sqliteVersion": 8,
+  "liveApi": false,
+  "osVault": false,
+  "windowsWebView": false,
+  "ciForNewPatch": "pending",
+  "auditForNewPatch": "pending"
+}

@@ -1,3 +1,25 @@
+# 4B-3 krok 1 — silnik protokołu, 21.10.2026
+
+Poprawka vision ma potwierdzenie zielonego CI Edwarda; brak identyfikatora/platform i tekstu nowego audytu. Za jego upoważnieniem wykonano pierwszy krok 4B-3.
+
+- [x] Pure Rust: propozycja Scribe albo Primary, osobna decyzja Primary.
+- [x] ACCEPT/MODIFY/REJECT; pomiar/hash faktycznej treści po MODIFY.
+- [x] Domyślne 300, presety/własna wartość i unlimited bez cichego skracania.
+- [x] Dwie próby pojemności, jedna osobna naprawa formatu, najwyżej cztery żądania logiczne.
+- [x] Źródła w danych, profile/hash i język zadania niezależny od UI.
+- [x] 200/200 Rust headless (29 nowych), 115/115 frontend, build, 22/22 granice, 193/193 P2.
+- [x] SQLite/IPC/P2/provider/vault/dependencies/lockfile/workflow/capabilities bez zmian.
+- [ ] Nowe CI i audyt 4B-3 kroku 1.
+- [ ] Trwały koordynator, fizyczny budżet, receipts, atomowy zapis/STOP/restart i panel pamięci — krok 2.
+- [ ] Dołączenie L2 do preflight/send i pełny odbiór 4B-3.
+- [ ] Rzeczywiste OS vault/live API/Windows/Tauri/WebView.
+
+Silnik nie jest IPC ani aktywną pamięcią. Wynik to kandydatura; nowe rekordy i aktywację może wykonać dopiero natywny koordynator po ponownej walidacji zakresu.
+
+---
+
+## Historyczne kryteria poprzednich etapów
+
 # 4B-2A krok 3 — korekta audytu, 21.10.2026
 
 Odebrany werdykt: DO KOREKTY. Nie otrzymano PASS poprawki.
