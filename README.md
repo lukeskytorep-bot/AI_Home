@@ -1,3 +1,17 @@
+# Bieżący krok: 4B-3 krok 2 — trwała pamięć i panel
+
+W wybranej rozmowie jest panel Working Context. Zapisz pojemność oraz jawne okna kontekstu modeli i wybierz Scribe albo wyłącz go, aby Primary proponował oraz osobno decydował. Przycisk Update memory from this conversation uruchamia modele na tekstach wiadomości. Domyślne L2: 300 szacowanych tokenów; presety/własna wartość/unlimited z ostrzeżeniem. Panel pokazuje próby, decyzję i ostatnią zapisaną wersję.
+
+**Pamięć jest już trwale zapisywana, ale jeszcze nie jest dołączana do żądań czatu — to krok 3.** Treści plików i obrazy nie są czytane przez Scribe w tym kroku. Nie ma automatycznych wywołań modeli po otwarciu panelu. STOP/restart/błąd/konflikt nie zastępuje starej pamięci pustym zapisem. Decyzja jest odpowiedzią Primary, nie zatwierdzeniem przez człowieka.
+
+SQLite migruje automatycznie v8→v9. Nie uruchamiaj cleanup ani Prepare Cargo lockfile. Zależności, zamrożone kontrakty, workflow i uprawnienia pozostają bez zmian. Wystarczy istniejące CI na push; bez nowego release/instalatorów.
+
+228/228 Rust Linux headless, 130/130 frontend, TypeScript/Vite, 23/23 granice i 193/193 P2 PASS. Raport: docs/AI_HOME_4B3_KROK_2_RAPORT_PL.md; logi docs/evidence/4b3-step-2; plan treść 1.25. Nowe CI/audyt kroku pozostają wymagane. Realne API/vault/Windows/WebView to osobne odbiory.
+
+Poniżej historyczny opis bazy kroku 1 oraz wcześniejszych etapów. Aktualny stan określa nagłówek powyżej, raport i plan 1.25.
+
+---
+
 # Bieżący krok: 4B-3 krok 1 — protokół pamięci
 
 Dodano czysty silnik Rust dla propozycji Scribe i decyzji Primary (ACCEPT/MODIFY/REJECT), dwóch prób pojemności i jednej naprawy formatu. Gdy Scribe jest wyłączony, Primary proponuje i podejmuje osobną decyzję. Obsługiwane 300/500/800/1000/własna pojemność i unlimited. Pomiar jest szacunkiem UTF-8 bytes, związanym z ID/rewizją Primary; nie jest tokenizerem.

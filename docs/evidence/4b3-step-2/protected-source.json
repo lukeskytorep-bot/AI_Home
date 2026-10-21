@@ -1,0 +1,10 @@
+{
+  "baseSha256": "2ba80109442b38c99d6c7d8abdb5f1d5ceff05c6dcd11c6e9dca508b21cd7331",
+  "protectedBaselineFiles": 270,
+  "oldContractsByteIdentical": true,
+  "providerVaultByteIdentical": true,
+  "dependenciesLocksByteIdentical": true,
+  "workflowCapabilitiesByteIdentical": true,
+  "historicalSnapshotsEvidenceByteIdentical": true,
+  "deletions": []
+}

@@ -1,0 +1,74 @@
+   Compiling ai-home v0.0.1 (/workspace/scratch/8e3755d5c581/memory2/work/AI_Home/src-tauri)
+warning: multiple fields are never read
+  --> src/providers/mod.rs:49:20
+   |
+48 | pub struct ProviderChatResponse {
+   |            -------------------- fields in this struct
+49 |     content:String,reasoning_content:Option<String>,reasoning_details:Option<Vec<Value>>,reasoning_source:Option<String>,
+   |                    ^^^^^^^^^^^^^^^^^                                                     ^^^^^^^^^^^^^^^^
+50 |     finish_reason:Option<String>,actual_model:Option<String>,usage:ProviderUsage,provider_request_id:Option<String>,actual_provider:Op...
+   |                                  ^^^^^^^^^^^^                                    ^^^^^^^^^^^^^^^^^^^                ^^^^^^^^^^^^^^^
+51 |     continuation_diagnostics:Option<()>,debug_payload:Option<()>,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^            ^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `enable_openrouter_streaming` is never used
+   --> src/providers/request_builders.rs:200:15
+    |
+200 | pub(super) fn enable_openrouter_streaming(body: &mut Value) -> Result<(), String> {
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: `ai-home` (lib) generated 2 warnings
+warning: unused import: `AtomicUsize`
+  --> tests/support/memory_setup.rs:13:30
+   |
+13 |         atomic::{AtomicBool, AtomicUsize, Ordering},
+   |                              ^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `sqlx::Row`
+ --> tests/support/memory_setup.rs:9:5
+  |
+9 | use sqlx::Row;
+  |     ^^^^^^^^^
+
+warning: function `history` is never used
+   --> tests/support/memory_setup.rs:238:10
+    |
+238 | async fn history(app: &Application, p: &str, c: &Value) -> Value {
+    |          ^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `received` is never used
+   --> tests/support/memory_setup.rs:249:10
+    |
+249 | async fn received(s: &Server) {
+    |          ^^^^^^^^
+
+warning: `ai-home` (test "memory_runtime") generated 4 warnings (run `cargo fix --test "memory_runtime" -p ai-home` to apply 1 suggestion)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 6.44s
+     Running tests/memory_runtime.rs (memory/work/AI_Home/src-tauri/target/debug/deps/memory_runtime-05090cd8e6d91c7c)
+
+running 16 tests
+test budget_preflight_rejects_without_paid_calls_or_pending_operation ... ok
+test forged_sources_wrong_profile_and_ui_decision_are_rejected_before_http ... ok
+test cancelled_primary_cannot_commit_late_memory ... ok
+test ambiguous_receipt_retry_and_parallel_update_do_not_duplicate_paid_calls ... ok
+test accepted_memory_commits_receipt_version_result_and_sources_once ... ok
+test final_transaction_failure_does_not_activate_or_leave_orphan_version ... ok
+test actual_scribe_route_receives_proposal_and_primary_receives_decision ... ok
+test format_repair_is_visible_and_not_a_capacity_retry ... ok
+test working_record_seeded_defaults_and_profile_isolation ... ok
+test key_change_while_post_is_pending_prevents_commit ... ok
+test stale_settings_scope_after_key_change_is_rejected ... ok
+test settings_change_during_post_does_not_activate_old_candidate ... ok
+test oversized_modify_then_second_proposal_shares_four_calls ... ok
+test two_invalid_formats_fail_without_empty_active_memory ... ok
+test unlimited_respects_output_and_context_but_does_not_reject_content_capacity ... ok
+test second_failure_and_primary_reject_retain_previous_version ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 15.54s
+

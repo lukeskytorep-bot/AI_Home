@@ -1,3 +1,28 @@
+# 4B-3 krok 2 — trwały Working Context i panel, 21.10.2026
+
+Edward potwierdził zielone CI kroku 1 i upoważnił krok 2. Nowy krok ma lokalne PASS, wymaga CI/audytu. Nie dostarczono numerów/platform wcześniejszego przebiegu ani nowego tekstu audytu.
+
+- [x] Ręczna aktualizacja L2 z tekstów wiadomości jednej rozmowy; niezależny Scribe lub Primary w roli proponującej.
+- [x] Decyzja Primary z rzeczywistego wywołania, nie UI; ACCEPT/MODIFY/REJECT, pomiar/hash finalnej treści.
+- [x] Trwałe propozycje, receipts, próby, wersje i typed wynik operacji; atomowa aktywacja.
+- [x] Pełny snapshot/CAS przed POST i commit; zmiany klucza/modelu/źródła/polityki nie zatwierdzają starego wyniku.
+- [x] Fizyczne retry/naprawy/decyzje dzielą 4 POST/180 s, trwała rezerwacja przed siecią.
+- [x] STOP, restart, rollback, idempotencja i izolacja profili; stara wersja zachowana przy porażce.
+- [x] Pojemność 300/presety/własna/unlimited, jawne okna obu modeli, EN/PL, faktyczny wynik i próby.
+- [x] Szkic ustawień i pełny zakres zachowane; niepewny update rozliczany z tym samym ID po zmianie rozmowy.
+- [x] SQLite v8→v9 i zachowanie poprzednich danych; stare kontrakty/dependencies/lockfile/CI/uprawnienia bez zmian.
+- [x] 228/228 Rust, 130/130 frontend, build, 23/23 granice, 193/193 P2.
+- [ ] Nowe CI/audyt kroku 2.
+- [ ] Krok 3: aktywny L2 w chat.preflight/send; domknięcie 4B-3.
+- [ ] Późniejsze warstwy/pozostałe przeznaczenia importu/wyszukiwanie/pełna historia i restore — 4B-4.
+- [ ] Rzeczywiste OS vault/live API/Windows/Tauri/WebView.
+
+Panel wyraźnie mówi, że w tym kroku zapisany L2 nie jest jeszcze wysyłany w czacie. Scribe czyta tekst wiadomości, bez zawartości dokumentów i obrazów.
+
+---
+
+## Historyczne kryteria wcześniejszych kroków
+
 # 4B-3 krok 1 — silnik protokołu, 21.10.2026
 
 Poprawka vision ma potwierdzenie zielonego CI Edwarda; brak identyfikatora/platform i tekstu nowego audytu. Za jego upoważnieniem wykonano pierwszy krok 4B-3.

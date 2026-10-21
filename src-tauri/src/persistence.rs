@@ -14,7 +14,7 @@ impl Store {
         let pool=SqlitePoolOptions::new().max_connections(1).connect_with(options).await?;
         let mut tx=pool.begin().await?;
         let version:i64=sqlx::query_scalar("PRAGMA user_version").fetch_one(&mut *tx).await?;
-        if version>8{return Err(sqlx::Error::Protocol("unsupported storage version".into()))}
+        if version>9{return Err(sqlx::Error::Protocol("unsupported storage version".into()))}
         sqlx::query("CREATE TABLE IF NOT EXISTS preferences (id INTEGER PRIMARY KEY CHECK(id=1), revision INTEGER NOT NULL, body TEXT NOT NULL)").execute(&mut *tx).await?;
         sqlx::query("CREATE TABLE IF NOT EXISTS receipts (request_id TEXT PRIMARY KEY, fingerprint TEXT NOT NULL, response TEXT NOT NULL)").execute(&mut *tx).await?;
         sqlx::query("CREATE TABLE IF NOT EXISTS app_events (sequence INTEGER PRIMARY KEY AUTOINCREMENT, body TEXT NOT NULL)").execute(&mut *tx).await?;
@@ -41,6 +41,24 @@ impl Store {
             "CREATE TABLE IF NOT EXISTS connection_models (profile_id TEXT NOT NULL, connection_id TEXT NOT NULL, connection_revision INTEGER NOT NULL, credential_revision INTEGER NOT NULL, body TEXT NOT NULL, PRIMARY KEY(profile_id,connection_id), FOREIGN KEY(profile_id,connection_id) REFERENCES connections(profile_id,id))",
             "CREATE TABLE IF NOT EXISTS profile_events (profile_id TEXT NOT NULL REFERENCES profiles(id), sequence INTEGER NOT NULL, body TEXT NOT NULL, PRIMARY KEY(profile_id,sequence))",
         ] {sqlx::query(statement).execute(&mut *tx).await?;}
+        // 4B-3: all references retain profile scope; generated FK columns bind DTOs.
+        for statement in [
+            "CREATE TABLE IF NOT EXISTS memory_records (profile_id TEXT NOT NULL REFERENCES profiles(id), id TEXT NOT NULL, revision INTEGER NOT NULL, body TEXT NOT NULL, PRIMARY KEY(profile_id,id))",
+            "CREATE UNIQUE INDEX IF NOT EXISTS one_working_record ON memory_records(profile_id) WHERE json_extract(body,'$.kind')='working'",
+            "CREATE TABLE IF NOT EXISTS memory_proposals (profile_id TEXT NOT NULL, id TEXT NOT NULL, revision INTEGER NOT NULL, body TEXT NOT NULL, operation_id TEXT GENERATED ALWAYS AS (json_extract(body,'$.operationId')) STORED, PRIMARY KEY(profile_id,id), FOREIGN KEY(profile_id,operation_id) REFERENCES operations(profile_id,id))",
+            "CREATE TABLE IF NOT EXISTS memory_decisions (profile_id TEXT NOT NULL, id TEXT NOT NULL, revision INTEGER NOT NULL, body TEXT NOT NULL, proposal_id TEXT GENERATED ALWAYS AS (json_extract(body,'$.proposalId')) STORED, PRIMARY KEY(profile_id,id), FOREIGN KEY(profile_id,proposal_id) REFERENCES memory_proposals(profile_id,id))",
+            "CREATE TABLE IF NOT EXISTS memory_attempts (profile_id TEXT NOT NULL, id TEXT NOT NULL, revision INTEGER NOT NULL, body TEXT NOT NULL, proposal_id TEXT GENERATED ALWAYS AS (json_extract(body,'$.proposalId')) STORED, PRIMARY KEY(profile_id,id), FOREIGN KEY(profile_id,proposal_id) REFERENCES memory_proposals(profile_id,id))",
+            "CREATE TABLE IF NOT EXISTS memory_versions (profile_id TEXT NOT NULL, id TEXT NOT NULL, revision INTEGER NOT NULL, body TEXT NOT NULL, record_id TEXT GENERATED ALWAYS AS (json_extract(body,'$.recordId')) STORED, decision_id TEXT GENERATED ALWAYS AS (json_extract(body,'$.decisionReceiptId')) STORED, PRIMARY KEY(profile_id,id), FOREIGN KEY(profile_id,record_id) REFERENCES memory_records(profile_id,id), FOREIGN KEY(profile_id,decision_id) REFERENCES memory_decisions(profile_id,id))",
+            "CREATE TABLE IF NOT EXISTS memory_runs (profile_id TEXT NOT NULL, operation_id TEXT NOT NULL, record_id TEXT NOT NULL, body TEXT NOT NULL, PRIMARY KEY(profile_id,operation_id), FOREIGN KEY(profile_id,operation_id) REFERENCES operations(profile_id,id), FOREIGN KEY(profile_id,record_id) REFERENCES memory_records(profile_id,id))",
+            "CREATE TABLE IF NOT EXISTS memory_contexts (profile_id TEXT NOT NULL, route_id TEXT NOT NULL, scope_id TEXT NOT NULL, context_tokens INTEGER NOT NULL CHECK(context_tokens>=1024 AND context_tokens<=2000000), PRIMARY KEY(profile_id,route_id), FOREIGN KEY(profile_id,route_id) REFERENCES routes(profile_id,id))",
+        ] {sqlx::query(statement).execute(&mut *tx).await?;}
+        let timestamp=chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis,true);
+        let profiles=sqlx::query("SELECT id FROM profiles").fetch_all(&mut *tx).await?;
+        for row in profiles {
+            let profile=row.get::<&str,_>("id");
+            let record=json!({"schemaVersion":1,"id":format!("working-{profile}"),"profileId":profile,"revision":1,"createdAt":timestamp,"kind":"working","state":"empty"});
+            sqlx::query("INSERT OR IGNORE INTO memory_records(profile_id,id,revision,body) VALUES(?,?,1,?)").bind(profile).bind(record["id"].as_str().unwrap()).bind(record.to_string()).execute(&mut *tx).await?;
+        }
         // A restarted process cannot resume a network request. Keep a durable safe error.
         let pending=sqlx::query("SELECT profile_id,id,revision,body FROM operations WHERE json_extract(body,'$.status') IN ('queued','running')").fetch_all(&mut *tx).await?;
         for row in pending {
@@ -57,10 +75,11 @@ impl Store {
             sqlx::query("INSERT INTO profile_events(profile_id,sequence,body) VALUES(?,?,?)").bind(profile).bind(sequence).bind(event.to_string()).execute(&mut *tx).await?;
 
         }
+        sqlx::query("UPDATE memory_proposals SET revision=revision+1,body=json_set(body,'$.revision',revision+1,'$.state','failed') WHERE json_extract(body,'$.state')='pending' AND EXISTS(SELECT 1 FROM operations o WHERE o.profile_id=memory_proposals.profile_id AND o.id=memory_proposals.operation_id AND json_extract(o.body,'$.status') IN ('failed','cancelled','interrupted'))").execute(&mut *tx).await?;
         // Imported originals survive a crash; interrupted extraction is never presented as ready.
         sqlx::query("UPDATE import_materials SET revision=revision+1,body=json_set(body,'$.revision',revision+1,'$.parseState','failed','$.errorCode','OPERATION_INTERRUPTED') WHERE json_extract(body,'$.parseState')='pending'").execute(&mut *tx).await?;
         sqlx::query("UPDATE attachments SET revision=revision+1,body=json_set(body,'$.revision',revision+1,'$.state','failed') WHERE EXISTS(SELECT 1 FROM import_materials m WHERE m.profile_id=attachments.profile_id AND m.id=attachments.material_id AND json_extract(m.body,'$.errorCode')='OPERATION_INTERRUPTED') AND json_extract(body,'$.state')='staged'").execute(&mut *tx).await?;
-        sqlx::query("PRAGMA user_version=8").execute(&mut *tx).await?;tx.commit().await?;
+        sqlx::query("PRAGMA user_version=9").execute(&mut *tx).await?;tx.commit().await?;
         let store=Self{pool};store.preferences().await?;Ok(store)
     }
     pub async fn preferences(&self)->Result<Value,sqlx::Error>{

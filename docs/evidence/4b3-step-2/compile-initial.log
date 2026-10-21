@@ -1,0 +1,54 @@
+   Compiling ai-home v0.0.1 (/workspace/scratch/8e3755d5c581/memory2/work/AI_Home/src-tauri)
+warning: unused import: `domain::schema`
+ --> src/memory_runtime.rs:3:13
+  |
+3 | use crate::{domain::schema,memory::{self,Engine,Outcome,Stage},providers::{self,ProviderChatRequest,ProviderMessage,transport::{CallB...
+  |             ^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: multiple fields are never read
+  --> src/providers/mod.rs:49:20
+   |
+48 | pub struct ProviderChatResponse {
+   |            -------------------- fields in this struct
+49 |     content:String,reasoning_content:Option<String>,reasoning_details:Option<Vec<Value>>,reasoning_source:Option<String>,
+   |                    ^^^^^^^^^^^^^^^^^                                                     ^^^^^^^^^^^^^^^^
+50 |     finish_reason:Option<String>,actual_model:Option<String>,usage:ProviderUsage,provider_request_id:Option<String>,actual_provider:Op...
+   |                                  ^^^^^^^^^^^^                                    ^^^^^^^^^^^^^^^^^^^                ^^^^^^^^^^^^^^^
+51 |     continuation_diagnostics:Option<()>,debug_payload:Option<()>,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^            ^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `enable_openrouter_streaming` is never used
+   --> src/providers/request_builders.rs:200:15
+    |
+200 | pub(super) fn enable_openrouter_streaming(body: &mut Value) -> Result<(), String> {
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: `ai-home` (lib) generated 3 warnings (run `cargo fix --lib -p ai-home` to apply 1 suggestion)
+warning: unused import: `AtomicUsize`
+  --> tests/chat.rs:12:30
+   |
+12 |         atomic::{AtomicBool, AtomicUsize, Ordering},
+   |                              ^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `sqlx::Row`
+ --> tests/chat.rs:8:5
+  |
+8 | use sqlx::Row;
+  |     ^^^^^^^^^
+
+warning: `ai-home` (lib test) generated 3 warnings (3 duplicates)
+warning: `ai-home` (test "chat") generated 2 warnings (run `cargo fix --test "chat" -p ai-home` to apply 1 suggestion)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 11.92s
+  Executable unittests src/lib.rs (/workspace/scratch/8e3755d5c581/memory/work/AI_Home/src-tauri/target/debug/deps/ai_home-90524c3444291721)
+  Executable tests/chat.rs (/workspace/scratch/8e3755d5c581/memory/work/AI_Home/src-tauri/target/debug/deps/chat-d76a7e5b8aa63061)
+  Executable tests/connections.rs (/workspace/scratch/8e3755d5c581/memory/work/AI_Home/src-tauri/target/debug/deps/connections-2bcd1ba2943f05ce)
+  Executable tests/conversations.rs (/workspace/scratch/8e3755d5c581/memory/work/AI_Home/src-tauri/target/debug/deps/conversations-5a7e69d0fd2af563)
+  Executable tests/foundation.rs (/workspace/scratch/8e3755d5c581/memory/work/AI_Home/src-tauri/target/debug/deps/foundation-58200729a0feed38)
+  Executable tests/imports.rs (/workspace/scratch/8e3755d5c581/memory/work/AI_Home/src-tauri/target/debug/deps/imports-aa57c1e397b1c119)
+  Executable tests/memory.rs (/workspace/scratch/8e3755d5c581/memory/work/AI_Home/src-tauri/target/debug/deps/memory-8546e64c3af590ea)

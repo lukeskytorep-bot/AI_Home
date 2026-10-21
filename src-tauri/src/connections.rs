@@ -19,9 +19,12 @@ mod chat_runtime;
 mod conversation_storage;
 #[path = "import_runtime.rs"]
 mod import_runtime;
+#[path = "memory_runtime.rs"]
+mod memory_runtime;
 type Failure = &'static str;
 type Tx<'a> = Transaction<'a, Sqlite>;
 const COMMANDS: &[&str] = &[
+    "memory.working.get", "memory.working.sources", "memory.settings.set", "memory.update.request",
     "material.select", "material.import", "material.get", "material.text.read", "material.original.read", "conversation.materials.list", "conversation.import.latest", "attachment.detach",
     "chat.send", "chat.preflight", "chat.vision.get", "chat.vision.set",
     "chat.settings.get",
@@ -115,6 +118,8 @@ fn validate_record(table: &str, v: &Value) -> bool {
             "routes" => "ModelRoute",
             "conversations" => "Conversation",
             "messages" => "Message",
+            "memory_records" => "MemoryRecord", "memory_versions" => "MemoryVersion",
+            "memory_proposals" => "MemoryProposal", "memory_decisions" => "MemoryDecisionReceipt", "memory_attempts" => "MemoryWriteAttempt",
             _ => "Operation",
         },
         v,
@@ -236,6 +241,7 @@ impl Connections {
         let imports:Value=serde_json::from_str(include_str!("../../contracts/imports.ipc.json")).unwrap();
         let context:Value=serde_json::from_str(include_str!("../../contracts/document-chat.ipc.json")).unwrap();
         let vision:Value=serde_json::from_str(include_str!("../../contracts/vision.ipc.json")).unwrap();
+        let memory:Value=serde_json::from_str(include_str!("../../contracts/memory.ipc.json")).unwrap();
         let contract = catalog["commands"]
             .get(command)
             .or_else(|| extra["commands"].get(command))
@@ -244,6 +250,7 @@ impl Connections {
             .or_else(|| imports["commands"].get(command))
             .or_else(|| context["commands"].get(command))
             .or_else(|| vision["commands"].get(command))
+            .or_else(|| memory["commands"].get(command))
             .ok_or("UNKNOWN_COMMAND")?;
         if !schema::dto("CommandEnvelope", r)
             || !schema::valid(&r["payload"], &contract["payload"])
@@ -336,6 +343,7 @@ impl Connections {
         }
         let mut launch = None;
         let mut chat_launch = None;
+        let mut memory_launch = None;
         let mut import_launch = None;
         let mut cancel_after = Vec::new();
         let result = match command {
@@ -348,6 +356,7 @@ impl Connections {
                     serde_json::from_str(include_str!("../../contracts/defaults.json")).unwrap();
                 let v = json!({"schemaVersion":1,"id":id(),"revision":1,"createdAt":now(),"displayName":name,"status":"draft","mode":"standard","scribeMode":"automatic","memorySettings":defaults["memorySettings"],"contextBudget":defaults["contextBudget"],"languagePolicy":"preserve_source"});
                 put(&mut tx, "profiles", &v, true, 0).await?;
+                memory_runtime::seed(&mut tx,v["id"].as_str().unwrap()).await?;
                 event(&mut tx, v["id"].as_str().unwrap(), "profile.changed", &v).await?;
                 v
             }
@@ -396,6 +405,10 @@ impl Connections {
                     return Err("POLICY_DENIED");
                 }
                 match command {
+                    "memory.working.get" => memory_runtime::view(&mut tx,profile).await?,
+                    "memory.working.sources" => memory_runtime::sources(&mut tx,profile,payload).await?,
+                    "memory.settings.set" => memory_runtime::settings(&mut tx,&mut p,payload,expected).await?,
+                    "memory.update.request" => {let (job,op)=memory_runtime::accept(&mut tx,&p,payload,expected).await?;memory_launch=Some((job,op.clone()));json!({"operation":op})},
                     "material.import" => {let (job,op)=import_runtime::accept(&mut tx,self,profile,payload).await?;import_launch=Some((job,op.clone()));json!({"operation":op})}
                     "material.get"|"material.text.read"|"material.original.read"|"conversation.materials.list"|"conversation.import.latest"|"attachment.detach" => import_runtime::read(&mut tx,command,profile,payload,expected).await?,
                     "chat.settings.get" | "chat.settings.set" => {
@@ -433,7 +446,7 @@ impl Connections {
                             all.push(values);
                         }
                         let seq:i64=sqlx::query_scalar("SELECT COALESCE(MAX(sequence),0) FROM profile_events WHERE profile_id=?").bind(profile).fetch_one(&mut *tx).await.map_err(|_|"STORAGE_ERROR")?;
-                        json!({"profile":p,"connections":all[0],"routes":all[1],"memoryRecords":[],"lastEventSequence":seq})
+                        json!({"profile":p,"connections":all[0],"routes":all[1],"memoryRecords":memory_runtime::records(&mut tx,profile).await?,"lastEventSequence":seq})
                     }
                     "connection.create" => {
                         let draft = &payload["connection"];
@@ -718,6 +731,7 @@ impl Connections {
                             }
                             let old = revision(&op)?;
                             terminal(&mut op, "cancelled", "OPERATION_CANCELLED")?;
+                            if op["kind"]=="memory_update"{memory_runtime::close_pending(&mut tx,profile,op["id"].as_str().unwrap()).await?;}
                             if op["kind"]=="import"{import_runtime::cancel_pending(&mut tx,profile,op["id"].as_str().unwrap(),"OPERATION_CANCELLED").await?;}
                             put(&mut tx, "operations", &op, false, old).await?;
                             event(&mut tx, profile, "operation.changed", &op).await?;
@@ -812,6 +826,34 @@ impl Connections {
                 service.active.lock().await.remove(&opid);
             });
         }
+        if let Some((job, op)) = memory_launch {
+            let cancel = Cancellation::default();
+            let budget = CallBudget::new(
+                std::time::Duration::from_millis(op["limits"]["maxElapsedMs"].as_u64().unwrap()),
+                op["limits"]["maxPhysicalCalls"].as_u64().unwrap() as u8,
+                cancel.clone(),
+            )
+            .map_err(|_| "VALIDATION_ERROR")?
+            .with_recorder(Arc::new(RecordAttempt {
+                pool: self.pool.clone(),
+                gate: self.gate.clone(),
+                profile: op["profileId"].as_str().unwrap().into(),
+                operation: op["id"].as_str().unwrap().into(),
+            }));
+            self.active
+                .lock()
+                .await
+                .insert(op["id"].as_str().unwrap().into(), (cancel, budget.clone()));
+            let service = self.clone();
+            tokio::spawn(async move {
+                let opid = op["id"].as_str().unwrap().to_string();
+                let profile = op["profileId"].as_str().unwrap().to_string();
+                if memory_runtime::run(&service, job, op, budget).await.is_err() {
+                    let _ = service.fail_operation(&profile, &opid).await;
+                }
+                service.active.lock().await.remove(&opid);
+            });
+        }
         Ok(response)
     }
     async fn secret_fingerprint(
@@ -851,6 +893,7 @@ impl Connections {
         if matches!(op["status"].as_str(), Some("queued") | Some("running")) {
             let old = revision(&op)?;
             terminal(&mut op, "failed", "STORAGE_ERROR")?;
+            if op["kind"]=="memory_update"{memory_runtime::close_pending(&mut tx,profile,id).await?;}
             put(&mut tx, "operations", &op, false, old).await?;
             event(&mut tx, profile, "operation.changed", &op).await?;
         }
@@ -1049,6 +1092,9 @@ impl providers::transport::CallRecorder for RecordAttempt {
                             TransportError::Cancelled
                         }
                     })?;
+            }
+            if op["kind"] == "memory_update" {
+                memory_runtime::ensure_current(&mut tx,&op).await.map_err(|code| if code=="STORAGE_ERROR" {TransportError::Storage} else {TransportError::Cancelled})?;
             }
             if count == 0 || u64::from(count) > op["limits"]["maxPhysicalCalls"].as_u64().unwrap() {
                 return Err(TransportError::CallLimit);

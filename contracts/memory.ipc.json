@@ -1,0 +1,388 @@
+{
+  "contractVersion": 1,
+  "commands": {
+    "memory.working.get": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "record": {
+            "$ref": "#/$defs/MemoryRecord"
+          },
+          "version": {
+            "$ref": "#/$defs/MemoryVersion"
+          },
+          "profileRevision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "capacityPolicy": {
+            "$ref": "#/$defs/MemoryCapacityPolicy"
+          },
+          "scribeMode": {
+            "enum": [
+              "automatic",
+              "disabled"
+            ]
+          },
+          "scopeId": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "primary": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "revision": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "modelId": {
+                "type": "string"
+              },
+              "scopeId": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "contextTokens": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2000000
+              },
+              "verified": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "id",
+              "revision",
+              "modelId",
+              "scopeId",
+              "contextTokens",
+              "verified"
+            ],
+            "additionalProperties": false
+          },
+          "scribe": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "revision": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "modelId": {
+                "type": "string"
+              },
+              "scopeId": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "contextTokens": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2000000
+              },
+              "verified": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "id",
+              "revision",
+              "modelId",
+              "scopeId",
+              "contextTokens",
+              "verified"
+            ],
+            "additionalProperties": false
+          },
+          "latestOperation": {
+            "$ref": "#/$defs/Operation"
+          },
+          "attempts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/MemoryWriteAttempt"
+            }
+          },
+          "proposals": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/MemoryProposal"
+            }
+          },
+          "decisions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/MemoryDecisionReceipt"
+            }
+          },
+          "formatRepairCount": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1
+          }
+        },
+        "required": [
+          "record",
+          "profileRevision",
+          "capacityPolicy",
+          "scribeMode",
+          "scopeId",
+          "attempts",
+          "proposals",
+          "decisions",
+          "formatRepairCount"
+        ],
+        "additionalProperties": false
+      },
+      "mutates": false,
+      "requiresExpectedRevision": false,
+      "async": false
+    },
+    "memory.working.sources": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "conversationId"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "recordId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "recordRevision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "sourceRefs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/SourceRef"
+            }
+          }
+        },
+        "required": [
+          "recordId",
+          "recordRevision",
+          "sourceRefs"
+        ],
+        "additionalProperties": false
+      },
+      "mutates": false,
+      "requiresExpectedRevision": false,
+      "async": false
+    },
+    "memory.settings.set": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "scopeId": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "capacityPolicy": {
+            "$ref": "#/$defs/MemoryCapacityPolicy"
+          },
+          "scribeMode": {
+            "enum": [
+              "automatic",
+              "disabled"
+            ]
+          },
+          "primaryContextTokens": {
+            "type": "integer",
+            "minimum": 1024,
+            "maximum": 2000000
+          },
+          "scribeContextTokens": {
+            "type": "integer",
+            "minimum": 1024,
+            "maximum": 2000000
+          }
+        },
+        "required": [
+          "scopeId",
+          "capacityPolicy",
+          "scribeMode",
+          "primaryContextTokens"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "record": {
+            "$ref": "#/$defs/MemoryRecord"
+          },
+          "version": {
+            "$ref": "#/$defs/MemoryVersion"
+          },
+          "profileRevision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "capacityPolicy": {
+            "$ref": "#/$defs/MemoryCapacityPolicy"
+          },
+          "scribeMode": {
+            "enum": [
+              "automatic",
+              "disabled"
+            ]
+          },
+          "scopeId": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "primary": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "revision": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "modelId": {
+                "type": "string"
+              },
+              "scopeId": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "contextTokens": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2000000
+              },
+              "verified": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "id",
+              "revision",
+              "modelId",
+              "scopeId",
+              "contextTokens",
+              "verified"
+            ],
+            "additionalProperties": false
+          },
+          "scribe": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "revision": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "modelId": {
+                "type": "string"
+              },
+              "scopeId": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "contextTokens": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2000000
+              },
+              "verified": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "id",
+              "revision",
+              "modelId",
+              "scopeId",
+              "contextTokens",
+              "verified"
+            ],
+            "additionalProperties": false
+          },
+          "latestOperation": {
+            "$ref": "#/$defs/Operation"
+          },
+          "attempts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/MemoryWriteAttempt"
+            }
+          },
+          "proposals": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/MemoryProposal"
+            }
+          },
+          "decisions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/MemoryDecisionReceipt"
+            }
+          },
+          "formatRepairCount": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1
+          }
+        },
+        "required": [
+          "record",
+          "profileRevision",
+          "capacityPolicy",
+          "scribeMode",
+          "scopeId",
+          "attempts",
+          "proposals",
+          "decisions",
+          "formatRepairCount"
+        ],
+        "additionalProperties": false
+      },
+      "mutates": true,
+      "requiresExpectedRevision": true,
+      "async": false
+    }
+  }
+}

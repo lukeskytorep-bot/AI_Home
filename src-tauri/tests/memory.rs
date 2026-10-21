@@ -22,6 +22,7 @@ fn snapshot() -> Snapshot {
         capacity: Capacity::default(),
         previous_content: Some("Poprzednia pamięć.".into()),
         sources: vec![Source {
+            message_metadata: None,
             text: text.into(),
             reference: json!({"profileId":"p","kind":"message","entityId":"m1",
  "contentSha256":format!("{:x}",Sha256::digest(text.as_bytes()))}),
@@ -418,5 +419,18 @@ fn previous_version_and_content_must_agree() {
 fn primary_and_scribe_routes_have_distinct_role_identity() {
     let mut s = snapshot();
     s.scribe = Some(s.primary.clone());
+    assert!(matches!(Engine::new(s), Err(Error::InvalidInput)));
+}
+
+#[test]
+fn native_message_metadata_retains_speaker_and_time_without_forged_system_role() {
+    let mut s = snapshot();
+    let metadata =
+        json!({"role":"human","language":"pl","createdAt":"2026-10-21T00:00:00Z","sequence":1});
+    s.sources[0].message_metadata = Some(metadata.clone());
+    let mut e = Engine::new(s.clone()).unwrap();
+    let p = e.next_call().unwrap();
+    assert_eq!(p.data["sources"][0]["messageMetadata"], metadata);
+    s.sources[0].message_metadata.as_mut().unwrap()["role"] = json!("system");
     assert!(matches!(Engine::new(s), Err(Error::InvalidInput)));
 }

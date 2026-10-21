@@ -1,0 +1,11 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> ai-home@0.0.1 build
+> npm run typecheck && vite build
+
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> ai-home@0.0.1 typecheck
+> tsc --noEmit
+
+src/ui/MemoryPanel.tsx(18,74): error TS2554: Expected 1 arguments, but got 0.

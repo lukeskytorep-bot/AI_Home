@@ -1,0 +1,21 @@
+{
+  "stage": "4B-3 step 2 durable memory runtime and UI",
+  "date": "2026-10-21",
+  "base": "AI_HOME_4B3_KROK_1_SOURCE.zip",
+  "baseSha256": "2ba80109442b38c99d6c7d8abdb5f1d5ceff05c6dcd11c6e9dca508b21cd7331",
+  "rustHeadless": 228,
+  "memoryPure": 30,
+  "memoryRuntime": 27,
+  "frontend": 130,
+  "boundaryChecks": 23,
+  "p2ReferenceChecks": 193,
+  "sqliteVersion": 9,
+  "workingMemorySaved": true,
+  "workingMemoryInjectedIntoChat": false,
+  "documentsImagesIncludedInScribe": false,
+  "desktopFeatureTested": false,
+  "liveApiTested": false,
+  "realOsVaultTested": false,
+  "ciForThisPatch": "pending",
+  "auditForThisPatch": "pending"
+}
