@@ -14,6 +14,8 @@ use crate::{
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use sqlx::Row;
+#[path="memory_restore.rs"] mod restore_runtime;
+pub(super) async fn restore(tx:&mut Tx<'_>,p:&Value,payload:&Value,expected:i64)->Result<(Job,Value),Failure>{restore_runtime::accept(tx,p,payload,expected).await}
 fn digest(v: &str) -> String {
     format!("{:x}", Sha256::digest(v.as_bytes()))
 }
@@ -351,6 +353,10 @@ pub(super) async fn accept(
     if !(1..=4).contains(&calls) || !(1..=180000).contains(&elapsed) {
         return Err("VALIDATION_ERROR");
     }
+    // Proposing and deciding are separate required calls, even with Scribe off.
+    if calls < 2 {
+        return Err("OPERATION_BUDGET_EXCEEDED");
+    }
     let cap =
         memory::Capacity::from_dto(&p["memorySettings"]["working"]).map_err(|_| "STORAGE_ERROR")?;
     for role in ["primary", "scribe"] {
@@ -423,13 +429,24 @@ pub(super) async fn accept(
             .collect(),
     })
     .map_err(|_| "VALIDATION_ERROR")?;
-    let first = engine.clone().next_call().map_err(|_| "VALIDATION_ERROR")?;
+    let mut budget_probe = engine.clone();
+    let first = budget_probe.next_call().map_err(|_| "STORAGE_ERROR")?;
     let role = if first.role == memory::Role::Scribe {
         "scribe"
     } else {
         "primary"
     };
     build(&first, &rs[role], p)?;
+    // Check the minimum possible Primary decision request before accepting work.
+    // One unescaped UTF-8 byte and a shortest allowed claimKind form a lower
+    // bound, not a prediction of Scribe's output. This cloned pure engine never
+    // calls a provider, writes a proposal, or consumes the operation's budget.
+    budget_probe
+        .proposal(&json!({"content":"x","language":language,"claimKind":"fact"}).to_string())
+        .map_err(|_| "STORAGE_ERROR")?;
+    let minimum_decision = budget_probe.next_call().map_err(|_| "STORAGE_ERROR")?;
+    build(&minimum_decision, &rs["primary"], p)?;
+    // run() still builds and validates every actual request with its real data.
     let op = json!({"schemaVersion":1,"id":id(),"profileId":profile,"revision":1,"createdAt":now(),"kind":"memory_update","status":"queued","capacityAttemptCount":0,"physicalCallCount":0,"expectedRecordRevision":expected,"limits":{"maxPhysicalCalls":calls,"maxElapsedMs":elapsed},"recordRefs":[{"profileId":profile,"recordKind":"memory_record","recordId":r["id"]}]});
     put(tx, "operations", &op, true, 0).await?;
     event(tx, profile, "operation.changed", &op).await?;
@@ -473,13 +490,14 @@ pub(super) async fn ensure_current(tx: &mut Tx<'_>, op: &Value) -> Result<(), Fa
     }
     let rs = routes(tx, &p).await?;
     for role in ["primary", "scribe"] {
-        if role == "scribe" && p["scribeMode"] == "disabled" {
+        if role == "scribe" && (p["scribeMode"] == "disabled" || s.get("restoreSource").is_some()) {
             continue;
         }
         if rs[role] != s["routes"][role] || !verified(&rs[role]["connection"]) {
             return Err("REVISION_CONFLICT");
         }
     }
+    if s.get("restoreSource").is_some(){return restore_runtime::ensure_source(tx,profile,&s).await;}
     let (messages, c) = resolve(tx, profile, &s["sources"]).await?;
     if json!(messages) != s["messages"]
         || c["id"] != s["conversationId"]
@@ -524,7 +542,7 @@ async fn fail(
         .err()
         .unwrap_or(code);
     let rev = revision(&current)?;
-    current["physicalCallCount"] = json!(budget.physical_calls());
+    if current["kind"]!="restore" {current["physicalCallCount"] = json!(budget.physical_calls());}
     terminal(
         &mut current,
         if code == "OPERATION_CANCELLED" {
@@ -602,7 +620,7 @@ async fn persist(
         put(&mut tx, "memory_attempts", &attempt, true, 0).await?;
     }
     current["capacityAttemptCount"] = json!(prompt.attempt);
-    current["physicalCallCount"] = json!(budget.physical_calls());
+    if current["kind"]!="restore" {current["physicalCallCount"] = json!(budget.physical_calls());}
     let mut stored = snapshot(&mut tx, &current).await?;
     stored["formatRepairCount"] = json!(engine.format_repairs());
     sqlx::query("UPDATE memory_runs SET body=? WHERE profile_id=? AND operation_id=?")
@@ -630,6 +648,7 @@ async fn persist(
             let mut r = job.snapshot["record"].clone();
             let old = revision(&r)?;
             let mut v = json!({"schemaVersion":1,"id":id(),"profileId":profile,"revision":1,"createdAt":now(),"recordId":r["id"],"versionNumber":job.snapshot["version"]["versionNumber"].as_u64().unwrap_or(0)+1,"content":c.content,"language":c.language,"contentSha256":c.sha256,"measurement":c.measurement,"sources":job.snapshot["sources"],"origin":"agent_decision","decisionReceiptId":receipt["id"],"claimKind":c.claim_kind});
+            if let Some(source)=job.snapshot.get("restoreSource"){v["origin"]=json!("restore");v["restoredFromVersionId"]=source["id"].clone();}
             if let Some(previous) = r.get("activeVersionId") {
                 v["previousVersionId"] = previous.clone()
             }
@@ -642,8 +661,9 @@ async fn persist(
             bump(&mut current)?;
             current["status"] = json!("succeeded");
             current["finishedAt"] = json!(now());
-            current["result"] = json!({"kind":"memory_update","outcome":"committed","recordId":r["id"],"versionId":v["id"],"recordRevision":r["revision"]});
+            current["result"] = if let Some(source)=job.snapshot.get("restoreSource"){json!({"kind":"restore","recordId":r["id"],"versionId":v["id"],"recordRevision":r["revision"],"restoredFromVersionId":source["id"]})}else{json!({"kind":"memory_update","outcome":"committed","recordId":r["id"],"versionId":v["id"],"recordRevision":r["revision"]})};
         }
+        Some(Outcome::Failed(memory::Failure::Rejected)) if job.snapshot.get("restoreSource").is_some() => {terminal(&mut current,"failed","MEMORY_PRIMARY_REJECTED")?;},
         Some(Outcome::Failed(memory::Failure::Rejected)) => {
             bump(&mut current)?;
             current["status"] = json!("succeeded");
@@ -692,9 +712,10 @@ pub(super) async fn run(
         tx.commit().await.map_err(|_| "STORAGE_ERROR")?;
     }
     let result=async {
-  let mut proposal=None;let mut receipt=None;
+  let mut proposal=job.snapshot["restoreProposalId"].as_str().map(str::to_string);let mut receipt=None;
   while job.engine.outcome().is_none(){
    let prompt=match job.engine.next_call(){Ok(p)=>p,Err(_)=>return Err(job.engine.outcome().and_then(|o|if let Outcome::Failed(f)=o{Some(failure(f))}else{None}).unwrap_or("STORAGE_ERROR"))};
+   let prompt=restore_runtime::prompt(prompt,&job.snapshot);
    let role=if prompt.role==memory::Role::Scribe{"scribe"}else{"primary"};let b=&job.snapshot["routes"][role];let request=build(&prompt,b,&job.snapshot["profile"])?;
    {let _guard=service.gate.lock().await;let mut tx=service.pool.begin().await.map_err(|_|"STORAGE_ERROR")?;ensure_current(&mut tx,&op).await?;budget.ensure_active().map_err(transport_code)?;}
    let response=tokio::select!{biased;_=budget.cancelled()=>Err("OPERATION_CANCELLED"),r=tokio::time::timeout_at(budget.deadline(),async {

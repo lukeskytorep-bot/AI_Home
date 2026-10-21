@@ -1,3 +1,15 @@
+# Bieżące przekazanie 4B-4 krok 2 — przywracanie wersji pamięci
+
+Starsza treść wymaga nowej decyzji bieżącego Primary. ACCEPT/MODIFY tworzy nową wersję z restoredFrom/previousVersion i nowym receipt; REJECT/STOP/błąd/restart zachowują poprzedni stan. Restore nie wywołuje Scribe. Budżet i snapshot sprawdzane są przed przyjęciem, każdym POST i commit.
+
+289/289 Rust headless, 164/164 UI, TypeScript/build, 24/24 granice i 193/193 P2 PASS lokalnie. Raport: docs/AI_HOME_4B4_KROK_2_RAPORT_PL.md. Plan treść 1.29. Krok 2 do CI/audytu, całe 4B-4 otwarte. Pozostałe warstwy/retrieval i przeznaczenia importu są dalej w planie.
+
+Kontrakty, SQLite v9/migracje, dependency/lockfile/provider/vault/CI/uprawnienia bez zmian. Nakładka, commit i push; niczego nie usuwać. Realne API/OS vault/Windows/Tauri/WebView nadal osobno.
+
+---
+
+## Historyczne przekazania
+
 # Bieżące przekazanie: 4B-4 krok 1 — historia i wyłączenie pamięci
 
 Historia L2, pełne porównanie dwóch wersji i ich pochodzenia/Primary receipt. Wyłączenie z czatu zachowuje wersje; ponowne włączenie dotyczy tej samej zatwierdzonej wersji. CAS i transakcja chronią stary widok, spóźniony wynik, receipt oraz zdarzenie. Odczyt historii nie potrzebuje modelu lub dostępnego vault i nie wykonuje HTTP.

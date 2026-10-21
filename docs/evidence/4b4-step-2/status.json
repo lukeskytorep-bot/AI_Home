@@ -1,0 +1,23 @@
+{
+  "stage": "4B-4 step 2",
+  "date": "2026-10-21",
+  "base": "AI_HOME_4B4_KROK_1_SOURCE.zip",
+  "baseSha256": "819bc1409e1d9a7bd406048b541c9adb97ccb39834770d7399b16adc4692c388",
+  "previousGreen": "user confirmation without run ID/platform or new audit text",
+  "status": "local PASS, pending CI/audit",
+  "rustHeadless": 289,
+  "newRustIntegration": 22,
+  "newPureProtocol": 3,
+  "frontend": 164,
+  "newFrontend": 10,
+  "boundaries": 24,
+  "p2": 193,
+  "sqliteVersion": 9,
+  "contractsChanged": false,
+  "dependenciesOrCiChanged": false,
+  "noDeletions": true,
+  "otherLayersRetrievalOrImportPurposesImplemented": false,
+  "windowsTauriWebViewTested": false,
+  "liveApiOrOsVaultTested": false,
+  "npmCiRun": false
+}

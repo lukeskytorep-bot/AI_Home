@@ -263,7 +263,7 @@
     "memory.state.archived": "archiwalny",
     "memory.excludedNotice": "Ta zapisana wersja jest wyłączona z nowych żądań czatu.",
     "history.title": "Historia wersji pamięci",
-    "history.notice": "Porównaj pełne treści obok siebie. Wersje, źródła i decyzje Primary pozostają zachowane. Przywracanie starszej wersji powstanie w kolejnym kroku i będzie wymagało osobnej decyzji.",
+    "history.notice": "Porównaj pełne zapisane wersje i decyzje Primary obok siebie. Osobnym przyciskiem zleć przywrócenie starszej wersji; wymaga ono nowej decyzji Primary.",
     "history.version": "Wersja",
     "history.choose": "Wybierz wersję",
     "history.loading": "Odczyt zapisanych wersji…",
@@ -291,6 +291,14 @@
     "history.enable": "Włącz ponownie zatwierdzoną pamięć",
     "history.exclude": "Wyłącz pamięć z czatu",
     "history.show": "Pokaż historię wersji",
-    "history.hide": "Ukryj historię wersji"
+    "history.hide": "Ukryj historię wersji",
+    "restore.notice": "Zlecenie dotyczy pierwszej wybranej wersji. Bieżący Primary może ją przyjąć, zmienić lub odrzucić według zapisanych limitów pojemności i kontekstu. Dopiero zatwierdzenie tworzy nową wersję; STOP, odrzucenie lub błąd zachowuje obecny stan. Scribe nie jest wywoływany.",
+    "restore.request": "Poproś Primary o przywrócenie pierwszej wersji",
+    "restore.selected": "Wersja wskazana do rozpatrzenia",
+    "restore.pending": "Niepewne zlecenie przywrócenia wersji",
+    "restore.source": "Przywrócono z wersji",
+    "restore.committed": "Przywrócenie zatwierdzone; zapisano nową wersję",
+    "restore.operation": "Rozpatrywanie przywrócenia historycznej pamięci",
+    "restore.savedCandidate": "Kandydatura skopiowana z wcześniej zatwierdzonej wersji"
   }
 }

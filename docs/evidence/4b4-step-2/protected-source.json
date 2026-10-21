@@ -1,0 +1,20 @@
+{
+  "baseSha256": "819bc1409e1d9a7bd406048b541c9adb97ccb39834770d7399b16adc4692c388",
+  "protectedFiles": 323,
+  "productionNativeChanges": [
+    "src-tauri/src/connections.rs",
+    "src-tauri/src/memory_runtime.rs",
+    "src-tauri/src/memory_history.rs",
+    "src-tauri/src/memory/mod.rs",
+    "src-tauri/src/memory_restore.rs (new)"
+  ],
+  "unchanged": [
+    "all contracts",
+    "SQLite/migrations",
+    "dependencies and lockfiles",
+    "providers/vault",
+    "CI/capabilities",
+    "historical snapshots/evidence"
+  ],
+  "deletions": []
+}

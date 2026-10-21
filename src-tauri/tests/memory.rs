@@ -434,3 +434,11 @@ fn native_message_metadata_retains_speaker_and_time_without_forged_system_role()
     s.sources[0].message_metadata.as_mut().unwrap()["role"] = json!("system");
     assert!(matches!(Engine::new(s), Err(Error::InvalidInput)));
 }
+
+fn restore_snapshot()->Snapshot{let mut s=snapshot();s.scribe=None;s.sources[0].reference["kind"]=json!("memory_version");s}
+#[test]
+fn review_existing_requires_a_historical_source_and_new_primary_decision(){let s=restore_snapshot();let content=s.sources[0].text.clone();let mut e=Engine::review_existing(s,content,"mixed".into()).unwrap();assert_eq!(e.issued_requests(),0);assert!(e.outcome().is_none());let p=e.next_call().unwrap();assert_eq!(p.stage,Stage::Decision);assert_eq!(p.role,Role::Primary);assert_eq!(e.issued_requests(),1);e.decision(&decision("accept","")).unwrap();assert!(matches!(e.outcome(),Some(Outcome::Candidate(_))));}
+#[test]
+fn review_existing_cannot_approve_an_unbound_candidate_or_scribe_route(){let mut s=restore_snapshot();assert!(Engine::review_existing(s.clone(),"Forged".into(),"mixed".into()).is_err());s.scribe=Some(route("scribe"));let content=s.sources[0].text.clone();assert!(Engine::review_existing(s,content,"mixed".into()).is_err());}
+#[test]
+fn review_existing_can_shrink_only_through_primary_modify_or_second_attempt(){let mut s=restore_snapshot();s.capacity=Capacity::Bounded(3);let content=s.sources[0].text.clone();let mut e=Engine::review_existing(s,content,"mixed".into()).unwrap();decide(&mut e,"modify","Cel");assert_eq!(accepted(&e).content,"Cel");assert_eq!(accepted(&e).measurement["value"],3);assert_eq!(e.issued_requests(),1);}

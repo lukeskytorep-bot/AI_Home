@@ -26,6 +26,7 @@ mod memory_history;
 type Failure = &'static str;
 type Tx<'a> = Transaction<'a, Sqlite>;
 const COMMANDS: &[&str] = &[
+    "memory.restore",
     "memory.versions.list", "memory.version.get", "memory.outdated.set",
     "memory.working.get", "memory.working.sources", "memory.settings.set", "memory.update.request",
     "material.select", "material.import", "material.get", "material.text.read", "material.original.read", "conversation.materials.list", "conversation.import.latest", "attachment.detach",
@@ -417,6 +418,7 @@ impl Connections {
                     "memory.working.get" => memory_runtime::view(&mut tx,profile).await?,
                     "memory.working.sources" => memory_runtime::sources(&mut tx,profile,payload).await?,
                     "memory.settings.set" => memory_runtime::settings(&mut tx,&mut p,payload,expected).await?,
+                    "memory.restore" => {let(job,op)=memory_runtime::restore(&mut tx,&p,payload,expected).await?;memory_launch=Some((job,op.clone()));json!({"operation":op})},
                     "memory.update.request" => {let (job,op)=memory_runtime::accept(&mut tx,&p,payload,expected).await?;memory_launch=Some((job,op.clone()));json!({"operation":op})},
                     "material.import" => {let (job,op)=import_runtime::accept(&mut tx,self,profile,payload).await?;import_launch=Some((job,op.clone()));json!({"operation":op})}
                     "material.get"|"material.text.read"|"material.original.read"|"conversation.materials.list"|"conversation.import.latest"|"attachment.detach" => import_runtime::read(&mut tx,command,profile,payload,expected).await?,
@@ -736,12 +738,12 @@ impl Connections {
                                 self.active.lock().await.get(op["id"].as_str().unwrap())
                             {
                                 let _ = cancel;
-                                op["physicalCallCount"] = json!(budget.physical_calls());
+                                if op["kind"]!="restore"{op["physicalCallCount"] = json!(budget.physical_calls());}
                                 cancel_after.push(op["id"].as_str().unwrap().to_string());
                             }
                             let old = revision(&op)?;
                             terminal(&mut op, "cancelled", "OPERATION_CANCELLED")?;
-                            if op["kind"]=="memory_update"{memory_runtime::close_pending(&mut tx,profile,op["id"].as_str().unwrap()).await?;}
+                            if matches!(op["kind"].as_str(),Some("memory_update"|"restore")){memory_runtime::close_pending(&mut tx,profile,op["id"].as_str().unwrap()).await?;}
                             if op["kind"]=="import"{import_runtime::cancel_pending(&mut tx,profile,op["id"].as_str().unwrap(),"OPERATION_CANCELLED").await?;}
                             put(&mut tx, "operations", &op, false, old).await?;
                             event(&mut tx, profile, "operation.changed", &op).await?;
@@ -903,7 +905,7 @@ impl Connections {
         if matches!(op["status"].as_str(), Some("queued") | Some("running")) {
             let old = revision(&op)?;
             terminal(&mut op, "failed", "STORAGE_ERROR")?;
-            if op["kind"]=="memory_update"{memory_runtime::close_pending(&mut tx,profile,id).await?;}
+            if matches!(op["kind"].as_str(),Some("memory_update"|"restore")){memory_runtime::close_pending(&mut tx,profile,id).await?;}
             put(&mut tx, "operations", &op, false, old).await?;
             event(&mut tx, profile, "operation.changed", &op).await?;
         }
@@ -1103,7 +1105,7 @@ impl providers::transport::CallRecorder for RecordAttempt {
                         }
                     })?;
             }
-            if op["kind"] == "memory_update" {
+            if matches!(op["kind"].as_str(),Some("memory_update"|"restore")) {
                 memory_runtime::ensure_current(&mut tx,&op).await.map_err(|code| if code=="STORAGE_ERROR" {TransportError::Storage} else {TransportError::Cancelled})?;
             }
             if count == 0 || u64::from(count) > op["limits"]["maxPhysicalCalls"].as_u64().unwrap() {

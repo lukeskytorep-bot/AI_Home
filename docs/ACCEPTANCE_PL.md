@@ -1,3 +1,25 @@
+# 4B-4 krok 2 — restore przez Primary, 21.10.2026
+
+Poprzedni krok ma potwierdzenie zielonego wyniku Edwarda. Nowy krok wykonano lokalnie, do CI/audytu.
+
+- [x] Frozen memory.restore, CAS rekordu, scope wersji/approval/hash i blokada równoległych zapisów.
+- [x] Historyczna kopia kandydatury jawnie oznaczona; brak fikcyjnego wywołania propozycji/Scribe.
+- [x] Nowa decyzja bieżącego Primary ACCEPT/MODIFY/REJECT.
+- [x] Nowa wersja/receipt/data/hash/pomiar, restoredFrom i previousVersion; historyczne źródła pozostają.
+- [x] Rzeczywisty preflight przed przyjęciem i fizycznym POST; wspólny limit czasu/wywołań/formatu/pojemności.
+- [x] Snapshot przed każdą fizyczną próbą i atomowym commit, STOP, restart bez replay, rollback błędów.
+- [x] REJECT/niepowodzenie zachowuje pamięć; dwa rodzaje wersji działają w historii/toggle/czacie.
+- [x] Niepewne command/target/requestId/CAS i Accepted przed reload; UI EN/PL pokazuje faktyczny wynik.
+- [x] 289 Rust /164 UI /build /24 granice /193 P2 PASS.
+- [x] Brak zmian kontraktów, SQLite v9/migracji, dependencies/lockfiles, provider/vault, CI/uprawnień i usunięć.
+- [ ] Nowe CI/audyt kroku 2; całe 4B-4 nie jest zamknięte.
+- [ ] Dalsze warstwy/retrieval oraz przeznaczenia importu.
+- [ ] Wcześniejsze realne odbiory API/systemowego vault/Windows/Tauri/WebView.
+
+---
+
+## Historyczne kryteria
+
 # 4B-4 krok 1 — historia i wyłączenie L2, 21.10.2026
 
 Edward potwierdził zielony wynik poprzedniego kroku (bez danych przebiegu i nowego tekstu audytu). Bieżący krok wykonano lokalnie; do nowego CI/audytu.

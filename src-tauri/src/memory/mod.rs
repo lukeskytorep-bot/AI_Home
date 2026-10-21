@@ -234,6 +234,17 @@ impl Engine {
             outcome: None,
         })
     }
+    /// Native-resolved historical content, awaiting a NEW Primary decision.
+    /// This constructor does not approve, persist, or charge a model call.
+    pub fn review_existing(snapshot: Snapshot, content: String, claim_kind: String) -> Result<Self, Error> {
+        if snapshot.sources.len()!=1 || snapshot.sources[0].reference["kind"]!="memory_version" || snapshot.sources[0].text!=content || content.trim().is_empty() || !["fact","preference","inference","rule","mixed"].contains(&claim_kind.as_str()) || snapshot.scribe.is_some() {
+            return Err(Error::InvalidInput);
+        }
+        let mut engine=Self::new(snapshot)?;
+        engine.pending=Some(engine.candidate(content,claim_kind));
+        engine.phase=Phase::NeedDecision;
+        Ok(engine)
+    }
     pub fn pending_candidate(&self) -> Option<&Candidate> {
         self.pending.as_ref()
     }

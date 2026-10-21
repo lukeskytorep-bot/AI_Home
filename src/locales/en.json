@@ -263,7 +263,7 @@
     "memory.state.archived": "archived",
     "memory.excludedNotice": "This saved version is excluded from new chat requests.",
     "history.title": "Memory version history",
-    "history.notice": "Compare the complete contents side by side. Versions, source references and Primary decisions are retained. Restoring an older version will be available in a later step and will require a separate decision.",
+    "history.notice": "Compare complete saved versions and their Primary decisions side by side. Request restoration of an older version with the separate button; it requires a new Primary decision.",
     "history.version": "Version",
     "history.choose": "Choose a version",
     "history.loading": "Reading saved versions…",
@@ -291,6 +291,14 @@
     "history.enable": "Re-enable approved memory",
     "history.exclude": "Exclude memory from chat",
     "history.show": "Show version history",
-    "history.hide": "Hide version history"
+    "history.hide": "Hide version history",
+    "restore.notice": "Request the first selected version. The current Primary can accept, modify or reject it under the saved capacity and context limits. Only approval creates a new version; STOP, rejection or failure preserves the current state. No Scribe call is required.",
+    "restore.request": "Ask Primary to restore first version",
+    "restore.selected": "Version requested for review",
+    "restore.pending": "Uncertain restore target",
+    "restore.source": "Restored from version",
+    "restore.committed": "Restoration approved; new version saved",
+    "restore.operation": "Reviewing historical memory for restoration",
+    "restore.savedCandidate": "Candidate copied from the previously approved version"
   }
 }

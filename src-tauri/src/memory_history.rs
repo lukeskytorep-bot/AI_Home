@@ -10,7 +10,7 @@ pub(super) async fn approved(tx:&mut Tx<'_>,profile:&str,record:&Value,version_i
     let content = version["content"].as_str().ok_or("STORAGE_ERROR")?;
     if content.len()>8*1024*1024 { return Err("CONTEXT_BUDGET_EXCEEDED"); }
     let digest = format!("{:x}", Sha256::digest(content.as_bytes()));
-    if version["recordId"] != record["id"] || version["contentSha256"] != digest || version["origin"] != "agent_decision" { return Err("STORAGE_ERROR"); }
+    if version["recordId"] != record["id"] || version["contentSha256"] != digest { return Err("STORAGE_ERROR"); }
     let decision = get(tx,"memory_decisions",profile,version["decisionReceiptId"].as_str().ok_or("STORAGE_ERROR")?).await?;
     let operation = get(tx,"operations",profile,decision["operationId"].as_str().ok_or("STORAGE_ERROR")?).await?;
     if !matches!(decision["decision"].as_str(),Some("accept" | "modify"))
@@ -18,9 +18,18 @@ pub(super) async fn approved(tx:&mut Tx<'_>,profile:&str,record:&Value,version_i
         || decision["candidateMeasurement"] != version["measurement"]
         || decision["primaryRouteId"] != version["measurement"]["modelRouteId"]
         || decision["routeRevision"] != version["measurement"]["modelRouteRevision"]
-        || operation["kind"] != "memory_update" || operation["status"] != "succeeded"
-        || operation["result"]["outcome"] != "committed" || operation["result"]["versionId"] != version["id"]
+        || operation["status"] != "succeeded" || operation["result"]["versionId"] != version["id"]
         || operation["result"]["recordId"] != record["id"] { return Err("STORAGE_ERROR"); }
+    if version["sources"].as_array().ok_or("STORAGE_ERROR")?.iter().any(|s|s["profileId"]!=profile){return Err("STORAGE_ERROR");}
+    match version["origin"].as_str(){
+        Some("agent_decision") if operation["kind"]=="memory_update" && operation["result"]["outcome"]=="committed"=>{},
+        Some("restore") if operation["kind"]=="restore" && operation["result"]["kind"]=="restore" && operation["result"]["restoredFromVersionId"]==version["restoredFromVersionId"]=>{
+            let source=get(tx,"memory_versions",profile,version["restoredFromVersionId"].as_str().ok_or("STORAGE_ERROR")?).await?;
+            if source["recordId"]!=record["id"]||source["versionNumber"].as_u64().ok_or("STORAGE_ERROR")?>=version["versionNumber"].as_u64().ok_or("STORAGE_ERROR")?||source["contentSha256"]!=format!("{:x}",Sha256::digest(source["content"].as_str().unwrap().as_bytes())){return Err("STORAGE_ERROR");}
+            let reference=json!({"profileId":profile,"kind":"memory_version","entityId":source["id"],"contentSha256":source["contentSha256"]});
+            if !version["sources"].as_array().unwrap().contains(&reference){return Err("STORAGE_ERROR");}
+        },_=>return Err("STORAGE_ERROR")
+    }
     Ok((version,decision))
 }
 async fn working_record(tx:&mut Tx<'_>,profile:&str,payload:&Value)->Result<Value,Failure>{
