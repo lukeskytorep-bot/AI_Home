@@ -1,0 +1,19 @@
+{
+  "baseSha256": "738270c6c170e47371113fd5ae02f662d95ae268318e4cae93f4798151e16716",
+  "protectedFiles": 300,
+  "productionNativeChanges": [
+    "src-tauri/src/chat.rs",
+    "src-tauri/src/connections.rs",
+    "src-tauri/src/working_context.rs (new)"
+  ],
+  "unchanged": [
+    "frozen P2/foundation contracts",
+    "SQLite/migrations",
+    "dependencies and lockfiles",
+    "providers/vault",
+    "pure memory engine and memory coordinator",
+    "CI/capabilities",
+    "historical snapshots/evidence"
+  ],
+  "deletions": []
+}

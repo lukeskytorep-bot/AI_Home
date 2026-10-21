@@ -1,3 +1,27 @@
+# Bieżące przekazanie: 4B-3 krok 3 — pamięć w czacie
+
+Aktywny, zatwierdzony Working Context trafia do preflight/send jako pojedynczy blok danych user/JSON. Pełna historia i załączniki pozostają. Snapshot jest sprawdzany przed każdym POST i commit; historia UI pokazuje przechwyconą wersję, również po restarcie. Pusta/outdated/archived pamięć jest wyłączona. Unlimited nie omija okna modelu.
+
+250/250 Rust/Linux headless, 137/137 UI, TypeScript/build, 23/23 granice i 193/193 P2 PASS lokalnie. Raport: docs/AI_HOME_4B3_KROK_3_RAPORT_PL.md. Plan: treść 1.27. Krok 3 i całe 4B-3 do CI/audytu. Wcześniejsze odbiory live API/OS vault/Windows/Tauri/WebView otwarte.
+
+Bez zmian SQLite v9, zależności/lockfile, frozen P2/foundation, providerów/vault, workflow/uprawnień. Wystarczy nakładka, commit i push.
+
+---
+
+## Historyczne przekazania
+
+# Bieżące przekazanie: korekta audytu 4B-3 kroku 2
+
+Przed przyjęciem aktualizacji pamięci sprawdzamy teraz budżet obu koniecznych etapów: propozycji i minimalnej decyzji Primary. Niewykonalne okno Primary nie powoduje już zbędnego wywołania Scribe. Zachowano sprawdzanie każdego rzeczywistego requestu z faktyczną treścią. Limit jednej fizycznej próby nie wystarcza na propozycję i osobną decyzję, więc także jest odrzucany przed siecią.
+
+Regresja na starej wersji odtworzyła 1 POST; po poprawce wymaga 0 POST i braku nowych operacji/receipts/zdarzeń/wersji. Finalnie 231/231 Rust Linux headless, 130/130 UI, build, 23/23 granice i 193/193 P2 PASS.
+
+Raport: docs/AI_HOME_4B3_KROK_2_AUDIT_FIX_RAPORT_PL.md. Plan: treść 1.26. Audyt kroku 2: DO KOREKTY; poprawka wymaga nowego CI/ponownego audytu. Krok 3 nie został rozpoczęty. SQLite v9, UI, kontrakty, zależności, lockfile i CI pozostają bez zmian. Wystarczy nałożyć pliki i zrobić commit/push.
+
+Poniżej historyczny opis bazowego kroku 2.
+
+---
+
 # Bieżący krok: 4B-3 krok 2 — trwała pamięć i panel
 
 W wybranej rozmowie jest panel Working Context. Zapisz pojemność oraz jawne okna kontekstu modeli i wybierz Scribe albo wyłącz go, aby Primary proponował oraz osobno decydował. Przycisk Update memory from this conversation uruchamia modele na tekstach wiadomości. Domyślne L2: 300 szacowanych tokenów; presety/własna wartość/unlimited z ostrzeżeniem. Panel pokazuje próby, decyzję i ostatnią zapisaną wersję.

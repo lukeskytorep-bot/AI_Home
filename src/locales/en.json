@@ -41,7 +41,7 @@
     "side.standard": "Standard mode",
     "side.independent": "Independent of the forum",
     "side.conscious": "Conscious · planned, unavailable",
-    "side.note": "Chats and manual memory updates are available. Saved Working Context will join chat requests in the next step.",
+    "side.note": "Active, approved Working Context joins chat as reference data. Memory updates remain explicit.",
     "error.title": "Unable to complete this action",
     "error.validation_error": "Check the entered values.",
     "error.revision_conflict": "Saved settings changed elsewhere. Current data has been refreshed; try again.",
@@ -218,7 +218,7 @@
     "files.closeImage": "Close image preview",
     "files.error.IMAGE_ANIMATION_UNSUPPORTED": "Animated images are not supported; the original is retained. Import a static image instead.",
     "memory.title": "Working Context",
-    "memory.notice": "Update saved memory explicitly from the text of this conversation. File contents and images are not included. Saved memory is not yet added to chat requests in this step.",
+    "memory.notice": "Update saved memory explicitly from the text of this conversation. File contents and images are not included in the memory update. Only approved active Working Context joins chat requests as fallible reference data. The full request is checked against the model context without silent shortening.",
     "memory.capacity": "Memory capacity (estimated tokens)",
     "memory.measurement": "Estimate: UTF-8 bytes, not the model tokenizer. Message context and output limits are separate.",
     "memory.unlimited": "No memory length limit",
@@ -251,6 +251,16 @@
     "memory.proposals": "Proposals and provenance",
     "error.memory_capacity_exceeded": "Both memory capacity attempts failed. Previous memory was retained.",
     "error.memory_format_invalid": "The memory response format is invalid. Previous memory was retained.",
-    "error.memory_primary_rejected": "Primary rejected the memory proposal."
+    "error.memory_primary_rejected": "Primary rejected the memory proposal.",
+    "chat.memoryCaptured": "Captured Working Context",
+    "chat.memoryVersion": "Version",
+    "chat.memoryInput": "Memory input estimate (including metadata)",
+    "chat.memoryUnknown": "Unknown for this historical request",
+    "chat.memoryExcluded": "Not included",
+    "memory.state.empty": "empty",
+    "memory.state.active": "active",
+    "memory.state.outdated": "outdated",
+    "memory.state.archived": "archived",
+    "memory.excludedNotice": "This saved version is excluded from new chat requests."
   }
 }

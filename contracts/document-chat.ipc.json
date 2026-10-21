@@ -85,6 +85,100 @@
           "visionPolicyRevision": {
             "type": "integer",
             "minimum": 0
+          },
+          "workingContext": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "included": {
+                    "const": false
+                  },
+                  "recordId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "recordRevision": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "state": {
+                    "enum": [
+                      "empty",
+                      "outdated",
+                      "archived"
+                    ]
+                  }
+                },
+                "required": [
+                  "included",
+                  "recordId",
+                  "recordRevision",
+                  "state"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "included": {
+                    "const": true
+                  },
+                  "recordId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "recordRevision": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "state": {
+                    "const": "active"
+                  },
+                  "versionId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "versionNumber": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "contentSha256": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{64}$"
+                  },
+                  "language": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "decisionReceiptId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "measurement": {
+                    "$ref": "#/$defs/TokenMeasurement"
+                  },
+                  "inputTokens": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                },
+                "required": [
+                  "included",
+                  "recordId",
+                  "recordRevision",
+                  "state",
+                  "versionId",
+                  "versionNumber",
+                  "contentSha256",
+                  "language",
+                  "decisionReceiptId",
+                  "measurement",
+                  "inputTokens"
+                ],
+                "additionalProperties": false
+              }
+            ]
           }
         },
         "required": [
@@ -95,7 +189,8 @@
           "contextTokens",
           "attachmentCount",
           "modelRouteId",
-          "measurement"
+          "measurement",
+          "workingContext"
         ],
         "additionalProperties": false
       },

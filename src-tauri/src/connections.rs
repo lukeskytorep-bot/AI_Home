@@ -29,7 +29,7 @@ const COMMANDS: &[&str] = &[
     "chat.send", "chat.preflight", "chat.vision.get", "chat.vision.set",
     "chat.settings.get",
     "chat.settings.set",
-    "conversation.chat.latest",
+    "conversation.chat.latest", "chat.context.get",
     "conversation.create",
     "conversation.draft.set",
     "conversation.get",
@@ -242,6 +242,7 @@ impl Connections {
         let context:Value=serde_json::from_str(include_str!("../../contracts/document-chat.ipc.json")).unwrap();
         let vision:Value=serde_json::from_str(include_str!("../../contracts/vision.ipc.json")).unwrap();
         let memory:Value=serde_json::from_str(include_str!("../../contracts/memory.ipc.json")).unwrap();
+        let memory_chat:Value=serde_json::from_str(include_str!("../../contracts/memory-chat.ipc.json")).unwrap();
         let contract = catalog["commands"]
             .get(command)
             .or_else(|| extra["commands"].get(command))
@@ -251,6 +252,7 @@ impl Connections {
             .or_else(|| context["commands"].get(command))
             .or_else(|| vision["commands"].get(command))
             .or_else(|| memory["commands"].get(command))
+            .or_else(|| memory_chat["commands"].get(command))
             .ok_or("UNKNOWN_COMMAND")?;
         if !schema::dto("CommandEnvelope", r)
             || !schema::valid(&r["payload"], &contract["payload"])
@@ -418,6 +420,7 @@ impl Connections {
                         chat_runtime::latest(&mut tx, profile, payload).await?
                     }
                     "chat.vision.get"|"chat.vision.set"=>chat_runtime::vision(&mut tx,command,profile,payload,expected).await?,
+                    "chat.context.get" => chat_runtime::context(&mut tx,profile,payload).await?,
                     "chat.preflight" => chat_runtime::preflight(&mut tx,&p,payload,expected).await?,
                     "chat.send" => {
                         let (job, op) =

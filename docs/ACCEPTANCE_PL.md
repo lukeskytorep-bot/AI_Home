@@ -1,3 +1,45 @@
+# 4B-3 krok 3 — Working Context w czacie, 21.10.2026
+
+Korekta kroku 2 ma potwierdzenie zielonego wyniku Edwarda (bez identyfikatora/platform i nowego tekstu audytu). Krok 3 wykonano lokalnie.
+
+- [x] Tylko aktywna zatwierdzona wersja własnego profilu; hash/receipt/commit zweryfikowane.
+- [x] JSON user data z pochodzeniem, jedna stała instrukcja systemowa, pełna historia/źródła/replay.
+- [x] Wspólny preflight/send liczy pełny blok i modelowe okno; bez cichego skracania i wyjątku dla unlimited.
+- [x] Fresh TokenMeasurement dla bieżącego Primary ID/revision, bez mutowania starej wersji.
+- [x] Atomowy snapshot w chat_runs; kontrola przed każdym fizycznym POST i commit.
+- [x] Zmiana rekordu/wersji/empty→active blokuje spóźniony wynik; retry nie zawyża licznika po odrzuceniu przed dispatch.
+- [x] STOP, idempotencja, błędy receipt, izolacja i restart.
+- [x] Durable chat.context.get, EN/PL, historyczna wersja zamiast dzisiejszej, legacy unknown, ostrzeżenie o wyłączeniu.
+- [x] Zmiana odczytanej pamięci unieważnia preflight i jego spóźniony wynik bez kasowania szkiców.
+- [x] 250/250 Rust, 137/137 frontend, build, 23/23 granice, 193/193 P2.
+- [x] Brak usunięć i zmian frozen P2/foundation, SQLite/migracji, dependencies/lockfiles, provider/vault i CI/capabilities.
+- [ ] Nowe CI oraz audyt kroku 3; brak PASS CLOSED całego 4B-3.
+- [ ] Osobne wcześniejsze odbiory live API/systemowego vault/Windows/Tauri/WebView.
+
+---
+
+## Historyczne kryteria wcześniejszych przekazań
+
+# 4B-3 krok 2 — korekta audytu budżetu, 21.10.2026
+
+Odebrany werdykt: **DO KOREKTY**. Poprawka ma lokalne wyniki PASS; brak nowego CI i werdyktu ponownego audytu.
+
+- [x] Regresja przed poprawką: Accepted, 1 POST do Scribe, potem błąd kontekstu Primary.
+- [x] Preflight obu koniecznych etapów przed Accepted, zapisem i siecią.
+- [x] Minimalna decyzja Primary korzysta z tego samego build() i rzeczywistych znanych instrukcji/danych/wyjścia/rezerwy.
+- [x] Primary 1024 oraz 2048 /Scribe 32768: 0 POST i brak nowych operations/receipts/events/proposals/versions.
+- [x] Niewystarczający Scribe oraz pula jednego fizycznego wywołania odrzucone bez POST.
+- [x] Ponowna walidacja rzeczywistej propozycji nadal działa; preflight minimalny nie jest gwarancją całej operacji.
+- [x] 231/231 Rust, 130/130 frontend, build, 23/23 granice, 193/193 P2.
+- [x] UI/kontrakty/SQLite v9/dependencies/lockfile/provider/vault/workflow/uprawnienia bez zmian.
+- [ ] Nowe CI i ponowny audyt poprawki; brak PASS CLOSED.
+- [ ] Dopiero później krok 3: Working Context w chat.preflight/send.
+- [ ] Wcześniejsze odbiory live API/systemowy vault/Windows/Tauri/WebView pozostają otwarte.
+
+---
+
+## Historyczne kryteria bazowego kroku 2
+
 # 4B-3 krok 2 — trwały Working Context i panel, 21.10.2026
 
 Edward potwierdził zielone CI kroku 1 i upoważnił krok 2. Nowy krok ma lokalne PASS, wymaga CI/audytu. Nie dostarczono numerów/platform wcześniejszego przebiegu ani nowego tekstu audytu.

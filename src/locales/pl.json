@@ -41,7 +41,7 @@
     "side.standard": "Tryb Standard",
     "side.independent": "Niezależny od forum",
     "side.conscious": "Conscious · planowany, niedostępny",
-    "side.note": "Czat i ręczne aktualizacje pamięci są dostępne. Zapisany kontekst roboczy będzie dodawany do czatu w kolejnym kroku.",
+    "side.note": "Aktywny, zatwierdzony kontekst roboczy trafia do czatu jako dane referencyjne. Aktualizacja pamięci pozostaje jawna.",
     "error.title": "Nie udało się wykonać tej czynności",
     "error.validation_error": "Sprawdź wpisane wartości.",
     "error.revision_conflict": "Zapisane ustawienia zmieniły się w innym miejscu. Odświeżono bieżące dane; spróbuj ponownie.",
@@ -218,7 +218,7 @@
     "files.closeImage": "Zamknij podgląd obrazu",
     "files.error.IMAGE_ANIMATION_UNSUPPORTED": "Animowane obrazy nie są obsługiwane; oryginał zachowano. Zaimportuj obraz statyczny.",
     "memory.title": "Kontekst roboczy",
-    "memory.notice": "Ręcznie odśwież zapisaną pamięć z tekstu tej rozmowy. Treści plików i obrazy nie są dołączane. W tym kroku zapisana pamięć nie jest jeszcze dodawana do wywołań czatu.",
+    "memory.notice": "Odświeżaj zapisaną pamięć jawnie z tekstu tej rozmowy. Treść plików i obrazy nie wchodzą do aktualizacji pamięci. Do czatu trafia wyłącznie zatwierdzony, aktywny kontekst roboczy jako omylne dane referencyjne. Całe żądanie jest sprawdzane względem okna modelu, bez cichego skracania.",
     "memory.capacity": "Pojemność pamięci (szacowane tokeny)",
     "memory.measurement": "Szacunek: bajty UTF-8, nie tokenizer modelu. Kontekst wywołania i limit odpowiedzi są osobne.",
     "memory.unlimited": "Bez limitu długości pamięci",
@@ -251,6 +251,16 @@
     "memory.proposals": "Propozycje i pochodzenie",
     "error.memory_capacity_exceeded": "Obie próby pojemności pamięci nie przeszły. Zachowano poprzednią pamięć.",
     "error.memory_format_invalid": "Nieprawidłowy format odpowiedzi pamięci. Zachowano poprzednią pamięć.",
-    "error.memory_primary_rejected": "Primary odrzucił propozycję pamięci."
+    "error.memory_primary_rejected": "Primary odrzucił propozycję pamięci.",
+    "chat.memoryCaptured": "Przechwycony kontekst roboczy",
+    "chat.memoryVersion": "Wersja",
+    "chat.memoryInput": "Szacunek wejścia pamięci (z metadanymi)",
+    "chat.memoryUnknown": "Nieznany dla tego historycznego żądania",
+    "chat.memoryExcluded": "Nie dołączono",
+    "memory.state.empty": "pusty",
+    "memory.state.active": "aktywny",
+    "memory.state.outdated": "nieaktualny",
+    "memory.state.archived": "archiwalny",
+    "memory.excludedNotice": "Ta zapisana wersja jest wyłączona z nowych żądań czatu."
   }
 }

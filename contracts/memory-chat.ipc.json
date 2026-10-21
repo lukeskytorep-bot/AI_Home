@@ -1,0 +1,157 @@
+{
+  "contractVersion": 1,
+  "commands": {
+    "chat.context.get": {
+      "scope": "profile",
+      "mutates": false,
+      "requiresExpectedRevision": false,
+      "async": false,
+      "payload": {
+        "type": "object",
+        "properties": {
+          "operationId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "operationId"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "known": {
+                "const": false
+              },
+              "operationId": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "known",
+              "operationId"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "known": {
+                "const": true
+              },
+              "operationId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "workingContext": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "included": {
+                        "const": false
+                      },
+                      "recordId": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "recordRevision": {
+                        "type": "integer",
+                        "minimum": 1
+                      },
+                      "state": {
+                        "enum": [
+                          "empty",
+                          "outdated",
+                          "archived"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "included",
+                      "recordId",
+                      "recordRevision",
+                      "state"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "included": {
+                        "const": true
+                      },
+                      "recordId": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "recordRevision": {
+                        "type": "integer",
+                        "minimum": 1
+                      },
+                      "state": {
+                        "const": "active"
+                      },
+                      "versionId": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "versionNumber": {
+                        "type": "integer",
+                        "minimum": 1
+                      },
+                      "contentSha256": {
+                        "type": "string",
+                        "pattern": "^[0-9a-f]{64}$"
+                      },
+                      "language": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "decisionReceiptId": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "measurement": {
+                        "$ref": "#/$defs/TokenMeasurement"
+                      },
+                      "inputTokens": {
+                        "type": "integer",
+                        "minimum": 1
+                      }
+                    },
+                    "required": [
+                      "included",
+                      "recordId",
+                      "recordRevision",
+                      "state",
+                      "versionId",
+                      "versionNumber",
+                      "contentSha256",
+                      "language",
+                      "decisionReceiptId",
+                      "measurement",
+                      "inputTokens"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              }
+            },
+            "required": [
+              "known",
+              "operationId",
+              "workingContext"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      }
+    }
+  }
+}
