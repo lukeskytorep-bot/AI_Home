@@ -628,7 +628,7 @@ async fn migration_from_v5_retains_preferences_profiles_conversations_and_integr
             .fetch_one(&pool)
             .await
             .unwrap(),
-        11
+        12
     );
     assert_eq!(
         sqlx::query_scalar::<_, String>("PRAGMA integrity_check")

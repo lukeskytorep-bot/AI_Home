@@ -1,18 +1,17 @@
 {
   "schemaVersion": 1,
   "date": "2026-10-22",
-  "stage": "4B-6 STEP 1 ARCHIVE LIFECYCLE AUDIT FIX 2",
-  "planContentVersion": "1.41",
+  "stage": "4B-6 STEP 1 ARCHIVE LIFECYCLE AUDIT FIX 3",
+  "planContentVersion": "1.42",
   "status": "IMPLEMENTED_REQUIRES_CI_AND_REAUDIT",
-  "baseSource": "AI_HOME_4B6_KROK_1_AUDIT_FIX_SOURCE.zip",
+  "baseSource": "AI_HOME_4B6_KROK_1_AUDIT_FIX_2_SOURCE.zip",
   "storageVersion": 12,
   "p2ReferenceChecks": 193,
   "boundaryChecks": 27,
   "scope": [
-    "R1 draft-safe late-result guard",
-    "R2 stale archive-list scope generation",
-    "R3 late Accepted view isolation",
-    "connections.rs storage-version assertions"
+    "R1/R2/R3 retained from AUDIT FIX 2",
+    "all remaining stale schema-version assertions updated from 11 to 12",
+    "migration test name normalized from through_v11 to through_v12"
   ],
   "outOfScope": [
     "database backup/restore",

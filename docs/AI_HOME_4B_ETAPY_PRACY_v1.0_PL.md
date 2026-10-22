@@ -420,3 +420,7 @@ Po statycznym PASS F1/F2 oraz FIX 3 pełne CI wykryło dwa pozostałe problemy t
 Korekta zamyka uwagi A1–A3 z niezależnego audytu Archive Lifecycle. Archiwizacja rozmowy atomowo kończy queued/running operacje czatu oraz conversation-scoped importy powiązane z tą rozmową, a po commit wysyła cancellation do aktywnego wykonania. Dodatkowo każdy nowy chat run zapisuje rewizję rozmowy po Accepted; finalny commit wymaga identycznej rewizji, więc cykl archive→restore unieważnia każdą starą odpowiedź nawet wtedy, gdy fizyczny HTTP zdąży wrócić po przywróceniu.
 
 Lifecycle UI używa teraz trwałego, profile/application-scoped rejestru pending write w nadrzędnym Conversations. Niepewny wynik zachowuje niezmienne command/scope/payload/expectedRevision/requestId i ponowienie rozlicza ten sam requestId. Odpowiedź Accepted jest przekazywana rodzicowi przed fallible readback listy archiwum, więc błąd odświeżenia nie cofa widoku ani nowej rewizji. Nie zmieniono SQLite v12, frozen P2 ani zakresu 4B-6 krok 2.
+
+
+## Aktualizacja 1.42 — pełny sweep oczekiwań schematu po SQLite v12
+Po wynikach CI wykonano pełne przeszukanie `src-tauri/tests` pod kątem historycznych oczekiwań `PRAGMA user_version == 11`. Zaktualizowano pięć pozostałych asercji: dwie w `conversations.rs`, jedną w `imports.rs` i dwie w `memory_runtime.rs`. Dodatkowo nazwę testu `migration_v9_preserves_approved_working_history_through_v11` znormalizowano do `...through_v12`. Nie dodano migracji i nie zmieniono runtime; aktualna wersja storage pozostaje 12. 4B-6 krok 2 nadal nie jest rozpoczęty.

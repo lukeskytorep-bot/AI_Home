@@ -1,4 +1,4 @@
-4B-6 STEP 1 AUDIT FIX 2
-R1/R2/R3 plus two stale connections.rs schema-version assertions corrected.
-Local static verification: 193/193 P2 PASS; 27/27 boundaries PASS.
-Full Rust/frontend CI remains required.
+4B-6 STEP 1 AUDIT FIX 3
+Full sweep of src-tauri/tests for stale PRAGMA user_version == 11 expectations.
+Updated 5 remaining assertions to schema 12 and renamed one historical test label through_v11 -> through_v12.
+No persistence migration or runtime behavior changed.
