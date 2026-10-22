@@ -389,6 +389,7 @@
     "backup.conversations": "conversations",
     "error.backup_invalid": "The backup or restore state is invalid.",
     "action.refresh": "Refresh",
-    "backup.lastFailed": "Last restore failed. The current database was kept."
+    "backup.lastFailed": "Last restore failed. The current database was kept.",
+    "error.restore_restart_required": "Restart AI Home to finish the pending restore before making more changes."
   }
 }

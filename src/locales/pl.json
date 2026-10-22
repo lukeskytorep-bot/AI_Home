@@ -389,6 +389,7 @@
     "backup.conversations": "rozmowy",
     "error.backup_invalid": "Kopia lub stan przywracania jest nieprawidłowy.",
     "action.refresh": "Odśwież",
-    "backup.lastFailed": "Ostatnie przywracanie nie powiodło się. Bieżąca baza została zachowana."
+    "backup.lastFailed": "Ostatnie przywracanie nie powiodło się. Bieżąca baza została zachowana.",
+    "error.restore_restart_required": "Uruchom ponownie AI Home, aby dokończyć oczekujące przywracanie przed wprowadzaniem kolejnych zmian."
   }
 }

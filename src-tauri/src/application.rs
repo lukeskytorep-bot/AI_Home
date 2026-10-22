@@ -30,8 +30,15 @@ impl Application {
         let reject=|code|Dispatch{response:error(r,code),event:None};
         if r["contractVersion"]!=1{return Ok(reject("UNSUPPORTED_CONTRACT_VERSION"))}
         if !schema::dto("CommandEnvelope",r){return Ok(reject("VALIDATION_ERROR"))}
-        if crate::connections::supports(r["command"].as_str().unwrap()){return Ok(Dispatch{response:self.connections.dispatch(r.clone()).await,event:None})}
         let command=r["command"].as_str().unwrap();
+        if crate::backup::restore_pending_for_store(&self.store) && command!="backup.restore.request" {
+            let mutates=if crate::connections::supports(command){crate::connections::mutates(command)}else{
+                let catalog=embedded(include_str!("../../contracts/ipc.catalog.json"));let foundation=embedded(include_str!("../../contracts/foundation.ipc.json"));let backup=embedded(include_str!("../../contracts/backup.ipc.json"));
+                catalog["commands"].get(command).or_else(||foundation["commands"].get(command)).or_else(||backup["commands"].get(command)).and_then(|c|c["mutates"].as_bool()).unwrap_or(false)
+            };
+            if mutates{return Ok(reject("RESTORE_RESTART_REQUIRED"))}
+        }
+        if crate::connections::supports(command){return Ok(Dispatch{response:self.connections.dispatch(r.clone()).await,event:None})}
         let catalog=embedded(include_str!("../../contracts/ipc.catalog.json"));let foundation=embedded(include_str!("../../contracts/foundation.ipc.json"));let backup=embedded(include_str!("../../contracts/backup.ipc.json"));
         let implemented=["app.preferences.get","app.preferences.set","app.pack.validate","kernel.status.get","app.events.list","backup.create","backup.list","backup.restore.preflight","backup.restore.request","backup.restore.status"];
         if !implemented.contains(&command){return Ok(reject("UNKNOWN_COMMAND"))}
@@ -44,7 +51,8 @@ impl Application {
             "app.events.list"=>self.store.events(r["payload"]["afterSequence"].as_i64().unwrap(),r["payload"]["limit"].as_i64().unwrap()).await?,
             "app.pack.validate"=>match pack(r["payload"]["kind"].as_str().unwrap(),&r["payload"]["pack"]){Ok(w)=>json!({"valid":true,"warnings":w}),Err(code)=>return Ok(reject(code))},
             "app.preferences.set"=>return self.set(r).await,
-            "backup.create"|"backup.list"|"backup.restore.preflight"|"backup.restore.request"|"backup.restore.status"=>match crate::backup::dispatch(&self.store,r).await{Ok(v)=>v,Err(_)=>return Ok(reject("BACKUP_INVALID"))},
+            "backup.create"|"backup.list"|"backup.restore.preflight"|"backup.restore.status"=>match crate::backup::dispatch(&self.store,r).await{Ok(v)=>v,Err(_)=>return Ok(reject("BACKUP_INVALID"))},
+            "backup.restore.request"=>match crate::backup::dispatch(&self.store,r).await{Ok(v)=>{self.connections.cancel_active_transports().await;v},Err(e)=>{let m=e.to_string();return Ok(reject(if m.contains("idempotency conflict"){"IDEMPOTENCY_CONFLICT"}else if m.contains("already pending"){"RESTORE_RESTART_REQUIRED"}else{"BACKUP_INVALID"}))}},
             _=>unreachable!()
         };
         Ok(Dispatch{response:success(r,result),event:None})

@@ -68,6 +68,18 @@ const COMMANDS: &[&str] = &[
 pub fn supports(command: &str) -> bool {
     COMMANDS.contains(&command)
 }
+pub fn mutates(command:&str)->bool {
+    let sources=[
+        include_str!("../../contracts/ipc.catalog.json"),include_str!("../../contracts/connections.ipc.json"),
+        include_str!("../../contracts/conversations.ipc.json"),include_str!("../../contracts/chat.ipc.json"),
+        include_str!("../../contracts/imports.ipc.json"),include_str!("../../contracts/document-chat.ipc.json"),
+        include_str!("../../contracts/vision.ipc.json"),include_str!("../../contracts/memory.ipc.json"),
+        include_str!("../../contracts/memory-chat.ipc.json"),include_str!("../../contracts/memory-layers.ipc.json"),
+        include_str!("../../contracts/memory-history.ipc.json"),include_str!("../../contracts/profile-imports.ipc.json"),
+        include_str!("../../contracts/conversation-segments.ipc.json"),include_str!("../../contracts/lifecycle.ipc.json")
+    ];
+    sources.iter().filter_map(|raw|serde_json::from_str::<Value>(raw).ok()).find_map(|v|v["commands"].get(command).and_then(|c|c["mutates"].as_bool())).unwrap_or(false)
+}
 pub fn now() -> String {
     chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true)
 }
@@ -232,6 +244,7 @@ pub struct Connections {
     active: Arc<Mutex<HashMap<String, (Cancellation, CallBudget)>>>,
 }
 impl Connections {
+    pub async fn cancel_active_transports(&self){let active=self.active.lock().await;for (cancel,_) in active.values(){cancel.cancel();}}
     pub fn new(pool: SqlitePool, vault: Vault) -> Self {
         Self {
             pool,

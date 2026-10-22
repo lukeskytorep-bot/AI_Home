@@ -440,3 +440,12 @@ Po wynikach CI wykonano pełne przeszukanie `src-tauri/tests` pod kątem history
 ## Aktualizacja 1.43 — 22 października 2026 — 4B-6 krok 1 AUDIT FIX 4 (IPC router parity)
 
 CI wykryło `UNKNOWN_COMMAND` dla `profile.import.latest`. Handler istniał w `profile_imports.rs` i kontrakt w `contracts/profile-imports.ipc.json`, lecz komenda nie była wpisana do `connections::COMMANDS` ani do gałęzi dispatchera. Poprawiono oba miejsca. Wykonano pełny sweep kontrakt/handler/router dla suplementarnych komend; `kernel.status.get` i `app.events.list` pozostają prawidłowo w warstwie aplikacji. Nie zmieniono SQLite v12, lifecycle archive, R1–R3 ani zakresu 4B-6 krok 2. Od tej wersji parity komend jest stałą bramką przed handoffem.
+
+
+## Aktualizacja 1.45 — 22 października 2026 — 4B-6 krok 2 AUDIT FIX (crash-safe restore)
+
+Po audycie backup/restore przebudowano restore jako crash-safe workflow. Trwały ledger request/result poza przywracaną bazą zapewnia idempotencję requestId także po restarcie. Po Accepted aplikacja przechodzi w globalny restart-required write freeze, aktywne operacje są kończone przed finalnym safety snapshotem, a nowe mutacje są odrzucane do restartu. Safety snapshot jest logicznym backupem SQLite przez `VACUUM INTO`.
+
+Startup restore nie usuwa ręcznie WAL/SHM, nie połyka błędu i nie pozwala `Store::open(create_if_missing=true)` utworzyć pustej bazy po nieudanym restore. Zweryfikowany safety służy do recovery, staging jest sprawdzany przed instalacją, a poprzedni current pozostaje zachowany do czasu potwierdzenia. Jeżeli nowa baza została już fizycznie zainstalowana, lecz receipt nie został zapisany, następny start rozpoznaje jej SHA i domyka wynik bez drugiego restore. Sidecary request/result są immutable create-once i nie mają okna delete-before-rename.
+
+UI zachowuje requestId przez remount i pokazuje wymagany restart. Krok 2 pozostaje `IMPLEMENTED_REQUIRES_CI_AND_AUDIT`; krok 3 nie jest rozpoczęty. Stałe bramki handoffu: schema expectation sweep, contract/handler/router parity, brak ręcznego usuwania aktywnego WAL/SHM, restore idempotency sweep.
