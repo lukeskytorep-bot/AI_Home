@@ -1,4 +1,5 @@
-4B-6 STEP 1 AUDIT FIX 3
-Full sweep of src-tauri/tests for stale PRAGMA user_version == 11 expectations.
-Updated 5 remaining assertions to schema 12 and renamed one historical test label through_v11 -> through_v12.
-No persistence migration or runtime behavior changed.
+4B-6 STEP 1 AUDIT FIX 4
+Registered profile.import.latest in src-tauri/src/connections.rs COMMANDS and routed it to profile_imports::dispatch.
+Full contract/handler/router sweep found no additional unregistered profile/import commands; kernel.status.get and app.events.list are application-layer commands by design.
+No persistence migration or lifecycle runtime behavior changed.
+Schema expectation sweep remains clean for user_version == 11 assertions.

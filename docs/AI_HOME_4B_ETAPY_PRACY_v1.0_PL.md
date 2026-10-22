@@ -424,3 +424,8 @@ Lifecycle UI używa teraz trwałego, profile/application-scoped rejestru pending
 
 ## Aktualizacja 1.42 — pełny sweep oczekiwań schematu po SQLite v12
 Po wynikach CI wykonano pełne przeszukanie `src-tauri/tests` pod kątem historycznych oczekiwań `PRAGMA user_version == 11`. Zaktualizowano pięć pozostałych asercji: dwie w `conversations.rs`, jedną w `imports.rs` i dwie w `memory_runtime.rs`. Dodatkowo nazwę testu `migration_v9_preserves_approved_working_history_through_v11` znormalizowano do `...through_v12`. Nie dodano migracji i nie zmieniono runtime; aktualna wersja storage pozostaje 12. 4B-6 krok 2 nadal nie jest rozpoczęty.
+
+
+## Aktualizacja 1.43 — 22 października 2026 — 4B-6 krok 1 AUDIT FIX 4 (IPC router parity)
+
+CI wykryło `UNKNOWN_COMMAND` dla `profile.import.latest`. Handler istniał w `profile_imports.rs` i kontrakt w `contracts/profile-imports.ipc.json`, lecz komenda nie była wpisana do `connections::COMMANDS` ani do gałęzi dispatchera. Poprawiono oba miejsca. Wykonano pełny sweep kontrakt/handler/router dla suplementarnych komend; `kernel.status.get` i `app.events.list` pozostają prawidłowo w warstwie aplikacji. Nie zmieniono SQLite v12, lifecycle archive, R1–R3 ani zakresu 4B-6 krok 2. Od tej wersji parity komend jest stałą bramką przed handoffem.

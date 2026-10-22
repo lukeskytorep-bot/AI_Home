@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "excludedFiles": [
     "docs/evidence/manifest.sha256.json",
     "SHA256SUMS.txt"
@@ -9,12 +10,14 @@
     ".gitignore": "0411bd2f21e43200684c40272d20df0b78ec2278496422b66c757ee90c395cbc",
     "AI_HOME_4B6_KROK_1_AUDIT_FIX_2_RAPORT_PL.md": "e36f8237ceea9b9ec27522313ecfb800a89578a66423d73c725b41944687faaa",
     "AI_HOME_4B6_KROK_1_AUDIT_FIX_3_RAPORT_PL.md": "5315819cf8d978e911ef10ca199eb6128509a20439726f0fbd7a6e3e32074826",
+    "AI_HOME_4B6_KROK_1_AUDIT_FIX_4_RAPORT_PL.md": "a7cc6a30267dfbc78948f509ac660d80a6953ce7123d25c16b38f4a7a614a2ba",
     "AI_HOME_4B6_KROK_1_AUDIT_FIX_RAPORT_PL.md": "48d61863d1d18860df80490aa6dd2a1edda05ed2f62d52e4740ab2c98584a914",
     "AI_HOME_4B6_KROK_1_RAPORT_PL.md": "93984d43b85dde6b807eb03b20ba8671ec9b0a8fd909e4bfa42c55e023c057f8",
     "AI_HOME_4B_ETAPY_PRACY_v1.0_PL_1.39.md": "72060d35645cfec125bb34f78053f446df5a5cfcdfbae29359fcd70b9c1af789",
     "AI_HOME_4B_ETAPY_PRACY_v1.0_PL_1.40.md": "2a8a5aa6249a8bab8fa95bebcfa58379d4b875b343d0375c1f051c285837a9e7",
     "AI_HOME_4B_ETAPY_PRACY_v1.0_PL_1.41.md": "60bc33d3bbe9ed2948cc4a1a81a0cf9d65389c395fe89e2dad5f4c1fc923cbbf",
     "AI_HOME_4B_ETAPY_PRACY_v1.0_PL_1.42.md": "6a439b0e540e5f5d3dfbe9810722f8171e4f4ecafd640a86882c696ebeb5d98a",
+    "AI_HOME_4B_ETAPY_PRACY_v1.0_PL_1.43.md": "13aa9dc9e17629cfe2bf856c83fde1d67a38b568cebb0a55b5d874f5bb7c8187",
     "INSTRUKCJA_4B5_REBASE_AUDIT_FIX_2_PL.md": "cb065d95673f8af5485bc4a68fa8c05a84f8c8ea691fc39417ffe98b69e31ead",
     "INSTRUKCJA_4B5_REBASE_AUDIT_FIX_3_PL.md": "39c7769e4fdf6de96fa63970bf005da9c6affcbc5c6f6cfd949649e67e05bc40",
     "INSTRUKCJA_4B5_REBASE_AUDIT_FIX_4_PL.md": "f9f289cb8c035b87cdb30f46e60764eb8a1bfa31f8ca3910928d95bf81a34a6f",
@@ -22,6 +25,7 @@
     "INSTRUKCJA_4B5_REBASE_PL.md": "e6f3d9c84435ff41a81cc45729cc1a5c2ec2b2c8352b0f198fec97ed7c2b830c",
     "INSTRUKCJA_4B6_KROK_1_AUDIT_FIX_2_PL.md": "c4476f5c8ca49cdeea38446a5d9ff70fcfdfed6e3a7f08b7a26c50b404fca4bc",
     "INSTRUKCJA_4B6_KROK_1_AUDIT_FIX_3_PL.md": "1316b1670079eed78e678bda3cccd48495545036f03192dbba08173a46e3e6ed",
+    "INSTRUKCJA_4B6_KROK_1_AUDIT_FIX_4_PL.md": "7ca52817003b401faf4723fdc272e31080f0b474ec554066c6ecb461e6fad021",
     "INSTRUKCJA_4B6_KROK_1_AUDIT_FIX_PL.md": "e19efe1c0710d615c43a97f08151ff775cc623a2829795c1167cff560ded3271",
     "INSTRUKCJA_4B6_KROK_1_PL.md": "d348d31e1346526b8b00b71a9e0a30b096f26437892c6ab461556f487b5332d0",
     "LICENSE": "682755f68a25bf8c9ea4956368c5fbcc345793677b7503737e10bb383cf9bee8",
@@ -69,8 +73,9 @@
     "docs/AI_HOME_4B4_KROK_4_AUDIT_FIX_RAPORT_PL.md": "73c1803e790ff27438d7028b6548958208bb82245769b74370a1ab32e3cd7d05",
     "docs/AI_HOME_4B4_KROK_4_RAPORT_PL.md": "effb95d42a664b4fd68d664762f43b37c1b018fda3893c4998f4493e85d1f558",
     "docs/AI_HOME_4B5_RAPORT_PL.md": "73c600f25696610e7cd1760f7ded26e122f21949bec634dc784c7fd13ceda31e",
+    "docs/AI_HOME_4B6_KROK_1_AUDIT_FIX_4_RAPORT_PL.md": "a7cc6a30267dfbc78948f509ac660d80a6953ce7123d25c16b38f4a7a614a2ba",
     "docs/AI_HOME_4B6_KROK_1_AUDIT_FIX_RAPORT_PL.md": "48d61863d1d18860df80490aa6dd2a1edda05ed2f62d52e4740ab2c98584a914",
-    "docs/AI_HOME_4B_ETAPY_PRACY_v1.0_PL.md": "fccacc27d6eec837208bd77c8ec5e61eae52abbaae3f8abb6ae3aa02310e172c",
+    "docs/AI_HOME_4B_ETAPY_PRACY_v1.0_PL.md": "13aa9dc9e17629cfe2bf856c83fde1d67a38b568cebb0a55b5d874f5bb7c8187",
     "docs/ARCHITECTURE_PL.md": "25e075d4ad3e5391ecead69bee62090252e6ebd28173434e102f1d102cee555c",
     "docs/CI_PL.md": "64fb5e88068431d6ca6fc3092e7ac6b0586b183c7c3a0232175f12f5ece3d69c",
     "docs/INSTRUKCJA_4B4_KROK_4_AUDIT_FIX_PL.md": "2b58c38aedb3ba69262f7cc78f4fbc6b523c217e94fd918035997844de8feb33",
@@ -253,8 +258,8 @@
     "docs/evidence/4b5/verification.log": "4949c680b4d627925cd10b96312b393e7845c09133938bcc076cf21202cfeba3",
     "docs/evidence/4b6-step-1/boundaries.log": "9d97076a340518454c3a43f2197b024120ccdf52754a4b88bc876a2fd53ee1d7",
     "docs/evidence/4b6-step-1/contracts.log": "f680d93ad59d77dfb135018c530fe763a4ce027cc5643ef399a74a0774527e22",
-    "docs/evidence/4b6-step-1/status.json": "1c38f265dcce81e4fd939e85a236d631dcf848e767064417eb7c76aa73c62b81",
-    "docs/evidence/4b6-step-1/verification.log": "1887d38556345f5bdbf775c978e901f6946d7f452a13ce6d2a7f4d4d6ebd06e3",
+    "docs/evidence/4b6-step-1/status.json": "7c8489390aed2957a7ca541ee3e18f7021d060dbdc3d4059872560b79a0e248c",
+    "docs/evidence/4b6-step-1/verification.log": "19330451db460a83e3912f848fa327058039e17689979ff4db0cccbababfad63",
     "docs/evidence/boundaries.log": "0637513c88720cfbeabb70c64029212d76aba434276ebb73a755fa8d5e816d47",
     "docs/evidence/cleanup-deletions.json": "44559cc87011e009f1ca5de20396cd8db8ee97c607ba35571d811489be448a1b",
     "docs/evidence/frontend-build.log": "711c31dfe57f10042c586c1ab2d1adf6146c3a2b790fdb6c95fa3cb8338ba285",
@@ -334,7 +339,7 @@
     "src-tauri/icons/icon.png": "709ba5c18a2b4d64c5b0c121a97328483026381eb6c0997560e4676b11964443",
     "src-tauri/src/application.rs": "ff57acb56810d49878c99b991a3962562bc4fbfcbedab46abfdd8797cae749a7",
     "src-tauri/src/chat.rs": "15ce8348eb30cdb8b1b4c83892e6f0f98b621a880c5bfc7d31c42dcfbddda97a",
-    "src-tauri/src/connections.rs": "02c3c6dd4ad9052e058809215806b9c3a12969a019d12c5e477b7fc25b3f73d2",
+    "src-tauri/src/connections.rs": "6055584e281c8e68f031db37cab1ea6fa66495be6be31ab2c03263730369fe76",
     "src-tauri/src/conversation_segments.rs": "43e874e2448825d003d6b196059e462949990c3f23cb6a083f1f0cd1c7c6bd93",
     "src-tauri/src/conversations.rs": "bb6e679185c0c3603b0d7629ef2d4717d5e52cb8ceba4ed0d9b2f1231ef6d1be",
     "src-tauri/src/document_context.rs": "8b6724ed3a5647d9c39e4a855ab795ecbbfa766940fc0af824239598220fc11d",
@@ -423,6 +428,5 @@
     "tsconfig.json": "83abb195d9db6b32c8059f3332fbf0a4134c20449805a0f351d92e0cd6781625",
     "verify-boundaries.mjs": "c803376f4df24c0a0d894c39d96aacb874088615290c080fa572ddbba042f578",
     "vite.config.ts": "d6358eaa1d7f39c26243163e3191ba3dbea09fc3fe455b210ac5e6807ecf84aa"
-  },
-  "schemaVersion": 1
+  }
 }
