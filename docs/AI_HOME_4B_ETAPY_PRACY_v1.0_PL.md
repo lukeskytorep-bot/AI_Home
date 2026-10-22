@@ -1,3 +1,12 @@
+# Aktualizacja 1.38 — 22.10.2026 — 4B-5 audit fix 5 po pełnym Cargo CI
+
+- 4B-5 pozostaje OPEN do zielonego pełnego CI i re-audytu.
+- CI Rust po FIX 4 ujawniło dwa błędy testów, nie nową regresję runtime F1/F2.
+- Test migracji `actual_v4_database_migrates_without_changing_profile_or_preferences` oczekiwał historycznego `PRAGMA user_version=11`; po wdrożeniu 4B-5 prawidłową wersją docelową jest 12. Oczekiwanie zaktualizowano do 12.
+- Test `checkpoint_excerpt_prioritizes_newest_turns_over_older_very_long_turn` nie wymuszał seal segmentu zawierającego najnowsze markery. Dwie najnowsze tury otrzymały kontrolowany payload tak, aby pierwsza pozostawała poniżej progu, a druga deterministycznie przekraczała próg i zamykała ten sam segment.
+- Logika F1/F2, IPC, SQLite migracja oraz runtime segmentacji nie zostały zmienione.
+- 4B-6 pozostaje zablokowane do PASS CLOSED 4B-5.
+
 # Aktualizacja 1.35 — 22.10.2026 — 4B-5 audit fix F1/F2 + frontend CI
 
 - 4B-4 N1/N2: pozostają analitycznie poprawione; pełne CI nadal jest warunkiem formalnego zamknięcia.

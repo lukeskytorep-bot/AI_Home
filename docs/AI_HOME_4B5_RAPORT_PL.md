@@ -33,3 +33,12 @@ Pełne CI ujawniło dwa pozostałe problemy niezależne od F1/F2:
 Dodatkowo znormalizowano `docs/evidence/4b5/status.json` do `4B-5 REBASE AUDIT FIX 4`, planu 1.37 i jawnie zachowano wcześniejszy log FIX 2/FIX 3 jako historię evidence.
 
 Zakres F1/F2 nie został zmieniony. 4B-5 nadal wymaga nowego pełnego zielonego CI przed `PASS CLOSED`.
+
+## AUDIT FIX 5 — korekta dwóch testów Cargo po FIX 4
+
+Pełny `cargo test --all-targets --locked` po FIX 4 skompilował projekt, a następnie ujawnił dwa błędy testowe w `src-tauri/tests/chat.rs`:
+
+1. `actual_v4_database_migrates_without_changing_profile_or_preferences` nadal oczekiwał `PRAGMA user_version == 11`. 4B-5 wprowadza migrację v11→v12, więc aktualnym prawidłowym wynikiem po otwarciu starej bazy jest 12. Oczekiwanie testu zostało zaktualizowane bez zmiany migracji.
+2. `checkpoint_excerpt_prioritizes_newest_turns_over_older_very_long_turn` tworzył bardzo długą pierwszą turę i dwie bardzo krótkie kolejne. Przy `contextTokens=16384` pierwszy segment pozostawał poniżej progu po pierwszej turze, ale dwie krótkie tury również nie gwarantowały przekroczenia progu. Test szukał więc newest markerów w sealed segmencie, którego mógł nie być. Obie najnowsze tury mają teraz kontrolowane dopełnienie 250 znaków: po pierwszej nadal pozostaje poniżej progu, a po drugiej ten sam segment przekracza próg i zostaje zapieczętowany.
+
+Nie zmieniono runtime F1/F2, algorytmu budowania summary, kontraktów, SQLite ani UI. FIX 5 wymaga ponownego pełnego CI.

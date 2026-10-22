@@ -608,7 +608,7 @@ async fn actual_v4_database_migrates_without_changing_profile_or_preferences() {
             .fetch_one(&pool)
             .await
             .unwrap(),
-        11
+        12
     );
     assert!(sqlx::query("PRAGMA foreign_key_check")
         .fetch_all(&pool)
@@ -1002,7 +1002,12 @@ async fn checkpoint_excerpt_prioritizes_newest_turns_over_older_very_long_turn()
     assert_eq!(finished(&app,&p,&first["result"]["operation"]["id"]).await["status"],"succeeded");
     c=ok(&app,"conversation.get",json!({"conversationId":c["id"]}),Some(&p),None).await;
     for marker in ["NEWEST-USER-A","NEWEST-USER-B"] {
-        let accepted=app.dispatch(send_request(&p,&c,marker)).await.response;
+        // Keep the first marker below the seal threshold, then let the second
+        // deterministically push this same segment over it. This ensures the
+        // assertion below inspects a sealed segment that actually contains
+        // the newest markers instead of an earlier sealed segment.
+        let payload=format!("{marker} {}","n".repeat(250));
+        let accepted=app.dispatch(send_request(&p,&c,&payload)).await.response;
         assert_eq!(accepted["ok"],true,"{accepted}");
         assert_eq!(finished(&app,&p,&accepted["result"]["operation"]["id"]).await["status"],"succeeded");
         c=ok(&app,"conversation.get",json!({"conversationId":c["id"]}),Some(&p),None).await;

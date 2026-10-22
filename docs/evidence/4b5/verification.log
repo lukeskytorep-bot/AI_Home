@@ -1,20 +1,9 @@
-4B-5 REBASE AUDIT FIX 2 local verification
-PASS check_contracts.py 193/193
-PASS scripts/verify-boundaries.mjs 26/26
-IMPLEMENTED F1: chat.preflight plans legacy checkpoint without storage mutation; chat.send persists atomically
-IMPLEMENTED F2: final 6144-char summary allocates newest turns before Working Context and prior checkpoint
-ADDED regression: legacy preflight leaves context_segments/messages/conversations/chat_runs unchanged
-ADDED regression: actual send persists legacy checkpoint and preserves newest user/assistant markers
-ADDED unit regression: full prior + Working Context cannot evict newest markers from final summary
-FIXED frontend test fixtures from supplied CI: chat.preflight segmentContext and complete MemoryRecord/metadata mocks
-NOT RUN npm tests: offline cache missing xmlchars-2.2.0.tgz
-NOT RUN cargo/rustc in this environment
-NOT RUN Windows / Tauri / WebView / OS vault / live API
-
-4B-5 REBASE AUDIT FIX 4
-FIXED Rust compile error: profile_import.latest validates stored Operation with schema::dto plus profile scope
-FIXED imports-ui candidate tests: current EN aria-labels for memory target and candidate reason
-UPDATED evidence status to FIX 4 / plan 1.37
-REQUIRES CI cargo + npm test/typecheck/build
-
-NOTE: earlier FIX 2/FIX 3 entries above are historical evidence. Current evidence index is status.json stage FIX 4 / plan 1.37.
+AI Home 4B-5 REBASE AUDIT FIX 5 verification
+Date: 2026-10-22
+Scope: two Cargo test corrections after FIX 4
+- migration v4 target expectation updated from schema 11 to current schema 12
+- newest-turn checkpoint regression now deterministically crosses seal threshold on the second newest payload
+- runtime F1/F2 unchanged
+- P2: 193/193 PASS
+- boundaries: 26/26 PASS
+- full Cargo/frontend CI: REQUIRED

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "date": "2026-10-22",
-  "stage": "4B-5 REBASE AUDIT FIX 4",
-  "planContentVersion": "1.37",
+  "stage": "4B-5 REBASE AUDIT FIX 5",
+  "planContentVersion": "1.38",
   "status": "IMPLEMENTED_REQUIRES_CI_AND_AUDIT",
   "baseSourceSha256": "f5ae15fee8c94ac789bdcdd84fe954d7524b57e5931211ed3dd50565c9c8b2ab",
   "p2ReferenceChecks": 193,
@@ -25,5 +25,10 @@
   "fix4Details": [
     "profile_import.latest validates Operation through schema::dto and profile scope",
     "imports-ui candidate tests use current locale aria-labels"
+  ],
+  "fix5CargoTestCorrections": "IMPLEMENTED_REQUIRES_CI",
+  "fix5Details": [
+    "legacy v4 migration test expects current storage version 12",
+    "newest-turn checkpoint regression deterministically seals the segment containing newest markers"
   ]
 }
