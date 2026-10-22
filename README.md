@@ -1,3 +1,9 @@
+# Bieżące przekazanie 4B-5 REBASE — poprawki N1/N2 + segmenty kontekstu
+
+Baza: dokładny `AI_HOME_4B4_KROK_4_AUDIT_FIX_SOURCE.zip`, SHA-256 `d60f8d47b1f5fe37f031479cdcf7ec5fac348ce2c524aaa180edf9aec5858d40`. Paczka najpierw domyka dwie uwagi ponownego audytu 4B-4: N1 unieważnia profile-context/preflight natychmiast po Accepted importu niezależnie od późniejszego błędu odświeżenia listy, a N2 przenosi monitoring kandydatury pamięci i niepewny requestId do profile-scoped stanu `Conversations`, więc zmiana rozmowy/remount nie odbiera statusu ani STOP.
+
+Następnie implementuje 4B-5 Conversation Segmentation + Continuity na tej poprawionej bazie. SQLite v11→v12 dodaje `context_segments`; surowe `messages` pozostają nienaruszone. Sealed segment zapisuje bounded checkpoint, a kolejne wywołania używają checkpointu poprzedniego segmentu i surowego aktywnego segmentu. Frozen P2 pozostaje bez zmian. Lokalnie 193/193 P2 i 26/26 boundaries PASS; pełne Rust/Vitest/TypeScript/Vite wymagają CI. Raport: `docs/AI_HOME_4B5_RAPORT_PL.md`.
+
 # Bieżące przekazanie 4B-4 krok 3 — warstwy pamięci i wyszukiwanie
 
 Wydarzenia, relacje, wiedza trwała, zamiary i zasady pracy mają osobne rekordy/limity, historię i approval Primary. Ludzkie adnotacje są odrębne. Korekty zachowują powód i poprzednią wersję. LexicalRetriever wybiera całe pasujące wpisy w budżecie i jawnie liczy pominięcia. Preflight/send i trwały snapshot chronią kontekst oraz spóźniony wynik. Panel EN/PL dostępny w rozmowach pod Other memory and search / Pozostała pamięć i wyszukiwanie.

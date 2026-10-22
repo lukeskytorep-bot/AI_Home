@@ -197,6 +197,7 @@ pub(super) fn build_anthropic_request(request: &ProviderChatRequest, base: &str)
 }
 
 
+#[allow(dead_code)] // Kept for the accepted provider builder boundary; live streaming wiring is a later step.
 pub(super) fn enable_openrouter_streaming(body: &mut Value) -> Result<(), String> {
     let object = body.as_object_mut().ok_or_else(|| "OpenRouter chat request body must be an object".to_string())?;
     object.insert("stream".into(), Value::Bool(true));

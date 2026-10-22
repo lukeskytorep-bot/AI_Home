@@ -45,6 +45,7 @@ impl CustomOpenAiOutputTokenField{fn as_str(self)->&'static str{match self{Self:
 }
 #[derive(Default)]pub struct ProviderUsage{pub input_tokens:Option<u64>,pub output_tokens:Option<u64>,pub reasoning_tokens:Option<u64>,pub total_tokens:Option<u64>,pub cost_usd:Option<f64>}
 // Deliberately not Serialize or Debug: hidden/provider data is not an IPC DTO.
+#[allow(dead_code)] // Compatibility metadata is preserved even before every field is surfaced by AI Home.
 pub struct ProviderChatResponse {
     content:String,reasoning_content:Option<String>,reasoning_details:Option<Vec<Value>>,reasoning_source:Option<String>,
     finish_reason:Option<String>,actual_model:Option<String>,usage:ProviderUsage,provider_request_id:Option<String>,actual_provider:Option<String>,

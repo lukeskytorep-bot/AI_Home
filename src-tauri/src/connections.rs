@@ -17,6 +17,8 @@ use tokio::sync::Mutex;
 mod chat_runtime;
 #[path = "conversations.rs"]
 mod conversation_storage;
+#[path = "conversation_segments.rs"]
+mod conversation_segments;
 #[path = "import_runtime.rs"]
 mod import_runtime;
 #[path = "memory_runtime.rs"]
@@ -29,7 +31,7 @@ mod memory_history;
 type Failure = &'static str;
 type Tx<'a> = Transaction<'a, Sqlite>;
 const COMMANDS: &[&str] = &[
-    "profile.imports.list", "profile.import.latest", "knowledge.enabled.set", "guidance.enabled.set", "chat.profile.context.get",
+    "profile.imports.list", "knowledge.enabled.set", "guidance.enabled.set", "chat.profile.context.get",
     "memory.version.annotations.get", "memory.records.list", "memory.record.create", "memory.record.get", "memory.record.metadata.set", "memory.record.update", "memory.layers.settings.get", "memory.layers.settings.set", "memory.search", "chat.retrieval.get",
     "memory.restore",
     "memory.versions.list", "memory.version.get", "memory.outdated.set",
@@ -44,6 +46,7 @@ const COMMANDS: &[&str] = &[
     "conversation.get",
     "conversation.list",
     "conversation.messages.list",
+    "conversation.segments.list",
     "profile.create",
     "profile.list",
     "profile.snapshot",
@@ -127,6 +130,7 @@ fn validate_record(table: &str, v: &Value) -> bool {
             "routes" => "ModelRoute",
             "conversations" => "Conversation",
             "messages" => "Message",
+            "context_segments" => "ContextSegment",
             "memory_records" => "MemoryRecord", "memory_versions" => "MemoryVersion",
             "memory_proposals" => "MemoryProposal", "memory_decisions" => "MemoryDecisionReceipt", "memory_attempts" => "MemoryWriteAttempt",
             "knowledge_sources" => "KnowledgeSource",
@@ -181,6 +185,8 @@ async fn put(
         ("profiles",false)=>sqlx::query("UPDATE profiles SET revision=?,body=? WHERE id=? AND revision=?").bind(rev).bind(v.to_string()).bind(record).bind(expected).execute(&mut **tx).await,
         ("routes",true)=>sqlx::query("INSERT INTO routes(profile_id,id,connection_id,revision,body) VALUES(?,?,?,?,?)").bind(profile).bind(record).bind(v["connectionId"].as_str().unwrap()).bind(rev).bind(v.to_string()).execute(&mut **tx).await,
         ("routes",false)=>sqlx::query("UPDATE routes SET connection_id=?,revision=?,body=? WHERE profile_id=? AND id=? AND revision=?").bind(v["connectionId"].as_str().unwrap()).bind(rev).bind(v.to_string()).bind(profile).bind(record).bind(expected).execute(&mut **tx).await,
+        ("context_segments",true)=>sqlx::query("INSERT INTO context_segments(profile_id,id,conversation_id,first_message_sequence,last_message_sequence,state,revision,body) VALUES(?,?,?,?,?,?,?,?)").bind(profile).bind(record).bind(v["conversationId"].as_str().unwrap()).bind(v["firstMessageSequence"].as_i64().unwrap()).bind(v["lastMessageSequence"].as_i64().unwrap()).bind(v["state"].as_str().unwrap()).bind(rev).bind(v.to_string()).execute(&mut **tx).await,
+        ("context_segments",false)=>sqlx::query("UPDATE context_segments SET conversation_id=?,first_message_sequence=?,last_message_sequence=?,state=?,revision=?,body=? WHERE profile_id=? AND id=? AND revision=?").bind(v["conversationId"].as_str().unwrap()).bind(v["firstMessageSequence"].as_i64().unwrap()).bind(v["lastMessageSequence"].as_i64().unwrap()).bind(v["state"].as_str().unwrap()).bind(rev).bind(v.to_string()).bind(profile).bind(record).bind(expected).execute(&mut **tx).await,
         (_,true)=>sqlx::query(&format!("INSERT INTO {table}(profile_id,id,revision,body) VALUES(?,?,?,?)")).bind(profile).bind(record).bind(rev).bind(v.to_string()).execute(&mut **tx).await,
         (_,false)=>sqlx::query(&format!("UPDATE {table} SET revision=?,body=? WHERE profile_id=? AND id=? AND revision=?")).bind(rev).bind(v.to_string()).bind(profile).bind(record).bind(expected).execute(&mut **tx).await,
     }.map_err(|_|"STORAGE_ERROR")?;
@@ -257,6 +263,7 @@ impl Connections {
         let layers:Value=serde_json::from_str(include_str!("../../contracts/memory-layers.ipc.json")).unwrap();
         let history:Value=serde_json::from_str(include_str!("../../contracts/memory-history.ipc.json")).unwrap();
         let profile_imports:Value=serde_json::from_str(include_str!("../../contracts/profile-imports.ipc.json")).unwrap();
+        let segments:Value=serde_json::from_str(include_str!("../../contracts/conversation-segments.ipc.json")).unwrap();
         let contract = catalog["commands"]
             .get(command)
             .or_else(|| extra["commands"].get(command))
@@ -270,6 +277,7 @@ impl Connections {
             .or_else(|| history["commands"].get(command))
             .or_else(|| layers["commands"].get(command))
             .or_else(|| profile_imports["commands"].get(command))
+            .or_else(|| segments["commands"].get(command))
             .ok_or("UNKNOWN_COMMAND")?;
         if !schema::dto("CommandEnvelope", r)
             || !schema::valid(&r["payload"], &contract["payload"])
@@ -429,7 +437,7 @@ impl Connections {
                     "memory.version.annotations.get"|"memory.records.list"|"memory.record.create"|"memory.record.get"|"memory.record.metadata.set"|"memory.layers.settings.get"|"memory.layers.settings.set" => memory_layers::dispatch(&mut tx,command,&mut p,payload,expected).await?,
                     "memory.search" => memory_retrieval::search(&mut tx,&p,payload).await?,
                     "chat.retrieval.get" => memory_retrieval::historical(&mut tx,profile,payload).await?,
-                    "profile.imports.list"|"profile.import.latest"|"knowledge.enabled.set"|"guidance.enabled.set"|"chat.profile.context.get" => profile_imports::dispatch(&mut tx,command,profile,payload,expected).await?,
+                    "profile.imports.list"|"knowledge.enabled.set"|"guidance.enabled.set"|"chat.profile.context.get" => profile_imports::dispatch(&mut tx,command,profile,payload,expected).await?,
                     "memory.record.update" => {let(job,op)=memory_runtime::accept(&mut tx,&p,payload,expected).await?;memory_launch=Some((job,op.clone()));json!({"operation":op})},
                     "memory.working.get" => memory_runtime::view(&mut tx,profile).await?,
                     "memory.working.sources" => memory_runtime::sources(&mut tx,profile,payload).await?,
@@ -453,6 +461,7 @@ impl Connections {
                         chat_launch = Some((job, op.clone()));
                         json!({"operation":op})
                     }
+                    "conversation.segments.list" => conversation_segments::list(&mut tx,profile,payload).await?,
                     c if c.starts_with("conversation.") => {
                         conversation_storage::execute(&mut tx, c, profile, payload, expected)
                             .await?

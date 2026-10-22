@@ -5,11 +5,10 @@ use ai_home::{
     vault::{SecretStore, Vault, VaultError},
 };
 use serde_json::{json, Value};
-use sqlx::Row;
 use std::{
     collections::HashMap,
     sync::{
-        atomic::{AtomicBool, AtomicUsize, Ordering},
+        atomic::{AtomicBool, Ordering},
         Arc, Mutex,
     },
 };
@@ -763,7 +762,7 @@ async fn v6_migration_and_restart_keep_document_versions_without_automatic_post(
     sqlx::query("DROP TABLE chat_vision_policies").execute(&pool).await.unwrap();sqlx::query("DROP TABLE message_documents").execute(&pool).await.unwrap();sqlx::query("PRAGMA user_version=6").execute(&pool).await.unwrap();
     drop(app);pool.close().await;
     let store=Store::open(&path).await.unwrap();let pool=store.pool.clone();let app=Application::with_vault(store,Vault::with_backend(vault.clone()));
-    assert_eq!(sqlx::query_scalar::<_,i64>("PRAGMA user_version").fetch_one(&pool).await.unwrap(),11);
+    assert_eq!(sqlx::query_scalar::<_,i64>("PRAGMA user_version").fetch_one(&pool).await.unwrap(),12);
     assert!(s.wires.lock().unwrap().is_empty());
     let r=with_document(&p,&c,&item,"First");let a=app.dispatch(r.clone()).await.response;assert_eq!(a["ok"],true,"{a}");let op=finished(&app,&p,&a["result"]["operation"]["id"]).await;assert_eq!(op["status"],"succeeded");
     let first=last_wire(&s)["messages"][1]["content"].clone();drop(app);pool.close().await;
@@ -853,7 +852,7 @@ async fn image_migration_restart_keeps_original_policy_and_replay(){
     let(app,pool,vault,s,p,c,_)=configure(app,pool,vault).await;let prefs=ok(&app,"app.preferences.get",json!({}),None,None).await;
     sqlx::query("DROP TABLE chat_vision_policies").execute(&pool).await.unwrap();sqlx::query("PRAGMA user_version=7").execute(&pool).await.unwrap();drop(app);pool.close().await;
     let store=Store::open(&path).await.unwrap();let pool=store.pool.clone();let app=Application::with_vault(store,Vault::with_backend(vault.clone()));
-    assert_eq!(sqlx::query_scalar::<_,i64>("PRAGMA user_version").fetch_one(&pool).await.unwrap(),11);assert_eq!(ok(&app,"app.preferences.get",json!({}),None,None).await,prefs);
+    assert_eq!(sqlx::query_scalar::<_,i64>("PRAGMA user_version").fetch_one(&pool).await.unwrap(),12);assert_eq!(ok(&app,"app.preferences.get",json!({}),None,None).await,prefs);
     assert_eq!(ok(&app,"chat.vision.get",json!({}),Some(&p),None).await["support"],"unknown");
     let(app,item,_)=imported_image(app,&pool,vault.clone(),&p,&c).await;let policy=declare_vision(&app,&p,"supported").await;
     let r=with_document(&p,&c,&item,"Describe");let a=app.dispatch(r.clone()).await.response;assert_eq!(a["ok"],true,"{a}");assert_eq!(finished(&app,&p,&a["result"]["operation"]["id"]).await["status"],"succeeded");let first=last_wire(&s)["messages"][1]["content"].clone();drop(app);pool.close().await;
@@ -911,3 +910,106 @@ async fn stale_vision_scope_after_verified_connection_change(endpoint_change:boo
 async fn stale_vision_save_after_key_change_and_successful_retest_is_rejected(){stale_vision_scope_after_verified_connection_change(false).await;}
 #[tokio::test]
 async fn stale_vision_save_after_endpoint_change_and_successful_retest_is_rejected(){stale_vision_scope_after_verified_connection_change(true).await;}
+
+#[tokio::test]
+async fn long_conversation_seals_segment_and_next_turn_uses_checkpoint_not_full_raw_history() {
+    let (app, _, _, s, p, mut c, _) = configured().await;
+    // A smaller declared context makes the automatic checkpoint threshold deterministic.
+    let settings=ok(&app,"chat.settings.get",json!({}),Some(&p),None).await;
+    ok(&app,"chat.settings.set",json!({"routeId":settings["routeId"],"contextTokens":8192}),Some(&p),settings["routeRevision"].as_i64()).await;
+    let raw_marker="FIRST-RAW-ONLY-MARKER ";
+    let continuity_marker="FIRST-CHECKPOINT-CONTINUITY-MARKER ";
+    for i in 0..3 {
+        let prefix=if i==0{raw_marker}else if i==2{continuity_marker}else{""};
+        let text=format!("{}{} {}",prefix,i,"x".repeat(700));
+        let accepted=app.dispatch(send_request(&p,&c,&text)).await.response;
+        assert_eq!(accepted["ok"],true,"{accepted}");
+        assert_eq!(finished(&app,&p,&accepted["result"]["operation"]["id"]).await["status"],"succeeded");
+        c=ok(&app,"conversation.get",json!({"conversationId":c["id"]}),Some(&p),None).await;
+    }
+    let segments=ok(&app,"conversation.segments.list",json!({"conversationId":c["id"],"page":{"limit":20}}),Some(&p),None).await;
+    assert_eq!(segments["items"].as_array().unwrap().len(),1,"{segments}");
+    let sealed=&segments["items"][0];
+    assert_eq!(sealed["state"],"sealed");
+    assert_eq!(sealed["firstMessageSequence"],1);
+    assert_eq!(sealed["lastMessageSequence"],6);
+    assert_eq!(sealed["messageDigest"].as_str().unwrap().len(),64);
+    assert!(sealed["summary"].as_str().unwrap().contains(continuity_marker));
+    assert!(!sealed["summary"].as_str().unwrap().contains(raw_marker));
+    assert!(c.get("activeSegmentId").is_none());
+
+    // Build and seal a second segment. Its bounded checkpoint must carry forward
+    // the prior checkpoint, not only the immediately recent raw turns.
+    for i in 0..3 {
+        let accepted=app.dispatch(send_request(&p,&c,&format!("second-segment-{i} {}","y".repeat(700)))).await.response;
+        assert_eq!(accepted["ok"],true,"{accepted}");
+        assert_eq!(finished(&app,&p,&accepted["result"]["operation"]["id"]).await["status"],"succeeded");
+        c=ok(&app,"conversation.get",json!({"conversationId":c["id"]}),Some(&p),None).await;
+    }
+    let segments=ok(&app,"conversation.segments.list",json!({"conversationId":c["id"],"page":{"limit":20}}),Some(&p),None).await;
+    assert_eq!(segments["items"].as_array().unwrap().len(),2,"{segments}");
+    assert_eq!(segments["items"][1]["state"],"sealed");
+    assert_eq!(segments["items"][1]["firstMessageSequence"],7);
+    assert_eq!(segments["items"][1]["lastMessageSequence"],12);
+    assert!(segments["items"][1]["summary"].as_str().unwrap().contains("Bounded previous checkpoint continuity"));
+    assert!(segments["items"][1]["summary"].as_str().unwrap().contains(continuity_marker));
+
+    let accepted=app.dispatch(send_request(&p,&c,"After two checkpoints")).await.response;
+    assert_eq!(accepted["ok"],true,"{accepted}");
+    assert_eq!(finished(&app,&p,&accepted["result"]["operation"]["id"]).await["status"],"succeeded");
+    let wires=s.wires.lock().unwrap();
+    let last=wires.last().unwrap();
+    assert!(last.contains("previous Context Segment checkpoint"),"{last}");
+    assert!(last.contains(continuity_marker),"prior checkpoint continuity was lost: {last}");
+    assert!(!last.contains(raw_marker),"old raw history leaked into the next provider request");
+    drop(wires);
+    let c=ok(&app,"conversation.get",json!({"conversationId":c["id"]}),Some(&p),None).await;
+    assert!(c["activeSegmentId"].as_str().is_some());
+    let segments=ok(&app,"conversation.segments.list",json!({"conversationId":c["id"],"page":{"limit":20}}),Some(&p),None).await;
+    assert_eq!(segments["items"].as_array().unwrap().len(),3);
+    assert_eq!(segments["items"][2]["state"],"open");
+    assert_eq!(segments["items"][2]["firstMessageSequence"],13);
+}
+
+
+#[tokio::test]
+async fn large_few_turn_segment_seals_without_waiting_for_six_messages_and_next_turn_continues() {
+    let (app, _, _, _s, p, mut c, _) = configured().await;
+    let settings=ok(&app,"chat.settings.get",json!({}),Some(&p),None).await;
+    ok(&app,"chat.settings.set",json!({"routeId":settings["routeId"],"contextTokens":8192}),Some(&p),settings["routeRevision"].as_i64()).await;
+    for i in 0..2 {
+        let text=format!("few-large-{i} {}","x".repeat(1800));
+        let accepted=app.dispatch(send_request(&p,&c,&text)).await.response;
+        assert_eq!(accepted["ok"],true,"{accepted}");
+        assert_eq!(finished(&app,&p,&accepted["result"]["operation"]["id"]).await["status"],"succeeded");
+        c=ok(&app,"conversation.get",json!({"conversationId":c["id"]}),Some(&p),None).await;
+    }
+    let segments=ok(&app,"conversation.segments.list",json!({"conversationId":c["id"],"page":{"limit":20}}),Some(&p),None).await;
+    assert!(segments["items"].as_array().unwrap().iter().any(|s|s["state"]=="sealed"),"{segments}");
+    let accepted=app.dispatch(send_request(&p,&c,"next turn after bounded checkpoint")).await.response;
+    assert_eq!(accepted["ok"],true,"{accepted}");
+    assert_eq!(finished(&app,&p,&accepted["result"]["operation"]["id"]).await["status"],"succeeded");
+    assert_eq!(history(&app,&p,&c).await.as_array().unwrap().len(),6);
+}
+
+#[tokio::test]
+async fn checkpoint_excerpt_prioritizes_newest_turns_over_older_very_long_turn() {
+    let (app, _, _, _s, p, mut c, _) = configured().await;
+    let settings=ok(&app,"chat.settings.get",json!({}),Some(&p),None).await;
+    ok(&app,"chat.settings.set",json!({"routeId":settings["routeId"],"contextTokens":16384}),Some(&p),settings["routeRevision"].as_i64()).await;
+    let first=app.dispatch(send_request(&p,&c,&format!("OLDER-HUGE {}","z".repeat(4300)))).await.response;
+    assert_eq!(first["ok"],true,"{first}");
+    assert_eq!(finished(&app,&p,&first["result"]["operation"]["id"]).await["status"],"succeeded");
+    c=ok(&app,"conversation.get",json!({"conversationId":c["id"]}),Some(&p),None).await;
+    for marker in ["NEWEST-USER-A","NEWEST-USER-B"] {
+        let accepted=app.dispatch(send_request(&p,&c,marker)).await.response;
+        assert_eq!(accepted["ok"],true,"{accepted}");
+        assert_eq!(finished(&app,&p,&accepted["result"]["operation"]["id"]).await["status"],"succeeded");
+        c=ok(&app,"conversation.get",json!({"conversationId":c["id"]}),Some(&p),None).await;
+    }
+    let segments=ok(&app,"conversation.segments.list",json!({"conversationId":c["id"],"page":{"limit":20}}),Some(&p),None).await;
+    let sealed=segments["items"].as_array().unwrap().iter().rev().find(|s|s["state"]=="sealed").expect("sealed segment");
+    let summary=sealed["summary"].as_str().unwrap();
+    assert!(summary.contains("NEWEST-USER-B"),"{summary}");
+    assert!(summary.contains("Checkpoint excerpt omitted")||summary.contains("older content within this newest turn omitted"),"{summary}");
+}

@@ -1,0 +1,30 @@
+{
+  "contractVersion": 1,
+  "note": "4B-5 supplement. Frozen P2 ContextSegment DTO is reused byte-identically.",
+  "commands": {
+    "conversation.segments.list": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "conversationId": {"type":"string","minLength":1,"maxLength":128},
+          "page": {"$ref":"#/$defs/PageRequest"}
+        },
+        "required": ["conversationId","page"],
+        "additionalProperties": false
+      },
+      "result": {
+        "type":"object",
+        "properties": {
+          "items":{"type":"array","items":{"$ref":"#/$defs/ContextSegment"}},
+          "nextCursor":{"type":"string"}
+        },
+        "required":["items","nextCursor"],
+        "additionalProperties":false
+      },
+      "mutates": false,
+      "requiresExpectedRevision": false,
+      "async": false
+    }
+  }
+}

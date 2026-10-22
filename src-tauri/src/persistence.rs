@@ -14,7 +14,7 @@ impl Store {
         let pool=SqlitePoolOptions::new().max_connections(1).connect_with(options).await?;
         let mut tx=pool.begin().await?;
         let version:i64=sqlx::query_scalar("PRAGMA user_version").fetch_one(&mut *tx).await?;
-        if version>11{return Err(sqlx::Error::Protocol("unsupported storage version".into()))}
+        if version>12{return Err(sqlx::Error::Protocol("unsupported storage version".into()))}
         sqlx::query("CREATE TABLE IF NOT EXISTS preferences (id INTEGER PRIMARY KEY CHECK(id=1), revision INTEGER NOT NULL, body TEXT NOT NULL)").execute(&mut *tx).await?;
         sqlx::query("CREATE TABLE IF NOT EXISTS receipts (request_id TEXT PRIMARY KEY, fingerprint TEXT NOT NULL, response TEXT NOT NULL)").execute(&mut *tx).await?;
         sqlx::query("CREATE TABLE IF NOT EXISTS app_events (sequence INTEGER PRIMARY KEY AUTOINCREMENT, body TEXT NOT NULL)").execute(&mut *tx).await?;
@@ -88,11 +88,14 @@ impl Store {
 
         }
         sqlx::query("UPDATE memory_proposals SET revision=revision+1,body=json_set(body,'$.revision',revision+1,'$.state','failed') WHERE json_extract(body,'$.state')='pending' AND EXISTS(SELECT 1 FROM operations o WHERE o.profile_id=memory_proposals.profile_id AND o.id=memory_proposals.operation_id AND json_extract(o.body,'$.status') IN ('failed','cancelled','interrupted'))").execute(&mut *tx).await?;
+        // v12: long conversations retain immutable raw messages while Context Segments bound model context.
+        sqlx::query("CREATE TABLE IF NOT EXISTS context_segments (profile_id TEXT NOT NULL, id TEXT NOT NULL, conversation_id TEXT NOT NULL, first_message_sequence INTEGER NOT NULL CHECK(first_message_sequence>0), last_message_sequence INTEGER NOT NULL CHECK(last_message_sequence>=first_message_sequence), state TEXT NOT NULL CHECK(state IN ('open','sealed')), revision INTEGER NOT NULL, body TEXT NOT NULL, PRIMARY KEY(profile_id,id), UNIQUE(profile_id,conversation_id,first_message_sequence), FOREIGN KEY(profile_id,conversation_id) REFERENCES conversations(profile_id,id))").execute(&mut *tx).await?;
+        sqlx::query("CREATE UNIQUE INDEX IF NOT EXISTS one_open_context_segment ON context_segments(profile_id,conversation_id) WHERE state='open'").execute(&mut *tx).await?;
         // Imported originals survive a crash; interrupted extraction is never presented as ready.
         sqlx::query("UPDATE import_materials SET revision=revision+1,body=json_set(body,'$.revision',revision+1,'$.parseState','failed','$.errorCode','OPERATION_INTERRUPTED') WHERE json_extract(body,'$.parseState')='pending'").execute(&mut *tx).await?;
         sqlx::query("UPDATE profile_import_materials SET revision=revision+1,body=json_set(body,'$.revision',revision+1,'$.parseState','failed','$.errorCode','OPERATION_INTERRUPTED') WHERE json_extract(body,'$.parseState')='pending'").execute(&mut *tx).await?;
         sqlx::query("UPDATE attachments SET revision=revision+1,body=json_set(body,'$.revision',revision+1,'$.state','failed') WHERE EXISTS(SELECT 1 FROM import_materials m WHERE m.profile_id=attachments.profile_id AND m.id=attachments.material_id AND json_extract(m.body,'$.errorCode')='OPERATION_INTERRUPTED') AND json_extract(body,'$.state')='staged'").execute(&mut *tx).await?;
-        sqlx::query("PRAGMA user_version=11").execute(&mut *tx).await?;tx.commit().await?;
+        sqlx::query("PRAGMA user_version=12").execute(&mut *tx).await?;tx.commit().await?;
         let store=Self{pool};store.preferences().await?;Ok(store)
     }
     pub async fn preferences(&self)->Result<Value,sqlx::Error>{

@@ -1,4 +1,19 @@
+# Aktualizacja 1.34 — 22.10.2026 — 4B-5 audit fix S1/S2
+
+- 4B-4 N1/N2: zaakceptowane statycznie, pełne CI nadal wymagane.
+- 4B-5 pozostaje OPEN do re-audytu.
+- S1: segmentacja nie ma już minimalnego progu 6 wiadomości; seal zależy od faktycznego obciążenia. Dodano wejście legacy dla rozmów bez segmentów.
+- S2: checkpoint preferuje najnowsze tury i jawnie oznacza pominięcie starszego materiału.
+- 4B-6 pozostaje zablokowane do PASS CLOSED 4B-5.
+
 # AI Home 4B Plan etapów pracy
+
+**Aktualizacja 1.33 — 4B-5 przebazowane na zaakceptowaną integralnie korektę 4B-4 oraz N1/N2.** Ponowny audyt 4B-4 potwierdził integralność poprawki, 193/193 P2 i 26/26 boundaries, ale wskazał dwa dalsze przypadki UI. N1: po Accepted profilowego importu unieważnienie preflight musi nastąpić niezależnie od powodzenia późniejszego `listProfile()`. N2: monitoring `memory.record.update` dla kandydatury i niepewny requestId nie mogą ginąć po zmianie rozmowy/remount. W tej paczce N1 wywołuje zmianę profile context przed odświeżeniami, a terminalny polling również powiadamia przed readbackiem. N2 przenosi operację i pending request do profile-scoped stanu nadrzędnego `Conversations`, zachowując status, STOP i requestId przy remount komponentu rozmowy. Dodano regresje obu przypadków. Formalnie 4B-4 pozostaje otwarte do CI/audytu tych poprawek.
+
+Na tej bazie wykonano 4B-5 Conversation Segmentation + Continuity: SQLite v11→v12, `context_segments`, zachowanie surowych wiadomości, bounded rekurencyjny checkpoint, spójny wybór segmentu dla preflight/send, snapshot w `chat_runs`, konflikt przy zmianie segmentu oraz suplement `conversation.segments.list`. Nie rozpoczęto 4B-6. Document 4B v1.4 i errata 1.32 pozostają nadrzędne dla Standard/Experimental.
+
+Wersja treści 1.33 — 22 października 2026. Nazwa pliku pozostaje bez zmian, aby zachować jeden aktualizowany plan.
+
 
 **Aktualizacja 1.32 — korekta audytu 4B-4 kroku 4 i errata v1.4.** Audyt 4B-4 kroku 4 zwrócił DO KOREKTY mimo integralnego SOURCE. Poprawiono U1–U4: profile-scoped zmiany knowledge/guidance/importu unieważniają preflight czatu; kandydatura pamięci jest śledzona przez operation.get do stanu końcowego i ma STOP; wybór celu pamięci stronicuje wszystkie rekordy zamiast pierwszych 100; nowe profile.import.latest odtwarza działający profilowy import po zmianie rozmowy/remount i zachowuje dostęp do STOP. Dodano regresje UI oraz natywną regresję latest. Edward zgłosił zielony wcześniejszy CI, lecz korekta wymaga własnego nowego CI i ponownego audytu przed PASS CLOSED 4B-4.
 

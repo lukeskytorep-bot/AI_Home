@@ -295,6 +295,9 @@
           },
           "guidance": {
             "type": "object"
+          },
+          "segmentContext": {
+            "type": "object"
           }
         },
         "required": [
@@ -306,7 +309,8 @@
           "attachmentCount",
           "modelRouteId",
           "measurement",
-          "workingContext"
+          "workingContext",
+          "segmentContext"
         ],
         "additionalProperties": false
       },
