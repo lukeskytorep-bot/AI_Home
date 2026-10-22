@@ -47,8 +47,12 @@ const COMMANDS: &[&str] = &[
     "conversation.list",
     "conversation.messages.list",
     "conversation.segments.list",
+    "conversation.archive",
+    "conversation.archived.list",
     "profile.create",
     "profile.list",
+    "profile.archive",
+    "profile.archived.list",
     "profile.snapshot",
     "connection.create",
     "connection.update",
@@ -264,6 +268,7 @@ impl Connections {
         let history:Value=serde_json::from_str(include_str!("../../contracts/memory-history.ipc.json")).unwrap();
         let profile_imports:Value=serde_json::from_str(include_str!("../../contracts/profile-imports.ipc.json")).unwrap();
         let segments:Value=serde_json::from_str(include_str!("../../contracts/conversation-segments.ipc.json")).unwrap();
+        let lifecycle:Value=serde_json::from_str(include_str!("../../contracts/lifecycle.ipc.json")).unwrap();
         let contract = catalog["commands"]
             .get(command)
             .or_else(|| extra["commands"].get(command))
@@ -278,6 +283,7 @@ impl Connections {
             .or_else(|| layers["commands"].get(command))
             .or_else(|| profile_imports["commands"].get(command))
             .or_else(|| segments["commands"].get(command))
+            .or_else(|| lifecycle["commands"].get(command))
             .ok_or("UNKNOWN_COMMAND")?;
         if !schema::dto("CommandEnvelope", r)
             || !schema::valid(&r["payload"], &contract["payload"])
@@ -387,7 +393,8 @@ impl Connections {
                 event(&mut tx, v["id"].as_str().unwrap(), "profile.changed", &v).await?;
                 v
             }
-            "profile.list" => {
+            "profile.list" | "profile.archived.list" => {
+                let archived = command == "profile.archived.list";
                 let limit = payload["limit"].as_i64().unwrap();
                 let mut after = String::new();
                 if let Some(cursor) = payload["cursor"].as_str() {
@@ -398,13 +405,15 @@ impl Connections {
                             .await
                             .map_err(|_| "STORAGE_ERROR")?
                             .ok_or("VALIDATION_ERROR")?;
-                    if row.get::<i64, _>("page_limit") != limit {
-                        return Err("VALIDATION_ERROR");
-                    }
-                    after = row.get("after_id");
+                    if row.get::<i64, _>("page_limit") != limit { return Err("VALIDATION_ERROR"); }
+                    let candidate:String=row.get("after_id");
+                    let bound=format!("{:x}",Sha256::digest(format!("profile-list:v2:{archived}:{limit}:{candidate}").as_bytes()));
+                    if bound != cursor { return Err("VALIDATION_ERROR"); }
+                    after = candidate;
                 }
-                let rows = sqlx::query("SELECT id FROM profiles WHERE id>? ORDER BY id LIMIT ?")
+                let rows = sqlx::query("SELECT id FROM profiles WHERE id>? AND (json_extract(body,'$.status')='archived')=? ORDER BY id LIMIT ?")
                     .bind(after)
+                    .bind(archived)
                     .bind(limit + 1)
                     .fetch_all(&mut *tx)
                     .await
@@ -417,7 +426,7 @@ impl Connections {
                     let last = items.last().unwrap()["id"].as_str().unwrap();
                     let token = format!(
                         "{:x}",
-                        Sha256::digest(format!("profile-list:v1:{limit}:{last}").as_bytes())
+                        Sha256::digest(format!("profile-list:v2:{archived}:{limit}:{last}").as_bytes())
                     );
                     sqlx::query("INSERT OR IGNORE INTO profile_cursors(id,after_id,page_limit) VALUES(?,?,?)").bind(&token).bind(last).bind(limit).execute(&mut *tx).await.map_err(|_|"STORAGE_ERROR")?;
                     token
@@ -428,10 +437,36 @@ impl Connections {
             }
             _ => {
                 let mut p = get(&mut tx, "profiles", "", profile).await?;
-                if p["status"] == "archived" {
-                    return Err("POLICY_DENIED");
-                }
-                match command {
+                if command == "profile.archive" {
+                    if revision(&p)? != expected { return Err("REVISION_CONFLICT"); }
+                    let archived = payload["archived"].as_bool().ok_or("VALIDATION_ERROR")?;
+                    if archived != (p["status"] == "archived") {
+                        let old = revision(&p)?;
+                        bump(&mut p)?;
+                        if archived {
+                            p["status"] = json!("archived");
+                            let rows=sqlx::query("SELECT id FROM operations WHERE profile_id=? AND json_extract(body,'$.status') IN ('queued','running')").bind(profile).fetch_all(&mut *tx).await.map_err(|_|"STORAGE_ERROR")?;
+                            for row in rows {
+                                let opid:String=row.get("id");
+                                let mut op=get(&mut tx,"operations",profile,&opid).await?;
+                                let opold=revision(&op)?;
+                                terminal(&mut op,"cancelled","OPERATION_CANCELLED")?;
+                                if matches!(op["kind"].as_str(),Some("memory_update"|"restore")){memory_runtime::close_pending(&mut tx,profile,&opid).await?;}
+                                if op["kind"]=="import"{import_runtime::cancel_pending(&mut tx,profile,&opid,"OPERATION_CANCELLED").await?;}
+                                put(&mut tx,"operations",&op,false,opold).await?;
+                                event(&mut tx,profile,"operation.changed",&op).await?;
+                                cancel_after.push(opid);
+                            }
+                        } else {
+                            p["status"] = json!(if routes_ready(&mut tx,&p).await?{"ready"}else{"draft"});
+                        }
+                        put(&mut tx,"profiles",&p,false,old).await?;
+                        event(&mut tx,profile,"profile.changed",&p).await?;
+                    }
+                    p
+                } else {
+                    if p["status"] == "archived" { return Err("POLICY_DENIED"); }
+                    match command {
                     "memory.versions.list"|"memory.version.get" => memory_history::read(&mut tx,command,profile,payload).await?,
                     "memory.outdated.set" => memory_history::outdated(&mut tx,profile,payload,expected).await?,
                     "memory.version.annotations.get"|"memory.records.list"|"memory.record.create"|"memory.record.get"|"memory.record.metadata.set"|"memory.layers.settings.get"|"memory.layers.settings.set" => memory_layers::dispatch(&mut tx,command,&mut p,payload,expected).await?,
@@ -463,8 +498,26 @@ impl Connections {
                     }
                     "conversation.segments.list" => conversation_segments::list(&mut tx,profile,payload).await?,
                     c if c.starts_with("conversation.") => {
-                        conversation_storage::execute(&mut tx, c, profile, payload, expected)
-                            .await?
+                        if c == "conversation.archive" && payload["archived"].as_bool() == Some(true) {
+                            let conversation_id = payload["conversationId"].as_str().ok_or("VALIDATION_ERROR")?;
+                            let current = get(&mut tx,"conversations",profile,conversation_id).await?;
+                            if revision(&current)? != expected { return Err("REVISION_CONFLICT"); }
+                            let rows = sqlx::query("SELECT DISTINCT o.id FROM operations o WHERE o.profile_id=? AND json_extract(o.body,'$.status') IN ('queued','running') AND (EXISTS(SELECT 1 FROM chat_runs r WHERE r.profile_id=o.profile_id AND r.operation_id=o.id AND r.conversation_id=?) OR EXISTS(SELECT 1 FROM import_materials m WHERE m.profile_id=o.profile_id AND m.operation_id=o.id AND m.conversation_id=?))")
+                                .bind(profile).bind(conversation_id).bind(conversation_id).fetch_all(&mut *tx).await.map_err(|_|"STORAGE_ERROR")?;
+                            for row in rows {
+                                let opid:String=row.get("id");
+                                let mut op=get(&mut tx,"operations",profile,&opid).await?;
+                                if matches!(op["status"].as_str(),Some("queued")|Some("running")) {
+                                    let old=revision(&op)?;
+                                    terminal(&mut op,"cancelled","OPERATION_CANCELLED")?;
+                                    if op["kind"]=="import" { import_runtime::cancel_pending(&mut tx,profile,&opid,"OPERATION_CANCELLED").await?; }
+                                    put(&mut tx,"operations",&op,false,old).await?;
+                                    event(&mut tx,profile,"operation.changed",&op).await?;
+                                    cancel_after.push(opid);
+                                }
+                            }
+                        }
+                        conversation_storage::execute(&mut tx, c, profile, payload, expected).await?
                     }
                     "profile.snapshot" => {
                         let mut all = vec![];
@@ -776,6 +829,7 @@ impl Connections {
                         op
                     }
                     _ => return Err("UNKNOWN_COMMAND"),
+                    }
                 }
             }
         };

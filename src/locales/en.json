@@ -361,6 +361,19 @@
     "files.enableKnowledge": "Enable profile knowledge",
     "files.disableGuidance": "Disable guidance",
     "files.enableGuidance": "Enable guidance",
-    "files.refreshProfile": "Refresh profile imports"
+    "files.refreshProfile": "Refresh profile imports",
+    "lifecycle.archiveConversation": "Archive conversation",
+    "lifecycle.restoreConversation": "Restore conversation",
+    "lifecycle.archiveProfile": "Archive profile",
+    "lifecycle.restoreProfile": "Restore profile",
+    "lifecycle.archive": "Archive",
+    "lifecycle.active": "Active",
+    "lifecycle.archivedProfiles": "Archived profiles",
+    "lifecycle.archivedConversations": "Archived conversations",
+    "lifecycle.none": "Nothing archived",
+    "lifecycle.profileArchived": "Profile archived",
+    "lifecycle.profileRestored": "Profile restored",
+    "lifecycle.conversationArchived": "Conversation archived",
+    "lifecycle.conversationRestored": "Conversation restored"
   }
 }

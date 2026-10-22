@@ -1,3 +1,13 @@
+# Aktualizacja 1.39 — 22.10.2026 — 4B-6 krok 1 Archive lifecycle
+
+- Edward upoważnił przejście do kolejnego etapu po linii 4B-5 FIX 5. Ta aktualizacja nie dopisuje nieistniejącego numeru audytu/CI jako formalnego PASS CLOSED 4B-5; zapisuje jedynie decyzję wykonawczą o rozpoczęciu 4B-6.
+- Wykonano pierwszy, ograniczony krok 4B-6: odwracalna archiwizacja profilu i rozmowy. Frozen `profile.archive` został uruchomiony bez zmiany P2; własny suplement dodaje listy archiwum i `conversation.archive`.
+- Zwykłe `profile.list` i `conversation.list` pokazują tylko aktywne rekordy. Archiwum ma osobne, stronicowane odczyty. Cursor profilu jest związany z widokiem active/archived.
+- Archiwizacja profilu kończy queued/running operations jako cancelled i po commit sygnalizuje cancellation transportom. Restore ponownie wylicza `ready/draft` z realnych tras.
+- Archiwizacja rozmowy nie kasuje draftu, wiadomości, segmentów ani materiałów. Profile scope i CAS pozostają wymagane.
+- Dodano globalny panel Archive EN/PL i regresje Rust/UI. Brak migracji SQLite; storage version pozostaje 12.
+- Backup/restore, portable export oraz permanent deletion NIE należą do kroku 1 i pozostają w dalszych krokach 4B-6.
+
 # Aktualizacja 1.38 — 22.10.2026 — 4B-5 audit fix 5 po pełnym Cargo CI
 
 - 4B-5 pozostaje OPEN do zielonego pełnego CI i re-audytu.
@@ -404,3 +414,9 @@ Po poprawkach F1/F2 pełny build TypeScript ujawnił trzy błędy kompilacji w w
 ## Aktualizacja 1.37 — 22 października 2026 — 4B-5 AUDIT FIX 4 (CI compile/test fix)
 
 Po statycznym PASS F1/F2 oraz FIX 3 pełne CI wykryło dwa pozostałe problemy techniczne. Rust nie kompilował, ponieważ `profile_imports.rs` odwoływał się do prywatnego helpera `validate()` spoza modułu; zastąpiono to walidacją `schema::dto("Operation", ...)` z kontrolą profilu, zgodną z istniejącym stylem persistence. Dwa testy `imports-ui` nie znajdowały kontrolek, ponieważ używały dawnych etykiet aria zamiast aktualnych tekstów locale; fixture zostały zsynchronizowane z bieżącym EN UI. Nie zmieniono F1/F2, SQLite, kontraktów ani semantyki kandydatur pamięci. Status evidence wskazuje FIX 4 / plan 1.37. Formalne zamknięcie 4B-5 wymaga zielonego cargo + frontend test/typecheck/build oraz ponownego odbioru.
+
+## Aktualizacja 1.40 — 22 października 2026 — 4B-6 krok 1 AUDIT FIX
+
+Korekta zamyka uwagi A1–A3 z niezależnego audytu Archive Lifecycle. Archiwizacja rozmowy atomowo kończy queued/running operacje czatu oraz conversation-scoped importy powiązane z tą rozmową, a po commit wysyła cancellation do aktywnego wykonania. Dodatkowo każdy nowy chat run zapisuje rewizję rozmowy po Accepted; finalny commit wymaga identycznej rewizji, więc cykl archive→restore unieważnia każdą starą odpowiedź nawet wtedy, gdy fizyczny HTTP zdąży wrócić po przywróceniu.
+
+Lifecycle UI używa teraz trwałego, profile/application-scoped rejestru pending write w nadrzędnym Conversations. Niepewny wynik zachowuje niezmienne command/scope/payload/expectedRevision/requestId i ponowienie rozlicza ten sam requestId. Odpowiedź Accepted jest przekazywana rodzicowi przed fallible readback listy archiwum, więc błąd odświeżenia nie cofa widoku ani nowej rewizji. Nie zmieniono SQLite v12, frozen P2 ani zakresu 4B-6 krok 2.

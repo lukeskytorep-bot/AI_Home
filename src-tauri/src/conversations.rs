@@ -60,6 +60,16 @@ pub(super) async fn execute(
             changed(tx, profile).await?;
             Ok(v)
         }
+        "conversation.archive" => {
+            let mut v=get(tx,"conversations",profile,payload["conversationId"].as_str().unwrap()).await?;
+            if revision(&v)? != expected { return Err("REVISION_CONFLICT"); }
+            let archived=payload["archived"].as_bool().ok_or("VALIDATION_ERROR")?;
+            if archived != (v["status"] == "archived") {
+                let old=revision(&v)?; bump(&mut v)?; v["status"]=json!(if archived{"archived"}else{"open"});
+                put(tx,"conversations",&v,false,old).await?; changed(tx,profile).await?;
+            }
+            Ok(v)
+        }
         "conversation.get" => {
             get(
                 tx,
@@ -69,8 +79,9 @@ pub(super) async fn execute(
             )
             .await
         }
-        "conversation.list" | "conversation.messages.list" => {
+        "conversation.list" | "conversation.archived.list" | "conversation.messages.list" => {
             let messages = command == "conversation.messages.list";
+            let archived = command == "conversation.archived.list";
             let conversation = if messages {
                 payload["conversationId"].as_str().unwrap()
             } else {
@@ -97,7 +108,7 @@ pub(super) async fn execute(
             let rows=if messages {
     sqlx::query("SELECT id,sequence FROM messages WHERE profile_id=? AND conversation_id=? AND sequence>? ORDER BY sequence LIMIT ?").bind(profile).bind(conversation).bind(after.parse::<i64>().map_err(|_|"STORAGE_ERROR")?).bind(limit+1).fetch_all(&mut **tx).await
    }else{
-    sqlx::query("SELECT id FROM conversations WHERE profile_id=? AND id>? ORDER BY id LIMIT ?").bind(profile).bind(&after).bind(limit+1).fetch_all(&mut **tx).await
+    sqlx::query("SELECT id FROM conversations WHERE profile_id=? AND id>? AND (json_extract(body,'$.status')='archived')=? ORDER BY id LIMIT ?").bind(profile).bind(&after).bind(archived).bind(limit+1).fetch_all(&mut **tx).await
    }.map_err(|_|"STORAGE_ERROR")?;
             let mut items = vec![];
             let mut last = String::new();

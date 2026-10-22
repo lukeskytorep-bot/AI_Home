@@ -1,0 +1,100 @@
+{
+  "contractVersion": 1,
+  "commands": {
+    "profile.archived.list": {
+      "scope": "app",
+      "payload": {
+        "$ref": "#/$defs/PageRequest"
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/Profile"
+            }
+          },
+          "nextCursor": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "additionalProperties": false
+      },
+      "mutates": false,
+      "requiresExpectedRevision": false,
+      "async": false,
+      "firstImplementationStage": "4B-6"
+    },
+    "conversation.archive": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "archived": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "conversationId",
+          "archived"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "$ref": "#/$defs/Conversation"
+      },
+      "mutates": true,
+      "requiresExpectedRevision": true,
+      "async": false,
+      "firstImplementationStage": "4B-6"
+    },
+    "conversation.archived.list": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "$ref": "#/$defs/PageRequest"
+          }
+        },
+        "required": [
+          "page"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/Conversation"
+            }
+          },
+          "nextCursor": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "additionalProperties": false
+      },
+      "mutates": false,
+      "requiresExpectedRevision": false,
+      "async": false,
+      "firstImplementationStage": "4B-6"
+    }
+  }
+}

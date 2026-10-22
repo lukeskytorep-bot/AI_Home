@@ -1064,3 +1064,26 @@ async fn legacy_preflight_is_read_only_and_send_persists_same_bounded_continuity
     assert!(summary.contains("LATEST_ASSISTANT_MARKER"),"{summary}");
     assert_eq!(history(&app,&p,&c).await.as_array().unwrap().len(),6,"raw legacy messages plus new user/assistant must remain stored");
 }
+
+#[tokio::test]
+async fn archive_restore_cancels_inflight_chat_and_rejects_late_commit() {
+    let (app, _, _, s, p, c, _) = configured().await;
+    s.hold.store(true, Ordering::SeqCst);
+    let sent = app.dispatch(send_request(&p, &c, "Before archive")).await.response;
+    assert_eq!(sent["ok"], true, "{sent}");
+    received(&s).await;
+    let current = ok(&app,"conversation.get",json!({"conversationId":c["id"]}),Some(&p),None).await;
+    let archived = ok(&app,"conversation.archive",json!({"conversationId":c["id"],"archived":true}),Some(&p),current["revision"].as_i64()).await;
+    let restored = ok(&app,"conversation.archive",json!({"conversationId":c["id"],"archived":false}),Some(&p),archived["revision"].as_i64()).await;
+    s.release.add_permits(1);
+    tokio::time::sleep(std::time::Duration::from_millis(30)).await;
+    let op = finished(&app,&p,&sent["result"]["operation"]["id"]).await;
+    assert_eq!(op["status"],"cancelled");
+    let messages=history(&app,&p,&c).await;
+    assert_eq!(messages.as_array().unwrap().len(),1,"late assistant must not commit");
+    s.hold.store(false, Ordering::SeqCst);
+    let fresh=request("chat.send",json!({"conversationId":c["id"],"content":"After restore","language":"pl","attachmentIds":[]}),Some(&p),restored["revision"].as_i64());
+    let accepted=app.dispatch(fresh).await.response;
+    assert_eq!(accepted["ok"],true,"{accepted}");
+    assert_eq!(finished(&app,&p,&accepted["result"]["operation"]["id"]).await["status"],"succeeded");
+}

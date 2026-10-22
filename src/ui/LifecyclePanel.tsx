@@ -1,0 +1,35 @@
+import {useEffect,useRef,useState} from 'react';
+import {Client} from '../ipc/client';
+import {t} from '../domain/packs';
+
+type Profile={id:string;revision:number;displayName:string;status:string};
+type Conversation={id:string;profileId:string;revision:number;title:string;language:string;draftText:string;status:string};
+type Page<T>={items:T[];nextCursor:string};
+export interface LifecycleWrite{command:string;payload:Record<string,unknown>;scope?:string;expectedRevision?:number;requestId:string}
+
+export function LifecyclePanel({client,locale,profile,conversation,writes,onProfileArchived,onProfileRestored,onConversationArchived,onConversationRestored}:{client:Client;locale:string;profile?:Profile;conversation?:Conversation;writes:Map<string,LifecycleWrite>;onProfileArchived:(p:Profile)=>void;onProfileRestored:(p:Profile)=>void;onConversationArchived:(c:Conversation)=>void;onConversationRestored:(c:Conversation)=>void}){
+ const text=(k:string)=>t(locale,k);const [archivedProfiles,setArchivedProfiles]=useState<Profile[]>([]);const [archivedConversations,setArchivedConversations]=useState<Conversation[]>([]);const [busy,setBusy]=useState(false);const [error,setError]=useState('');
+ const alive=useRef(true);const profileLoadGeneration=useRef(0);const conversationLoadGeneration=useRef(0);const currentProfile=useRef(profile?.id);currentProfile.current=profile?.id;
+ async function read<T>(command:string,payload:Record<string,unknown>,scope?:string){const r=await client.call<T>(command,payload,undefined,scope);if(!r.ok)throw Error(r.error.messageKey);return r.result;}
+ async function write<T>(key:string,command:string,payload:Record<string,unknown>,scope?:string,expectedRevision?:number){
+  if(!writes.has(key))writes.set(key,{command,payload,scope,expectedRevision,requestId:crypto.randomUUID()});
+  const pending=writes.get(key)!;
+  const r=await client.call<T>(pending.command,pending.payload,pending.expectedRevision,pending.scope,pending.requestId);
+  if(writes.get(key)===pending)writes.delete(key);
+  if(!r.ok)throw Error(r.error.messageKey);return r.result;
+ }
+ async function loadProfiles(){const generation=++profileLoadGeneration.current;let cursor:string|undefined;const all:Profile[]=[];do{const p=await read<Page<Profile>>('profile.archived.list',{limit:100,...(cursor?{cursor}:{})});all.push(...p.items);cursor=p.nextCursor||undefined;}while(cursor);if(alive.current&&generation===profileLoadGeneration.current)setArchivedProfiles(all);}
+ async function loadConversations(scope=profile?.id){const generation=++conversationLoadGeneration.current;if(!scope){if(alive.current)setArchivedConversations([]);return;}let cursor:string|undefined;const all:Conversation[]=[];do{const p=await read<Page<Conversation>>('conversation.archived.list',{page:{limit:100,...(cursor?{cursor}:{})}},scope);all.push(...p.items.filter(c=>c.profileId===scope));cursor=p.nextCursor||undefined;}while(cursor);if(alive.current&&generation===conversationLoadGeneration.current&&currentProfile.current===scope)setArchivedConversations(all);}
+ useEffect(()=>{alive.current=true;void loadProfiles().catch(()=>{if(alive.current)setError('error.transport')});return()=>{alive.current=false;++profileLoadGeneration.current;++conversationLoadGeneration.current;};},[client]);
+ useEffect(()=>{++conversationLoadGeneration.current;setArchivedConversations([]);const scope=profile?.id;if(scope)void loadConversations(scope).catch(()=>{if(alive.current&&currentProfile.current===scope)setError('error.transport')});},[client,profile?.id]);
+ async function act(fn:()=>Promise<void>){if(busy)return;setBusy(true);setError('');try{await fn();}catch(e){if(alive.current)setError(e instanceof Error&&e.message.startsWith('error.')?e.message:'error.transport');}finally{if(alive.current)setBusy(false);}}
+ return <section className="lifecycle" aria-label={text('lifecycle.archive')}>
+  <h3>{text('lifecycle.archive')}</h3>
+  {profile&&<button disabled={busy} onClick={()=>void act(async()=>{const archived=await write<Profile>(`profile:${profile.id}:archive`,'profile.archive',{archived:true},profile.id,profile.revision);onProfileArchived(archived);await loadProfiles();})}>{text('lifecycle.archiveProfile')}</button>}
+  {conversation&&<button disabled={busy} onClick={()=>void act(async()=>{const archived=await write<Conversation>(`conversation:${conversation.profileId}:${conversation.id}:archive`,'conversation.archive',{conversationId:conversation.id,archived:true},conversation.profileId,conversation.revision);onConversationArchived(archived);await loadConversations(conversation.profileId);})}>{text('lifecycle.archiveConversation')}</button>}
+  <h4>{text('lifecycle.archivedProfiles')}</h4>
+  {archivedProfiles.length===0?<p className="muted">{text('lifecycle.none')}</p>:<ul>{archivedProfiles.map(p=><li key={p.id}>{p.displayName} <button disabled={busy} onClick={()=>void act(async()=>{const restored=await write<Profile>(`profile:${p.id}:restore`,'profile.archive',{archived:false},p.id,p.revision);onProfileRestored(restored);await loadProfiles();})}>{text('lifecycle.restoreProfile')}</button></li>)}</ul>}
+  {profile&&<><h4>{text('lifecycle.archivedConversations')}</h4>{archivedConversations.length===0?<p className="muted">{text('lifecycle.none')}</p>:<ul>{archivedConversations.filter(c=>c.profileId===profile.id).map(c=><li key={c.id}>{c.title||c.id} <button disabled={busy} onClick={()=>void act(async()=>{const restored=await write<Conversation>(`conversation:${c.profileId}:${c.id}:restore`,'conversation.archive',{conversationId:c.id,archived:false},c.profileId,c.revision);onConversationRestored(restored);await loadConversations(c.profileId);})}>{text('lifecycle.restoreConversation')}</button></li>)}</ul>}</>}
+  {error&&<p role="alert" className="error">{text(error)}</p>}
+ </section>;
+}
