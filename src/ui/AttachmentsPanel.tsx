@@ -27,7 +27,7 @@ export function AttachmentsPanel({client,locale,profileId,conversationId,selecte
  useEffect(()=>{if(!candidateRunning||!candidateOperation)return;let live=true;const timer=setTimeout(()=>{void call<ImportOperation>('operation.get',{operationId:candidateOperation.id}).then(async op=>{if(!live||!alive.current)return;try{if(!['queued','running'].includes(op.status))await Promise.all([listProfile(),loadMemoryRecords()]);}finally{if(live&&alive.current)setCandidateOperation(op);}}).catch(e=>{if(live&&alive.current)setError(safe(e));});},400);return()=>{live=false;clearTimeout(timer);};},[candidateOperation,client,profileId]);
  async function importSelection(){if(!selection?.selectionToken)return;const payload={selectionToken:selection.selectionToken,purpose,...(purpose==='conversation'?{conversationId}:{}),author:{kind:author,label,assertedBy:'importer',verified:false}};
   if(!pending.current||JSON.stringify(pending.current.payload)!==JSON.stringify(payload))pending.current={id:crypto.randomUUID(),payload};
-  const attempt=pending.current;const r=await client.call<{operation:Operation}>('material.import',attempt.payload,undefined,profileId,attempt.id);
+  const attempt=pending.current;const r=await client.call<{operation:ImportOperation}>('material.import',attempt.payload,undefined,profileId,attempt.id);
   if(!r.ok){pending.current=undefined;throw Error(r.error.messageKey);}pending.current=undefined;if(!alive.current)return;setSelection(s=>s?{...s,selectionToken:''}:s);setOperation(r.result.operation);if(purpose!=='conversation')onProfileContextChange?.();await Promise.all([list(),listProfile()]);
  }
  function clearImage(){if(imageObjectUrl.current)URL.revokeObjectURL(imageObjectUrl.current);imageObjectUrl.current='';setImageUrl('');}

@@ -1,7 +1,12 @@
-4B-5 REBASE AUDIT FIX S1/S2 local verification
+4B-5 REBASE AUDIT FIX 2 local verification
 PASS check_contracts.py 193/193
 PASS scripts/verify-boundaries.mjs 26/26
-ADDED regression: large few-turn segment seals before six messages
-ADDED regression: newest-turn-priority checkpoint excerpt
+IMPLEMENTED F1: chat.preflight plans legacy checkpoint without storage mutation; chat.send persists atomically
+IMPLEMENTED F2: final 6144-char summary allocates newest turns before Working Context and prior checkpoint
+ADDED regression: legacy preflight leaves context_segments/messages/conversations/chat_runs unchanged
+ADDED regression: actual send persists legacy checkpoint and preserves newest user/assistant markers
+ADDED unit regression: full prior + Working Context cannot evict newest markers from final summary
+FIXED frontend test fixtures from supplied CI: chat.preflight segmentContext and complete MemoryRecord/metadata mocks
+NOT RUN npm tests: offline cache missing xmlchars-2.2.0.tgz
 NOT RUN cargo/rustc in this environment
-NOT RUN full CI / Windows / Tauri / WebView / OS vault / live API
+NOT RUN Windows / Tauri / WebView / OS vault / live API

@@ -163,6 +163,7 @@ async fn prepare(
     p: &Value,
     payload: &Value,
     expected: i64,
+    persist_legacy_checkpoint: bool,
 ) -> Result<Prepared, Failure> {
     let profile = p["id"].as_str().unwrap();
     let conversation = payload["conversationId"].as_str().unwrap();
@@ -215,12 +216,11 @@ async fn prepare(
     }
     let scope = scope(&route, &c)?;
     let working_context = working_context::capture(tx,profile).await?;
-    // v12 lazy migration safety: a large legacy conversation may have no active segment yet.
-    // Create a bounded checkpoint before raw-history budgeting can dead-end the next turn.
-    super::conversation_segments::seal_legacy_if_needed(
-        tx,profile,&conv,&working_context,context as u64,output,policy["inputReserveTokens"].as_u64().unwrap()
+    // v12 lazy migration safety. Preflight plans a legacy checkpoint in memory only;
+    // chat.send persists it atomically before accepting the new user turn.
+    let segment_context=super::conversation_segments::prepare_context(
+        tx,profile,&conv,&working_context,context as u64,output,policy["inputReserveTokens"].as_u64().unwrap(),persist_legacy_checkpoint
     ).await?;
-    let segment_context=super::conversation_segments::capture(tx,profile,conversation,&conv).await?;
     let raw_start=super::conversation_segments::raw_start(&segment_context);
     let total:i64=sqlx::query_scalar("SELECT COALESCE(SUM(length(CAST(body AS BLOB))),0) FROM messages WHERE profile_id=? AND conversation_id=? AND sequence>=?").bind(profile).bind(conversation).bind(raw_start).fetch_one(&mut **tx).await.map_err(|_|"STORAGE_ERROR")?;
     if total > 8 * 1024 * 1024 {
@@ -344,11 +344,11 @@ struct Prepared {
     segment_context:Value,
 }
 pub(super) async fn preflight(tx:&mut Tx<'_>, p:&Value, payload:&Value, expected:i64)->Result<Value,Failure>{
-    let prepared=prepare(tx,p,payload,expected).await?;
+    let prepared=prepare(tx,p,payload,expected,false).await?;
     Ok(json!({"retrieval":prepared.retrieval,"knowledge":prepared.profile_context["knowledge"],"guidance":prepared.profile_context["guidance"],"segmentContext":super::conversation_segments::descriptor(&prepared.segment_context),"workingContext":working_context::descriptor(&prepared.working_context,&prepared.route),"modelRouteId":prepared.route["id"],"modelRouteRevision":prepared.route["revision"],"estimatedInputTokens":prepared.estimate,"outputTokens":prepared.output,"inputReserveTokens":p["contextBudget"]["inputReserveTokens"],"contextTokens":prepared.context,"measurement":if prepared.image_count>0{"utf8_bytes_and_image_reserve_estimate"}else{"utf8_bytes_estimate"},"attachmentCount":prepared.documents.len(),"imageCount":prepared.image_count,"imageInputTokens":prepared.image_input,"visionPolicyRevision":prepared.vision_policy["policyRevision"]}))
 }
 pub(super) async fn accept(tx:&mut Tx<'_>, p:&Value, payload:&Value, expected:i64)->Result<(Job,Value),Failure>{
-    let Prepared {mut conv,route,connection:c,request,estimate,context,output,documents,vision_policy,image_count,working_context,retrieval,profile_context,segment_context:_pre_segment,..}=prepare(tx,p,payload,expected).await?;
+    let Prepared {mut conv,route,connection:c,request,estimate,context,output,documents,vision_policy,image_count,working_context,retrieval,profile_context,segment_context:_pre_segment,..}=prepare(tx,p,payload,expected,true).await?;
     let profile=p["id"].as_str().unwrap();
     let conversation=payload["conversationId"].as_str().unwrap();
     let calls=p["contextBudget"]["maxPhysicalCalls"].as_u64().unwrap();

@@ -101,24 +101,28 @@ fn bounded_tail_chars(value:&str,limit:usize)->String{
     let chars:Vec<char>=value.chars().collect();
     chars[chars.len().saturating_sub(limit)..].iter().collect()
 }
-fn bounded_excerpt(messages:&[Value])->String{
-    const LIMIT:usize=4096;
+fn char_len(value:&str)->usize{value.chars().count()}
+
+fn bounded_excerpt(messages:&[Value],limit:usize)->String{
+    if limit==0{return String::new()}
     const NOTICE_RESERVE:usize=128;
-    let candidates:Vec<(usize,String)>=messages.iter().enumerate().rev().take(4).map(|(idx,m)|(idx,format!("{}: {}",m["role"].as_str().unwrap_or("unknown"),m["content"].as_str().unwrap_or("")))).collect();
+    let candidates:Vec<(usize,String)>=messages.iter().enumerate().rev().take(4)
+        .map(|(idx,m)|(idx,format!("{}: {}",m["role"].as_str().unwrap_or("unknown"),m["content"].as_str().unwrap_or(""))))
+        .collect();
     let mut kept:Vec<(usize,String)>=Vec::new();
     let mut used=0usize;
     let mut omitted=messages.len().saturating_sub(4);
-    let content_limit=LIMIT.saturating_sub(NOTICE_RESERVE);
+    let content_limit=limit.saturating_sub(NOTICE_RESERVE.min(limit));
     for (idx,line) in candidates {
         let separator=if kept.is_empty(){0}else{1};
         if used+separator>=content_limit {omitted+=1;continue}
         let remaining=content_limit-used-separator;
-        let count=line.chars().count();
+        let count=char_len(&line);
         if count<=remaining {
             used+=separator+count;kept.push((idx,line));
         } else if kept.is_empty() {
             let marker="[older content within this newest turn omitted] ";
-            let marker_len=marker.chars().count();
+            let marker_len=char_len(marker);
             let tail=bounded_tail_chars(&line,remaining.saturating_sub(marker_len));
             kept.push((idx,format!("{marker}{tail}")));
             used=content_limit;
@@ -127,35 +131,102 @@ fn bounded_excerpt(messages:&[Value])->String{
     kept.sort_by_key(|(idx,_)|*idx);
     let text=kept.into_iter().map(|(_,line)|line).collect::<Vec<_>>().join("\n");
     if omitted>0 {
-        bounded_chars(&format!("[Checkpoint excerpt omitted {omitted} older turn(s) to preserve the newest available content.]\n{text}"),LIMIT)
-    } else {bounded_chars(&text,LIMIT)}
+        let notice=format!("[Checkpoint excerpt omitted {omitted} older turn(s) to preserve the newest available content.]\n");
+        if char_len(&notice)>=limit{return bounded_chars(&notice,limit)}
+        format!("{notice}{}",bounded_chars(&text,limit-char_len(&notice)))
+    } else {bounded_chars(&text,limit)}
 }
 
+fn append_section(parts:&mut Vec<String>,heading:&str,content:&str,budget:&mut usize){
+    if content.is_empty()||*budget==0{return}
+    let separator=if parts.is_empty(){0}else{2};
+    let header=format!("{heading}\n");
+    let fixed=separator+char_len(&header);
+    if fixed>=*budget{return}
+    let allowed=*budget-fixed;
+    let body=bounded_chars(content,allowed);
+    if body.is_empty(){return}
+    *budget-=fixed+char_len(&body);
+    parts.push(format!("{header}{body}"));
+}
 
-pub(super) async fn seal_legacy_if_needed(tx:&mut Tx<'_>,profile:&str,conv:&Value,working:&Value,context_tokens:u64,output_tokens:u64,input_reserve:u64)->Result<bool,Failure>{
-    if conv.get("activeSegmentId").and_then(Value::as_str).is_some(){return Ok(false)}
+fn build_summary(prior:&str,working:&str,messages:&[Value],legacy:bool)->String{
+    const LIMIT:usize=6144;
+    let intro=if legacy{Some("Legacy conversation checkpoint created during v12 continuity migration; raw transcript remains stored locally.")}else{None};
+    let mut budget=LIMIT;
+    let mut recent=String::new();
+    let recent_heading="Recent turns preserved for continuity:";
+    let wc_heading="Bounded excerpt of approved Working Context at checkpoint:";
+    let prior_heading="Bounded previous checkpoint continuity:";
+    let sep_cost=2usize;
+    let intro_cost=intro.map(char_len).unwrap_or(0);
+    if intro_cost>0{budget=budget.saturating_sub(intro_cost)}
+
+    // Allocate the final summary budget by importance, not by final display order.
+    // Newest turns receive the largest share and are selected newest-first.
+    let recent_fixed=char_len(recent_heading)+1+if intro.is_some(){sep_cost}else{0};
+    let recent_budget=budget.saturating_sub(recent_fixed).min(3584);
+    if recent_budget>0{recent=bounded_excerpt(messages,recent_budget)}
+    if !recent.is_empty(){budget=budget.saturating_sub(recent_fixed+char_len(&recent));}
+
+    let wc_fixed=char_len(wc_heading)+1+if intro.is_some()||!recent.is_empty(){sep_cost}else{0};
+    let wc_budget=budget.saturating_sub(wc_fixed).min(1792);
+    let wc=bounded_chars(working,wc_budget);
+    if !wc.is_empty(){budget=budget.saturating_sub(wc_fixed+char_len(&wc));}
+
+    let prior_fixed=char_len(prior_heading)+1+if intro.is_some()||!recent.is_empty()||!wc.is_empty(){sep_cost}else{0};
+    let prior_budget=budget.saturating_sub(prior_fixed);
+    let prior=if char_len(prior)>prior_budget{
+        let marker="[older checkpoint content omitted] ";
+        format!("{marker}{}",bounded_tail_chars(prior,prior_budget.saturating_sub(char_len(marker))))
+    }else{prior.to_owned()};
+
+    // Display older continuity first, but allocations above guarantee that final assembly cannot
+    // truncate the newest-turn section afterwards.
+    let mut parts=Vec::new();
+    if let Some(text)=intro{parts.push(text.to_owned());}
+    let mut remaining=LIMIT.saturating_sub(parts.iter().map(|p|char_len(p)).sum::<usize>()+parts.len().saturating_sub(1)*2);
+    append_section(&mut parts,prior_heading,&prior,&mut remaining);
+    append_section(&mut parts,wc_heading,&wc,&mut remaining);
+    append_section(&mut parts,recent_heading,&recent,&mut remaining);
+    if parts.is_empty(){"No approved Working Context or recent text was available at this checkpoint.".to_owned()}else{parts.join("\n\n")}
+}
+
+async fn legacy_checkpoint_candidate(tx:&mut Tx<'_>,profile:&str,conv:&Value,working:&Value,context_tokens:u64,output_tokens:u64,input_reserve:u64,segment_id:&str)->Result<Option<Value>,Failure>{
+    if conv.get("activeSegmentId").and_then(Value::as_str).is_some(){return Ok(None)}
     let conversation=conv["id"].as_str().ok_or("STORAGE_ERROR")?;
-    if latest_sealed(tx,profile,conversation).await?.is_some(){return Ok(false)}
-    let last:i64=sqlx::query_scalar("SELECT COALESCE(MAX(sequence),0) FROM messages WHERE profile_id=? AND conversation_id=?").bind(profile).bind(conversation).fetch_one(&mut **tx).await.map_err(|_|"STORAGE_ERROR")?;
-    if last<1{return Ok(false)}
+    if latest_sealed(tx,profile,conversation).await?.is_some(){return Ok(None)}
+    let last:i64=sqlx::query_scalar("SELECT COALESCE(MAX(sequence),0) FROM messages WHERE profile_id=? AND conversation_id=?")
+        .bind(profile).bind(conversation).fetch_one(&mut **tx).await.map_err(|_|"STORAGE_ERROR")?;
+    if last<1{return Ok(None)}
     let messages=range_messages(tx,profile,conversation,1,last).await?;
     let raw:usize=messages.iter().map(|m|m["content"].as_str().unwrap_or("").len()+64).sum();
     let available=context_tokens.saturating_sub(output_tokens).saturating_sub(input_reserve).max(3072);
     let threshold=(available/3).max(2048) as usize;
-    if raw<threshold{return Ok(false)}
+    if raw<threshold{return Ok(None)}
     let wc=working.get("version").filter(|v|!v.is_null()).and_then(|v|v["content"].as_str()).unwrap_or("");
-    let wc_excerpt=bounded_chars(wc,2048);
-    let excerpt=bounded_chars(&bounded_excerpt(&messages),2048);
-    let mut parts=Vec::new();
-    parts.push("Legacy conversation checkpoint created during v12 continuity migration; raw transcript remains stored locally.".to_owned());
-    if !wc_excerpt.is_empty(){parts.push(format!("Bounded excerpt of approved Working Context at checkpoint:\n{wc_excerpt}"));}
-    if !excerpt.is_empty(){parts.push(format!("Newest turns preserved for continuity:\n{excerpt}"));}
-    let summary=bounded_chars(&parts.join("\n\n"),6144);
+    let summary=build_summary("",wc,&messages,true);
     let mut refs=Vec::new();let start=messages.len().saturating_sub(4);for m in &messages[start..]{refs.push(message_ref(profile,m)?)}
     if let Some(v)=working.get("version").filter(|v|!v.is_null()){refs.push(json!({"profileId":profile,"kind":"memory_version","entityId":v["id"],"contentSha256":v["contentSha256"]}));}
-    let s=json!({"schemaVersion":1,"id":id(),"profileId":profile,"revision":1,"createdAt":now(),"conversationId":conversation,"firstMessageSequence":1,"lastMessageSequence":last,"summary":summary,"summaryLanguage":conv["language"],"messageDigest":digest(&messages)?,"summarySources":refs,"state":"sealed"});
+    let s=json!({"schemaVersion":1,"id":segment_id,"profileId":profile,"revision":1,"createdAt":now(),"conversationId":conversation,"firstMessageSequence":1,"lastMessageSequence":last,"summary":summary,"summaryLanguage":conv["language"],"messageDigest":digest(&messages)?,"summarySources":refs,"state":"sealed"});
     if !schema::dto("ContextSegment",&s){return Err("STORAGE_ERROR")}
-    put(tx,"context_segments",&s,true,0).await?;Ok(true)
+    Ok(Some(s))
+}
+
+/// Build the segment snapshot used by chat preparation. Preflight uses a hypothetical
+/// legacy checkpoint only in memory; send persists the same kind of checkpoint atomically.
+pub(super) async fn prepare_context(tx:&mut Tx<'_>,profile:&str,conv:&Value,working:&Value,context_tokens:u64,output_tokens:u64,input_reserve:u64,persist_legacy:bool)->Result<Value,Failure>{
+    let conversation=conv["id"].as_str().ok_or("STORAGE_ERROR")?;
+    let current=capture(tx,profile,conversation,conv).await?;
+    if !current["previous"].is_null()||!current["active"].is_null(){return Ok(current)}
+    let sid=if persist_legacy{id()}else{"00000000-0000-4000-8000-000000000000".to_owned()};
+    let Some(candidate)=legacy_checkpoint_candidate(tx,profile,conv,working,context_tokens,output_tokens,input_reserve,&sid).await? else{return Ok(current)};
+    if persist_legacy{
+        put(tx,"context_segments",&candidate,true,0).await?;
+        capture(tx,profile,conversation,conv).await
+    }else{
+        Ok(json!({"schemaVersion":1,"previous":candidate,"active":Value::Null}))
+    }
 }
 
 pub(super) async fn maybe_seal(tx:&mut Tx<'_>,profile:&str,conv:&mut Value,working:&Value,context_tokens:u64,output_tokens:u64,input_reserve:u64)->Result<bool,Failure>{
@@ -168,16 +239,9 @@ pub(super) async fn maybe_seal(tx:&mut Tx<'_>,profile:&str,conv:&mut Value,worki
     let threshold=(available/3).max(2048) as usize;
     if raw<threshold{return Ok(false)}
     let wc=working.get("version").filter(|v|!v.is_null()).and_then(|v|v["content"].as_str()).unwrap_or("");
-    let wc_excerpt=bounded_chars(wc,2048);
-    let excerpt=bounded_chars(&bounded_excerpt(&messages),2048);
     let previous=latest_sealed(tx,profile,conv["id"].as_str().unwrap()).await?;
-    let prior=previous.as_ref().filter(|v|v["id"]!=s["id"]).and_then(|v|v["summary"].as_str()).map(|v|bounded_chars(v,2048)).unwrap_or_default();
-    let mut parts=Vec::new();
-    if !prior.is_empty(){parts.push(format!("Bounded previous checkpoint continuity:\n{prior}"));}
-    if !wc_excerpt.is_empty(){parts.push(format!("Bounded excerpt of approved Working Context at checkpoint:\n{wc_excerpt}"));}
-    if !excerpt.is_empty(){parts.push(format!("Recent turns preserved for continuity:\n{excerpt}"));}
-    if parts.is_empty(){parts.push("No approved Working Context or recent text was available at this checkpoint.".to_owned());}
-    let summary=bounded_chars(&parts.join("\n\n"),6144);
+    let prior=previous.as_ref().filter(|v|v["id"]!=s["id"]).and_then(|v|v["summary"].as_str()).unwrap_or("");
+    let summary=build_summary(prior,wc,&messages,false);
     let mut refs=Vec::new();let start=messages.len().saturating_sub(4);for m in &messages[start..]{refs.push(message_ref(profile,m)?)}
     if let Some(v)=working.get("version").filter(|v|!v.is_null()){
         refs.push(json!({"profileId":profile,"kind":"memory_version","entityId":v["id"],"contentSha256":v["contentSha256"]}));
@@ -200,4 +264,31 @@ pub(super) async fn list(tx:&mut Tx<'_>,profile:&str,payload:&Value)->Result<Val
     let mut items=Vec::new();let mut last=after;
     for row in rows.iter().take(limit as usize){let v=segment(tx,profile,row.get("id")).await?;last=row.get("last_message_sequence");items.push(v)}
     Ok(json!({"items":items,"nextCursor":if rows.len()>limit as usize{last.to_string()}else{String::new()}}))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    fn msg(role:&str,content:String)->Value{json!({"role":role,"content":content})}
+
+    #[test]
+    fn final_summary_preserves_newest_turns_after_all_budgets(){
+        let messages=vec![
+            msg("human",format!("OLDER {}","o".repeat(1800))),
+            msg("assistant",format!("MIDDLE {}","m".repeat(700))),
+            msg("human",format!("LATEST_USER_MARKER {}","u".repeat(400))),
+            msg("assistant",format!("LATEST_ASSISTANT_MARKER {}","a".repeat(250))),
+        ];
+        let prior=format!("PRIOR {}","p".repeat(5000));
+        let working=format!("WORKING {}","w".repeat(5000));
+        for legacy in [false,true]{
+            let summary=build_summary(&prior,&working,&messages,legacy);
+            assert!(summary.chars().count()<=6144,"{}",summary.chars().count());
+            assert!(summary.contains("LATEST_USER_MARKER"),"{summary}");
+            assert!(summary.contains("LATEST_ASSISTANT_MARKER"),"{summary}");
+            assert!(summary.contains("Working Context")||summary.contains("Recent turns"),"{summary}");
+        }
+    }
 }

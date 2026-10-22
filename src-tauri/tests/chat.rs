@@ -1013,3 +1013,49 @@ async fn checkpoint_excerpt_prioritizes_newest_turns_over_older_very_long_turn()
     assert!(summary.contains("NEWEST-USER-B"),"{summary}");
     assert!(summary.contains("Checkpoint excerpt omitted")||summary.contains("older content within this newest turn omitted"),"{summary}");
 }
+
+#[tokio::test]
+async fn legacy_preflight_is_read_only_and_send_persists_same_bounded_continuity() {
+    let (app, pool, _, _s, p, c, _) = configured().await;
+    let settings=ok(&app,"chat.settings.get",json!({}),Some(&p),None).await;
+    ok(&app,"chat.settings.set",json!({"routeId":settings["routeId"],"contextTokens":8192}),Some(&p),settings["routeRevision"].as_i64()).await;
+    let created="2026-10-22T12:00:00.000Z";
+    let bodies=vec![
+        ("human",format!("OLDER {}","o".repeat(1800))),
+        ("assistant",format!("MIDDLE {}","m".repeat(700))),
+        ("human",format!("LATEST_USER_MARKER {}","u".repeat(400))),
+        ("assistant",format!("LATEST_ASSISTANT_MARKER {}","a".repeat(250))),
+    ];
+    for (idx,(role,content)) in bodies.into_iter().enumerate(){
+        let sequence=(idx+1) as i64;let mid=format!("legacy-{sequence}");
+        let message=json!({"schemaVersion":1,"id":mid,"profileId":p,"revision":1,"createdAt":created,"conversationId":c["id"],"sequence":sequence,"role":role,"content":content,"language":"en","status":"complete","sourceRefs":[]});
+        sqlx::query("INSERT INTO messages(profile_id,id,conversation_id,sequence,revision,body) VALUES(?,?,?,?,1,?)")
+            .bind(&p).bind(message["id"].as_str().unwrap()).bind(c["id"].as_str().unwrap()).bind(sequence).bind(message.to_string()).execute(&pool).await.unwrap();
+    }
+    let before_conv:(i64,String)=sqlx::query_as("SELECT revision,body FROM conversations WHERE profile_id=? AND id=?").bind(&p).bind(c["id"].as_str().unwrap()).fetch_one(&pool).await.unwrap();
+    let before_messages:Vec<(i64,String)>=sqlx::query_as("SELECT revision,body FROM messages WHERE profile_id=? AND conversation_id=? ORDER BY sequence").bind(&p).bind(c["id"].as_str().unwrap()).fetch_all(&pool).await.unwrap();
+    let before_segments:i64=sqlx::query_scalar("SELECT COUNT(*) FROM context_segments WHERE profile_id=? AND conversation_id=?").bind(&p).bind(c["id"].as_str().unwrap()).fetch_one(&pool).await.unwrap();
+    let before_runs:i64=sqlx::query_scalar("SELECT COUNT(*) FROM chat_runs WHERE profile_id=? AND conversation_id=?").bind(&p).bind(c["id"].as_str().unwrap()).fetch_one(&pool).await.unwrap();
+    assert_eq!(before_segments,0);
+
+    let preflight=ok(&app,"chat.preflight",json!({"conversationId":c["id"],"content":"preflight only","language":"en","attachmentIds":[]}),Some(&p),Some(c["revision"].as_i64().unwrap())).await;
+    assert!(preflight["segmentContext"]["previousSegment"].is_object(),"{preflight}");
+    let after_conv:(i64,String)=sqlx::query_as("SELECT revision,body FROM conversations WHERE profile_id=? AND id=?").bind(&p).bind(c["id"].as_str().unwrap()).fetch_one(&pool).await.unwrap();
+    let after_messages:Vec<(i64,String)>=sqlx::query_as("SELECT revision,body FROM messages WHERE profile_id=? AND conversation_id=? ORDER BY sequence").bind(&p).bind(c["id"].as_str().unwrap()).fetch_all(&pool).await.unwrap();
+    let after_segments:i64=sqlx::query_scalar("SELECT COUNT(*) FROM context_segments WHERE profile_id=? AND conversation_id=?").bind(&p).bind(c["id"].as_str().unwrap()).fetch_one(&pool).await.unwrap();
+    let after_runs:i64=sqlx::query_scalar("SELECT COUNT(*) FROM chat_runs WHERE profile_id=? AND conversation_id=?").bind(&p).bind(c["id"].as_str().unwrap()).fetch_one(&pool).await.unwrap();
+    assert_eq!(after_conv,before_conv);
+    assert_eq!(after_messages,before_messages);
+    assert_eq!(after_segments,before_segments);
+    assert_eq!(after_runs,before_runs);
+
+    let accepted=app.dispatch(send_request(&p,&c,"actual continuation")).await.response;
+    assert_eq!(accepted["ok"],true,"{accepted}");
+    assert_eq!(finished(&app,&p,&accepted["result"]["operation"]["id"]).await["status"],"succeeded");
+    let segments=ok(&app,"conversation.segments.list",json!({"conversationId":c["id"],"page":{"limit":20}}),Some(&p),None).await;
+    let sealed=segments["items"].as_array().unwrap().iter().find(|s|s["state"]=="sealed").expect("persisted legacy checkpoint");
+    let summary=sealed["summary"].as_str().unwrap();
+    assert!(summary.contains("LATEST_USER_MARKER"),"{summary}");
+    assert!(summary.contains("LATEST_ASSISTANT_MARKER"),"{summary}");
+    assert_eq!(history(&app,&p,&c).await.as_array().unwrap().len(),6,"raw legacy messages plus new user/assistant must remain stored");
+}

@@ -1,3 +1,13 @@
+# Aktualizacja 1.35 — 22.10.2026 — 4B-5 audit fix F1/F2 + frontend CI
+
+- 4B-4 N1/N2: pozostają analitycznie poprawione; pełne CI nadal jest warunkiem formalnego zamknięcia.
+- 4B-5 pozostaje OPEN do re-audytu i pełnego CI.
+- F1: `chat.preflight` jest ponownie ściśle read-only. Legacy checkpoint jest planowany hipotetycznie bez zapisu; trwały checkpoint powstaje wyłącznie w transakcji `chat.send`. Preflight i send używają tej samej logiki kosztu/wyboru kontekstu.
+- F2: finalny checkpoint summary ma jeden budżet i priorytet najnowsze tury → Working Context → wcześniejszy checkpoint. Usunięto późniejsze obcinanie początku, które mogło usuwać najnowsze wypowiedzi.
+- Dodano regresję read-only preflight na rozmowie legacy oraz testy finalnego summary z newest markers, pełnym prior i Working Context.
+- Przesłany pełny Vitest wykazał 180 PASS / 8 FAIL. Pięć FAIL chat-ui wynikało ze starego mocka `chat.preflight` bez `segmentContext`; trzy imports-ui z niepełnych mocków `MemoryRecord/metadata`. Fixture zostały doprowadzone do aktualnych frozen kontraktów.
+- 4B-6 pozostaje zablokowane do PASS CLOSED 4B-5.
+
 # Aktualizacja 1.34 — 22.10.2026 — 4B-5 audit fix S1/S2
 
 - 4B-4 N1/N2: zaakceptowane statycznie, pełne CI nadal wymagane.
@@ -376,3 +386,8 @@ Cztery cele importu mają odrębne znaczenie. `conversation` pozostaje załączn
 Wiedza jest dobierana leksykalnie bez embeddings i dzieli istniejący retrievalTargetTokens z pamięcią. Guidance używa osobnego guidanceTargetTokens i jest all-or-error. Oba rodzaje pozostają user data; dokument nie może przyznać sobie uprawnień ani instrukcyjnego priorytetu. Chat zapisuje dokładny snapshot i sprawdza go przed POST/commit. Historyczny odczyt używa przechwyconego zestawu i immutable blobów.
 
 SQLite v11 dodaje trzy tabele profile-scoped bez przepisywania wcześniejszych danych. Frozen P2 pozostaje byte-identical. W sandboxie 193/193 P2 i 26/26 boundaries PASS. Rust/frontend/build wymagają CI z pełnym toolchainem. Po ich zielonym wyniku i audycie 4B-4 może zostać zamknięte; dalej 4B-5.
+
+## Aktualizacja 1.36 — 22 października 2026 — 4B-5 AUDIT FIX 3 (TypeScript compile fix)
+
+Po poprawkach F1/F2 pełny build TypeScript ujawnił trzy błędy kompilacji w warstwie UI/testów. Zakres 1.36 nie zmienia funkcji runtime ani kontraktów. Naprawiono: użycie nieistniejącego typu `Operation` w `AttachmentsPanel` poprzez właściwy `ImportOperation`; inicjalizację `useRef<CandidatePending | undefined>(undefined)` w teście remount; oraz wynikający z tego błąd przypisania `CandidatePending | undefined`. 4B-5 pozostaje otwarte do czasu zielonego pełnego CI i ponownego audytu.
+
