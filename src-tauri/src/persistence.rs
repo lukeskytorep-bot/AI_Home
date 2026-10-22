@@ -1,16 +1,16 @@
 use serde_json::{json,Value};
 use sqlx::{sqlite::{SqliteConnectOptions,SqlitePoolOptions},Row,SqlitePool};
-use std::path::Path;
+use std::path::{Path,PathBuf};
 use crate::domain::schema;
-pub struct Store {pub pool:SqlitePool}
+pub struct Store {pub pool:SqlitePool,path:Option<PathBuf>}
 impl Store {
     pub async fn open(path:&Path)->Result<Self,sqlx::Error>{
         let options=SqliteConnectOptions::new().filename(path).create_if_missing(true)
             .journal_mode(sqlx::sqlite::SqliteJournalMode::Wal).busy_timeout(std::time::Duration::from_secs(5));
-        Self::connect(options).await
+        Self::connect(options,Some(path.to_path_buf())).await
     }
-    pub async fn memory()->Result<Self,sqlx::Error>{Self::connect(SqliteConnectOptions::new().in_memory(true)).await}
-    async fn connect(options:SqliteConnectOptions)->Result<Self,sqlx::Error>{
+    pub async fn memory()->Result<Self,sqlx::Error>{Self::connect(SqliteConnectOptions::new().in_memory(true),None).await}
+    async fn connect(options:SqliteConnectOptions,path:Option<PathBuf>)->Result<Self,sqlx::Error>{
         let pool=SqlitePoolOptions::new().max_connections(1).connect_with(options).await?;
         let mut tx=pool.begin().await?;
         let version:i64=sqlx::query_scalar("PRAGMA user_version").fetch_one(&mut *tx).await?;
@@ -96,8 +96,10 @@ impl Store {
         sqlx::query("UPDATE profile_import_materials SET revision=revision+1,body=json_set(body,'$.revision',revision+1,'$.parseState','failed','$.errorCode','OPERATION_INTERRUPTED') WHERE json_extract(body,'$.parseState')='pending'").execute(&mut *tx).await?;
         sqlx::query("UPDATE attachments SET revision=revision+1,body=json_set(body,'$.revision',revision+1,'$.state','failed') WHERE EXISTS(SELECT 1 FROM import_materials m WHERE m.profile_id=attachments.profile_id AND m.id=attachments.material_id AND json_extract(m.body,'$.errorCode')='OPERATION_INTERRUPTED') AND json_extract(body,'$.state')='staged'").execute(&mut *tx).await?;
         sqlx::query("PRAGMA user_version=12").execute(&mut *tx).await?;tx.commit().await?;
-        let store=Self{pool};store.preferences().await?;Ok(store)
+        let store=Self{pool,path};store.preferences().await?;Ok(store)
     }
+
+    pub fn database_path(&self)->Option<&Path>{self.path.as_deref()}
     pub async fn preferences(&self)->Result<Value,sqlx::Error>{
         let row=sqlx::query("SELECT revision,body FROM preferences WHERE id=1").fetch_one(&self.pool).await?;
         let p:Value=serde_json::from_str(row.get::<&str,_>("body")).map_err(|_|sqlx::Error::Protocol("invalid stored preferences".into()))?;

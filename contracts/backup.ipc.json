@@ -1,0 +1,341 @@
+{
+  "contractVersion": 1,
+  "commands": {
+    "backup.create": {
+      "scope": "app",
+      "payload": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "manifestVersion": {
+            "const": 1
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "safety"
+            ]
+          },
+          "requestId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "schemaVersion": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "integrity": {
+            "const": "ok"
+          },
+          "foreignKeyViolations": {
+            "const": 0
+          }
+        },
+        "required": [
+          "manifestVersion",
+          "id",
+          "kind",
+          "requestId",
+          "createdAt",
+          "schemaVersion",
+          "sizeBytes",
+          "sha256",
+          "integrity",
+          "foreignKeyViolations"
+        ],
+        "additionalProperties": false
+      },
+      "firstImplementationStage": "4B-6",
+      "mutates": true,
+      "requiresExpectedRevision": false,
+      "async": false
+    },
+    "backup.list": {
+      "scope": "app",
+      "payload": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "manifestVersion": {
+                  "const": 1
+                },
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 80
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "manual",
+                    "safety"
+                  ]
+                },
+                "requestId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "schemaVersion": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "sizeBytes": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "integrity": {
+                  "const": "ok"
+                },
+                "foreignKeyViolations": {
+                  "const": 0
+                }
+              },
+              "required": [
+                "manifestVersion",
+                "id",
+                "kind",
+                "requestId",
+                "createdAt",
+                "schemaVersion",
+                "sizeBytes",
+                "sha256",
+                "integrity",
+                "foreignKeyViolations"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "additionalProperties": false
+      },
+      "firstImplementationStage": "4B-6",
+      "mutates": false,
+      "requiresExpectedRevision": false,
+      "async": false
+    },
+    "backup.restore.preflight": {
+      "scope": "app",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "backupId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          }
+        },
+        "required": [
+          "backupId"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "backup": {
+            "type": "object",
+            "properties": {
+              "manifestVersion": {
+                "const": 1
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "manual",
+                  "safety"
+                ]
+              },
+              "requestId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "schemaVersion": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "sizeBytes": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "integrity": {
+                "const": "ok"
+              },
+              "foreignKeyViolations": {
+                "const": 0
+              }
+            },
+            "required": [
+              "manifestVersion",
+              "id",
+              "kind",
+              "requestId",
+              "createdAt",
+              "schemaVersion",
+              "sizeBytes",
+              "sha256",
+              "integrity",
+              "foreignKeyViolations"
+            ],
+            "additionalProperties": false
+          },
+          "source": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "currentSchemaVersion": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "safetyCopyRequired": {
+            "const": true
+          },
+          "restartRequired": {
+            "const": true
+          }
+        },
+        "required": [
+          "backup",
+          "source",
+          "currentSchemaVersion",
+          "safetyCopyRequired",
+          "restartRequired"
+        ],
+        "additionalProperties": false
+      },
+      "firstImplementationStage": "4B-6",
+      "mutates": false,
+      "requiresExpectedRevision": false,
+      "async": false
+    },
+    "backup.restore.request": {
+      "scope": "app",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "backupId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          }
+        },
+        "required": [
+          "backupId"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "accepted": {
+            "const": true
+          },
+          "backupId": {
+            "type": "string"
+          },
+          "safetyBackupId": {
+            "type": "string"
+          },
+          "restartRequired": {
+            "const": true
+          }
+        },
+        "required": [
+          "accepted",
+          "backupId",
+          "safetyBackupId",
+          "restartRequired"
+        ],
+        "additionalProperties": false
+      },
+      "firstImplementationStage": "4B-6",
+      "mutates": true,
+      "requiresExpectedRevision": false,
+      "async": false
+    },
+    "backup.restore.status": {
+      "scope": "app",
+      "payload": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "pending": {},
+          "last": {}
+        },
+        "required": [
+          "pending",
+          "last"
+        ],
+        "additionalProperties": false
+      },
+      "firstImplementationStage": "4B-6",
+      "mutates": false,
+      "requiresExpectedRevision": false,
+      "async": false
+    }
+  }
+}

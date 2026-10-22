@@ -374,6 +374,21 @@
     "lifecycle.profileArchived": "Profile archived",
     "lifecycle.profileRestored": "Profile restored",
     "lifecycle.conversationArchived": "Conversation archived",
-    "lifecycle.conversationRestored": "Conversation restored"
+    "lifecycle.conversationRestored": "Conversation restored",
+    "backup.title": "Backup and restore",
+    "backup.notice": "Backups are local SQLite snapshots. Restore is checked first, creates a safety copy, and is applied before the next app startup. API keys remain in the OS vault and are not copied from it.",
+    "backup.create": "Create backup",
+    "backup.choose": "Backup to restore",
+    "backup.none": "Choose a backup",
+    "backup.preflight": "Check restore",
+    "backup.preflightOk": "Restore preflight passed",
+    "backup.restore": "Prepare restore",
+    "backup.pendingRestart": "Restore prepared. Restart AI Home to apply it.",
+    "backup.lastApplied": "Last restore applied",
+    "backup.profiles": "profiles",
+    "backup.conversations": "conversations",
+    "error.backup_invalid": "The backup or restore state is invalid.",
+    "action.refresh": "Refresh",
+    "backup.lastFailed": "Last restore failed. The current database was kept."
   }
 }

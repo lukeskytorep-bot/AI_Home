@@ -32,11 +32,11 @@ impl Application {
         if !schema::dto("CommandEnvelope",r){return Ok(reject("VALIDATION_ERROR"))}
         if crate::connections::supports(r["command"].as_str().unwrap()){return Ok(Dispatch{response:self.connections.dispatch(r.clone()).await,event:None})}
         let command=r["command"].as_str().unwrap();
-        let catalog=embedded(include_str!("../../contracts/ipc.catalog.json"));let foundation=embedded(include_str!("../../contracts/foundation.ipc.json"));
-        let implemented=["app.preferences.get","app.preferences.set","app.pack.validate","kernel.status.get","app.events.list"];
+        let catalog=embedded(include_str!("../../contracts/ipc.catalog.json"));let foundation=embedded(include_str!("../../contracts/foundation.ipc.json"));let backup=embedded(include_str!("../../contracts/backup.ipc.json"));
+        let implemented=["app.preferences.get","app.preferences.set","app.pack.validate","kernel.status.get","app.events.list","backup.create","backup.list","backup.restore.preflight","backup.restore.request","backup.restore.status"];
         if !implemented.contains(&command){return Ok(reject("UNKNOWN_COMMAND"))}
         if r.get("profileId").is_some(){return Ok(reject("VALIDATION_ERROR"))}
-        let contract=catalog["commands"].get(command).or_else(||foundation["commands"].get(command)).unwrap();
+        let contract=catalog["commands"].get(command).or_else(||foundation["commands"].get(command)).or_else(||backup["commands"].get(command)).unwrap();
         if !schema::valid(&r["payload"],&contract["payload"]){return Ok(reject("VALIDATION_ERROR"))}
         let result=match command{
             "app.preferences.get"=>self.store.preferences().await?,
@@ -44,6 +44,7 @@ impl Application {
             "app.events.list"=>self.store.events(r["payload"]["afterSequence"].as_i64().unwrap(),r["payload"]["limit"].as_i64().unwrap()).await?,
             "app.pack.validate"=>match pack(r["payload"]["kind"].as_str().unwrap(),&r["payload"]["pack"]){Ok(w)=>json!({"valid":true,"warnings":w}),Err(code)=>return Ok(reject(code))},
             "app.preferences.set"=>return self.set(r).await,
+            "backup.create"|"backup.list"|"backup.restore.preflight"|"backup.restore.request"|"backup.restore.status"=>match crate::backup::dispatch(&self.store,r).await{Ok(v)=>v,Err(_)=>return Ok(reject("BACKUP_INVALID"))},
             _=>unreachable!()
         };
         Ok(Dispatch{response:success(r,result),event:None})

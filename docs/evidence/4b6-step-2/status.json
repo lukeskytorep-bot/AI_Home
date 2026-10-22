@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-22",
+  "stage": "4B-6 STEP 2 BACKUP RESTORE",
+  "planContentVersion": "1.44",
+  "status": "IMPLEMENTED_REQUIRES_CI_AND_AUDIT",
+  "baseSource": "AI_HOME_4B6_KROK_1_AUDIT_FIX_4_SOURCE.zip",
+  "storageVersion": 12,
+  "p2ReferenceChecks": 193,
+  "boundaryChecks": 28,
+  "scope": [
+    "SQLite VACUUM INTO backup",
+    "SHA-256 manifests",
+    "read-only restore preflight",
+    "safety backup before restore",
+    "pending restore applied before Store::open",
+    "fail-safe restore keeps current database",
+    "EN/PL BackupPanel",
+    "schema expectation sweep",
+    "contract/handler/router parity sweep"
+  ],
+  "outOfScope": [
+    "portable export",
+    "permanent deletion",
+    "4B-7",
+    "Windows/Tauri/WebView release smoke",
+    "live API and real OS vault"
+  ],
+  "migrationAdded": false,
+  "rust": "REQUIRES_CI",
+  "frontend": "REQUIRES_CI"
+}

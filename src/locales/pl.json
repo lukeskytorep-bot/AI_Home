@@ -374,6 +374,21 @@
     "lifecycle.profileArchived": "Profil zarchiwizowany",
     "lifecycle.profileRestored": "Profil przywrócony",
     "lifecycle.conversationArchived": "Rozmowa zarchiwizowana",
-    "lifecycle.conversationRestored": "Rozmowa przywrócona"
+    "lifecycle.conversationRestored": "Rozmowa przywrócona",
+    "backup.title": "Kopia zapasowa i przywracanie",
+    "backup.notice": "Kopie są lokalnymi snapshotami SQLite. Restore jest najpierw sprawdzany, tworzy kopię bezpieczeństwa i jest stosowany przed następnym startem aplikacji. Klucze API pozostają w magazynie systemowym i nie są z niego kopiowane.",
+    "backup.create": "Utwórz kopię",
+    "backup.choose": "Kopia do przywrócenia",
+    "backup.none": "Wybierz kopię",
+    "backup.preflight": "Sprawdź przywracanie",
+    "backup.preflightOk": "Preflight przywracania przeszedł",
+    "backup.restore": "Przygotuj przywracanie",
+    "backup.pendingRestart": "Przywracanie przygotowane. Uruchom AI Home ponownie, aby je zastosować.",
+    "backup.lastApplied": "Ostatnie przywrócenie zastosowano",
+    "backup.profiles": "profile",
+    "backup.conversations": "rozmowy",
+    "error.backup_invalid": "Kopia lub stan przywracania jest nieprawidłowy.",
+    "action.refresh": "Odśwież",
+    "backup.lastFailed": "Ostatnie przywracanie nie powiodło się. Bieżąca baza została zachowana."
   }
 }

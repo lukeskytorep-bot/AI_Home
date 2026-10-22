@@ -1,3 +1,14 @@
+# Aktualizacja 1.44 — 22.10.2026 — 4B-6 krok 2 Backup + Restore
+
+- Edward potwierdził zielony GitHub Actions po 4B-6 kroku 1 AUDIT FIX 4 i upoważnił przejście dalej. Ten zapis nie zastępuje osobnego audytu desktopowego.
+- Krok 2 dodaje lokalne backupy SQLite przez `VACUUM INTO`, manifesty SHA-256 i read-only preflight restore z kontrolą `user_version`, `integrity_check` i `foreign_key_check`.
+- Restore jest dwufazowy: Accepted tworzy safety backup bieżącej bazy i zapisuje sidecar pending-restore; fizyczna podmiana następuje wyłącznie przed otwarciem SQLite przy kolejnym starcie aplikacji. Nie nadpisujemy otwartego pliku SQLite/WAL.
+- Nieudany pending restore zachowuje bieżącą bazę, zapisuje failure status i nie blokuje startu aplikacji. Po udanym restore Store otwiera przywróconą bazę i stosuje zwykłe migracje do aktualnej wersji 12.
+- `backup.create` i `backup.restore.request` zachowują requestId przy niejednoznacznym wyniku. Rejestr backupów i pending restore nie ujawniają ścieżek systemowych ani sekretów. Klucze API pozostają w OS vault.
+- Dodano panel EN/PL oraz testy backup → zmiana → restore, safety copy, read-only preflight, corrupt backup i fail-safe startup. SQLite schema aplikacji pozostaje 12; krok nie dodaje migracji.
+- Portable export i permanent deletion pozostają poza krokiem 2. Następny krok 4B-6 będzie dotyczył eksportu bez sekretów, dopiero po CI/audycie kroku 2.
+- Stałe bramki handoffu: schema expectation sweep oraz contract/handler/router parity.
+
 # Aktualizacja 1.39 — 22.10.2026 — 4B-6 krok 1 Archive lifecycle
 
 - Edward upoważnił przejście do kolejnego etapu po linii 4B-5 FIX 5. Ta aktualizacja nie dopisuje nieistniejącego numeru audytu/CI jako formalnego PASS CLOSED 4B-5; zapisuje jedynie decyzję wykonawczą o rozpoczęciu 4B-6.

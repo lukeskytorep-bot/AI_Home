@@ -1,0 +1,5 @@
+4B-6 STEP 2
+Local source checks only. Full Rust/frontend CI required.
+Schema expectation sweep: PASS, no target user_version == 11 assertions.
+Contract/handler/router parity: PASS, 44/44 supplementary commands represented in native router/application.
+SQLite schema remains 12; no migration added.
