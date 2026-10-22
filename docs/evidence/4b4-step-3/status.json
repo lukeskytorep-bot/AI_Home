@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-22",
+  "stage": "4B-4 step 3",
+  "planContentVersion": "1.30",
+  "status": "LOCAL_PASS_REQUIRES_CI_AND_AUDIT",
+  "previousStepUserGreen": true,
+  "ciRunIdProvided": false,
+  "auditorNewVerdictProvided": false,
+  "rust": {
+    "passed": 316,
+    "failed": 0,
+    "binaries": [
+      81,
+      31,
+      19,
+      24,
+      10,
+      8,
+      19,
+      33,
+      14,
+      25,
+      22,
+      30
+    ],
+    "command": "cargo test --manifest-path src-tauri/Cargo.toml --no-default-features --all-targets --locked --offline"
+  },
+  "frontend": {
+    "passed": 181,
+    "failed": 0,
+    "files": 12
+  },
+  "build": "PASS",
+  "boundaries": 26,
+  "p2ReferenceChecks": 193,
+  "storageVersion": 10,
+  "node": "24.19.0",
+  "npm": "11.9.0",
+  "rustc": "1.99.1",
+  "npmInstall": "npm ci --ignore-scripts; lockfile unchanged",
+  "notRun": [
+    "Windows",
+    "desktop feature/Tauri/WebView",
+    "system OS vault",
+    "live provider API"
+  ],
+  "next": "4B-4 step 4: remaining import purposes",
+  "noDeletions": true,
+  "noReleaseOrWorkflowChanges": true
+}

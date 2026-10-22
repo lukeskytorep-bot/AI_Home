@@ -14,4 +14,6 @@ check(JSON.parse(fs.readFileSync('contracts/defaults.json')).appPreferences.loca
 const memoryProtocol=fs.readFileSync("src-tauri/src/memory/mod.rs","utf8");
 check(!/\b(?:sqlx|reqwest|tauri|tokio)\b/.test(memoryProtocol),"memory protocol contains runtime infrastructure");
 
+const retrievalProtocol=fs.readFileSync("src-tauri/src/retrieval.rs","utf8");
+check(!/\b(?:sqlx|reqwest|tauri|tokio)\b/.test(retrievalProtocol),"retriever contains runtime infrastructure");
 console.log(`${checks} boundary checks PASS`);

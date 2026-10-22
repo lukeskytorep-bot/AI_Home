@@ -1,3 +1,27 @@
+# 4B-4 krok 3 — warstwy i wyszukiwanie, 22.10.2026
+
+Krok 2 ma potwierdzenie zielonego wyniku Edwarda, bez danych przebiegu i nowego tekstu audytu. Krok 3 wykonano lokalnie; do nowego CI/audytu.
+
+- [x] Pięć pozostałych rodzajów, wiele scoped rekordów i puste tworzenie bez fikcyjnego approval.
+- [x] Propozycja/Primary, niezależne limity, realny MODIFY, dwie próby i STOP; poprzednia wersja zachowana po błędzie.
+- [x] ID/daty programu, źródła i dokładne metadane kontaktów, powód i poprzednia wersja korekty.
+- [x] Ludzkie adnotacje i Intent DTO ze statusem/trigger/importance/expiry; bez autonomicznego wykonania.
+- [x] Historia, porównanie, wersjonowane adnotacje, outdated i restore przez Primary dla wszystkich rodzajów.
+- [x] Czysty MemoryRetriever; dokładne słowa Unicode, deterministyczny ranking, tylko aktywne approval i otwarte niewygasłe intencje.
+- [x] Całe wpisy w odrębnym budżecie, jawne pominięcia, brak ukrytego skracania lub promocji workRule do system authority.
+- [x] Wspólne prepare preflight/send, pełny kontekst, snapshot przed POST/commit, trwały historyczny odczyt z unknown dla starszych żądań.
+- [x] SQLite v9→v10 addytywnie; restart, izolacja, receipts/CAS, rollback i zachowanie wcześniejszych danych.
+- [x] UI EN/PL, niepewne żądania/remount/spóźnione Accepted bez dublowania operacji, domyślne EN.
+- [x] 316 Rust /181 UI /build /26 granice /193 P2 PASS.
+- [x] Frozen P2/foundation, zależności/lockfile, provider/vault, CI/uprawnienia bez zmian, brak usunięć.
+- [ ] Nowe CI i audyt kroku 3; całe 4B-4 pozostaje otwarte.
+- [ ] Krok 4: pozostałe przeznaczenia importu z autorstwem/importerem i wskazówkami.
+- [ ] Wcześniejsze odbiory realnego API/systemowego vault/Windows/Tauri/WebView.
+
+---
+
+## Historyczne kryteria wcześniejszych przekazań
+
 # 4B-4 krok 2 — restore przez Primary, 21.10.2026
 
 Poprzedni krok ma potwierdzenie zielonego wyniku Edwarda. Nowy krok wykonano lokalnie, do CI/audytu.

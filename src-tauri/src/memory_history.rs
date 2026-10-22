@@ -34,7 +34,6 @@ pub(super) async fn approved(tx:&mut Tx<'_>,profile:&str,record:&Value,version_i
 }
 async fn working_record(tx:&mut Tx<'_>,profile:&str,payload:&Value)->Result<Value,Failure>{
     let r=get(tx,"memory_records",profile,payload["recordId"].as_str().ok_or("VALIDATION_ERROR")?).await?;
-    if r["kind"]!="working" {return Err("POLICY_DENIED");}
     Ok(r)
 }
 pub(super) async fn read(tx:&mut Tx<'_>,command:&str,profile:&str,payload:&Value)->Result<Value,Failure>{

@@ -1,0 +1,105 @@
+   Compiling ai-home v0.0.1 (/workspace/scratch/8e3755d5c581/layered_memory/work/AI_Home/src-tauri)
+warning: multiple fields are never read
+  --> src/providers/mod.rs:49:20
+   |
+48 | pub struct ProviderChatResponse {
+   |            -------------------- fields in this struct
+49 |     content:String,reasoning_content:Option<String>,reasoning_details:Option<Vec<Value>>,reasoning_source:Option<String>,
+   |                    ^^^^^^^^^^^^^^^^^                                                     ^^^^^^^^^^^^^^^^
+50 |     finish_reason:Option<String>,actual_model:Option<String>,usage:ProviderUsage,provider_request_id:Option<String>,actual_provider:Op...
+   |                                  ^^^^^^^^^^^^                                    ^^^^^^^^^^^^^^^^^^^                ^^^^^^^^^^^^^^^
+51 |     continuation_diagnostics:Option<()>,debug_payload:Option<()>,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^            ^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `enable_openrouter_streaming` is never used
+   --> src/providers/request_builders.rs:200:15
+    |
+200 | pub(super) fn enable_openrouter_streaming(body: &mut Value) -> Result<(), String> {
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: `ai-home` (lib) generated 2 warnings
+error[E0433]: cannot find type `Uuid` in this scope
+   --> tests/memory_layers.rs:153:497
+    |
+153 | ...,a);let mut other=req;other["requestId"]=json!(Uuid::new_v4().to_string());assert_eq!(app.dispatch(other).await.response["error"...
+    |                                                   ^^^^ use of undeclared type `Uuid`
+
+error[E0433]: cannot find type `Uuid` in this scope
+   --> tests/memory_layers.rs:176:181
+    |
+176 | ...e"],"VALIDATION_ERROR");req["requestId"]=json!(Uuid::new_v4().to_string());req["payload"].as_object_mut().unwrap().remove("corre...
+    |                                                   ^^^^ use of undeclared type `Uuid`
+
+error[E0433]: cannot find module or crate `tempfile` in this scope
+   --> tests/memory_layers.rs:231:10
+    |
+231 |  let dir=tempfile::tempdir().unwrap();let path=dir.path().join("v9.sqlite3");let vault=Arc::new(MemoryVault::default());let store=S...
+    |          ^^^^^^^^ use of unresolved module or unlinked crate `tempfile`
+    |
+    = help: if you wanted to use a crate named `tempfile`, use `cargo add tempfile` to add it to your `Cargo.toml`
+
+error[E0308]: arguments to this function are incorrect
+   --> tests/memory_layers.rs:231:280
+    |
+231 | ...kend(vault.clone()));let(s,p,c,_)=configure(&app,&pool,&vault).await;
+    |                                      ^^^^^^^^^ ---- expected `Application`, found `&Application`
+    |
+note: expected `Pool<Sqlite>`, found `&Pool<Sqlite>`
+   --> tests/memory_layers.rs:231:295
+    |
+231 | ...lt::with_backend(vault.clone()));let(s,p,c,_)=configure(&app,&pool,&vault).await;
+    |                                                                 ^^^^^
+    = note: expected struct `Pool<_>`
+            found reference `&Pool<_>`
+note: expected `Arc<MemoryVault>`, found `&Arc<MemoryVault>`
+   --> tests/memory_layers.rs:231:301
+    |
+231 | ...th_backend(vault.clone()));let(s,p,c,_)=configure(&app,&pool,&vault).await;
+    |                                                                 ^^^^^^
+    = note: expected struct `Arc<_>`
+            found reference `&Arc<_>`
+note: function defined here
+   --> tests/support/memory_setup.rs:185:10
+    |
+185 | async fn configure(
+    |          ^^^^^^^^^
+186 |     app: Application,
+    |     ----------------
+187 |     pool: sqlx::SqlitePool,
+    |     ----------------------
+188 |     vault: Arc<MemoryVault>,
+    |     -----------------------
+help: consider removing the borrow
+    |
+231 -  let dir=tempfile::tempdir().unwrap();let path=dir.path().join("v9.sqlite3");let vault=Arc::new(MemoryVault::default());let store=Store::open(&path).await.unwrap();let pool=store.pool.clone();let app=Application::with_vault(store,Vault::with_backend(vault.clone()));let(s,p,c,_)=configure(&app,&pool,&vault).await;
+231 +  let dir=tempfile::tempdir().unwrap();let path=dir.path().join("v9.sqlite3");let vault=Arc::new(MemoryVault::default());let store=Store::open(&path).await.unwrap();let pool=store.pool.clone();let app=Application::with_vault(store,Vault::with_backend(vault.clone()));let(s,p,c,_)=configure(app,&pool,&vault).await;
+    |
+help: consider removing the borrow
+    |
+231 -  let dir=tempfile::tempdir().unwrap();let path=dir.path().join("v9.sqlite3");let vault=Arc::new(MemoryVault::default());let store=Store::open(&path).await.unwrap();let pool=store.pool.clone();let app=Application::with_vault(store,Vault::with_backend(vault.clone()));let(s,p,c,_)=configure(&app,&pool,&vault).await;
+231 +  let dir=tempfile::tempdir().unwrap();let path=dir.path().join("v9.sqlite3");let vault=Arc::new(MemoryVault::default());let store=Store::open(&path).await.unwrap();let pool=store.pool.clone();let app=Application::with_vault(store,Vault::with_backend(vault.clone()));let(s,p,c,_)=configure(&app,pool,&vault).await;
+    |
+help: consider removing the borrow
+    |
+231 -  let dir=tempfile::tempdir().unwrap();let path=dir.path().join("v9.sqlite3");let vault=Arc::new(MemoryVault::default());let store=Store::open(&path).await.unwrap();let pool=store.pool.clone();let app=Application::with_vault(store,Vault::with_backend(vault.clone()));let(s,p,c,_)=configure(&app,&pool,&vault).await;
+231 +  let dir=tempfile::tempdir().unwrap();let path=dir.path().join("v9.sqlite3");let vault=Arc::new(MemoryVault::default());let store=Store::open(&path).await.unwrap();let pool=store.pool.clone();let app=Application::with_vault(store,Vault::with_backend(vault.clone()));let(s,p,c,_)=configure(&app,&pool,vault).await;
+    |
+
+error[E0308]: mismatched types
+   --> tests/memory_layers.rs:231:270
+    |
+231 | ...:with_backend(vault.clone()));let(s,p,c,_)=configure(&app,&pool,&vault).await;
+    |                                     ^^^^^^^^^ ---------------------------------- this expression has type `(Application, Pool<Sqlite>, Arc<_>, Server, String, Value, Value)`
+    |                                     |
+    |                                     expected a tuple with 7 elements, found one with 4 elements
+    |
+    = note: expected tuple `(Application, Pool<Sqlite>, Arc<MemoryVault>, Server, std::string::String, serde_json::Value, serde_json::Value)`
+               found tuple `(_, _, _, _)`
+    = note: the full name for the type has been written to '/workspace/scratch/8e3755d5c581/layered_memory/work/AI_Home/src-tauri/target/debug/deps/memory_layers-5a256d5611186c1d.long-type-13903702920837332640.txt'
+    = note: consider using `--verbose` to print the full type name to the console
+
+Some errors have detailed explanations: E0308, E0433.
+For more information about an error, try `rustc --explain E0308`.
+error: could not compile `ai-home` (test "memory_layers") due to 5 previous errors

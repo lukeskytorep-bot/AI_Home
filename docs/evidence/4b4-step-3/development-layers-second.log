@@ -1,0 +1,111 @@
+   Compiling ai-home v0.0.1 (/workspace/scratch/8e3755d5c581/layered_memory/work/AI_Home/src-tauri)
+warning: multiple fields are never read
+  --> src/providers/mod.rs:49:20
+   |
+48 | pub struct ProviderChatResponse {
+   |            -------------------- fields in this struct
+49 |     content:String,reasoning_content:Option<String>,reasoning_details:Option<Vec<Value>>,reasoning_source:Option<String>,
+   |                    ^^^^^^^^^^^^^^^^^                                                     ^^^^^^^^^^^^^^^^
+50 |     finish_reason:Option<String>,actual_model:Option<String>,usage:ProviderUsage,provider_request_id:Option<String>,actual_provider:Op...
+   |                                  ^^^^^^^^^^^^                                    ^^^^^^^^^^^^^^^^^^^                ^^^^^^^^^^^^^^^
+51 |     continuation_diagnostics:Option<()>,debug_payload:Option<()>,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^            ^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `enable_openrouter_streaming` is never used
+   --> src/providers/request_builders.rs:200:15
+    |
+200 | pub(super) fn enable_openrouter_streaming(body: &mut Value) -> Result<(), String> {
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: `ai-home` (lib) generated 2 warnings
+warning: function `detail` is never used
+   --> tests/memory_layers.rs:103:10
+    |
+103 | async fn detail(app:&Application,p:&str,record:&str,version:&Value)->Value{ok(app,"memory.version.get",json!({"recordId":record,"ve...
+    |          ^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `toggle` is never used
+   --> tests/memory_layers.rs:104:10
+    |
+104 | async fn toggle(app:&Application,p:&str,outdated:bool)->Value{let v=memory_view(app,p).await;ok(app,"memory.outdated.set",json!({"r...
+    |          ^^^^^^
+
+warning: function `fixture` is never used
+   --> tests/memory_layers.rs:106:10
+    |
+106 | async fn fixture()->(Application,sqlx::SqlitePool,Arc<MemoryVault>,Server,String,Value,Value,Value){
+    |          ^^^^^^^
+
+warning: function `req` is never used
+   --> tests/memory_layers.rs:109:10
+    |
+109 | async fn req(app:&Application,p:&str,old:&Value)->Value{let v=memory_view(app,p).await;request("memory.restore",json!({"recordId":v...
+    |          ^^^
+
+warning: function `restore` is never used
+   --> tests/memory_layers.rs:110:10
+    |
+110 | async fn restore(app:&Application,p:&str,old:&Value)->Value{let a=app.dispatch(req(app,p,old).await).await.response;assert_eq!(a["o...
+    |          ^^^^^^^
+
+warning: function `counts` is never used
+   --> tests/memory_layers.rs:111:10
+    |
+111 | async fn counts(pool:&sqlx::SqlitePool)->Vec<i64>{let mut n=vec![];for t in ["operations","receipts","profile_events","memory_versi...
+    |          ^^^^^^
+
+warning: `ai-home` (test "memory_layers") generated 6 warnings
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 4.95s
+     Running tests/memory_layers.rs (src-tauri/target/debug/deps/memory_layers-5a256d5611186c1d)
+
+running 20 tests
+test create_idempotency_and_profile_scope ... ok
+test five_kinds_empty_creation_provenance_and_frozen_dtos ... ok
+test invalid_annotations_and_forged_dates_or_decisions_do_not_create_records ... ok
+test layer_limits_do_not_change_working_or_other_kinds ... FAILED
+test annotation_change_during_post_blocks_memory_commit ... ok
+test layer_settings_stale_revision_and_receipt_replay ... ok
+test metadata_write_failure_rolls_back_record_event_and_receipt ... ok
+test exclusion_during_chat_prevents_late_commit ... ok
+test actual_modify_is_measured_against_kind_limit_two_attempts ... ok
+test pagination_high_water_scope_and_restart_safe_cursor ... ok
+test historical_retrieval_is_immutable_after_exclusion_and_unknown_for_legacy ... ok
+test correction_requires_reason_and_retains_versions_and_contacts ... ok
+test inactive_records_and_closed_or_expired_intents_are_excluded_without_history_loss ... ok
+test migration_v9_preserves_approved_working_history_and_adds_only_metadata_tables ... ok
+test lexical_search_is_profile_scoped_case_unicode_exact_not_entire_store ... ok
+test preflight_and_wire_use_same_selected_snapshot_without_promoting_rules ... ok
+test rejected_conflicting_proposal_retains_previous_version_and_annotations ... ok
+test each_kind_commits_primary_approval_real_contacts_and_independent_capacity ... ok
+test retrieval_includes_exact_whole_block_boundary_never_truncates_and_reports_omissions ... FAILED
+test restore_nonworking_keeps_kind_capacity_and_current_intent_status ... ok
+
+failures:
+
+---- layer_limits_do_not_change_working_or_other_kinds stdout ----
+
+thread 'layer_limits_do_not_change_working_or_other_kinds' (596) panicked at tests/support/memory_setup.rs:77:5:
+assertion `left == right` failed: {"contractVersion":1,"error":{"code":"STORAGE_ERROR","messageKey":"error.storage_error","retryable":false},"ok":false,"requestId":"d67b7f54-1e48-43f7-a94b-20ea3065787a"}
+  left: Bool(false)
+ right: true
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- retrieval_includes_exact_whole_block_boundary_never_truncates_and_reports_omissions stdout ----
+
+thread 'retrieval_includes_exact_whole_block_boundary_never_truncates_and_reports_omissions' (621) panicked at tests/support/memory_setup.rs:77:5:
+assertion `left == right` failed: {"contractVersion":1,"error":{"code":"STORAGE_ERROR","messageKey":"error.storage_error","retryable":false},"ok":false,"requestId":"e7cfe4d9-03d3-41fe-ae8b-94bf09f0a0f5"}
+  left: Bool(false)
+ right: true
+
+
+failures:
+    layer_limits_do_not_change_working_or_other_kinds
+    retrieval_includes_exact_whole_block_boundary_never_truncates_and_reports_omissions
+
+test result: FAILED. 18 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 21.25s
+
+error: test failed, to rerun pass `--test memory_layers`

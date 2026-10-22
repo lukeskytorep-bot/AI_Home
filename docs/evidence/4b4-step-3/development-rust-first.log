@@ -1,0 +1,508 @@
+   Compiling proc-macro2 v1.0.107
+   Compiling unicode-ident v1.0.26
+   Compiling quote v1.0.47
+   Compiling libc v0.2.190
+   Compiling cfg-if v1.0.5
+   Compiling serde_core v1.0.229
+   Compiling find-msvc-tools v0.1.14
+   Compiling shlex v2.0.1
+   Compiling version_check v0.9.5
+   Compiling writeable v0.6.4
+   Compiling autocfg v1.5.1
+   Compiling itoa v1.0.18
+   Compiling litemap v0.8.3
+   Compiling typenum v1.20.1
+   Compiling generic-array v0.14.7
+   Compiling utf8_iter v1.0.4
+   Compiling pkg-config v0.3.34
+   Compiling stable_deref_trait v1.2.1
+   Compiling icu_properties_data v2.3.0
+   Compiling icu_normalizer_data v2.3.0
+   Compiling siphasher v1.0.4
+   Compiling log v0.4.34
+   Compiling scopeguard v1.2.0
+   Compiling phf_shared v0.13.1
+   Compiling fastrand v2.5.0
+   Compiling bytes v1.12.1
+   Compiling smallvec v1.16.3
+   Compiling phf_generator v0.13.1
+   Compiling syn v3.0.8
+   Compiling syn v2.0.119
+   Compiling parking_lot_core v0.9.12
+   Compiling lock_api v0.4.14
+   Compiling dunce v1.0.5
+   Compiling memchr v2.8.3
+   Compiling futures-core v0.3.34
+   Compiling jobserver v0.1.35
+   Compiling serde v1.0.229
+   Compiling crypto-common v0.1.7
+   Compiling pin-project-lite v0.2.17
+   Compiling cc v1.8.0
+   Compiling block-buffer v0.10.4
+   Compiling num-traits v0.2.19
+   Compiling subtle v2.6.1
+   Compiling phf_codegen v0.13.1
+   Compiling zmij v1.0.23
+   Compiling equivalent v1.0.2
+   Compiling simd-adler32 v0.3.10
+   Compiling crc32fast v1.5.2
+   Compiling once_cell v1.21.4
+   Compiling thiserror v2.0.21
+   Compiling mio v1.2.4
+   Compiling socket2 v0.6.5
+   Compiling http v1.5.0
+   Compiling futures-sink v0.3.34
+   Compiling new_debug_unreachable v1.0.6
+   Compiling getrandom v0.4.3
+   Compiling fs_extra v1.3.0
+   Compiling bitflags v2.13.2
+   Compiling adler2 v2.0.1
+   Compiling hashbrown v0.17.1
+   Compiling cpufeatures v0.2.17
+   Compiling cmake v0.1.58
+   Compiling string_cache_codegen v0.6.1
+   Compiling precomputed-hash v0.1.1
+   Compiling serde_json v1.0.151
+   Compiling winnow v1.0.4
+   Compiling parking_lot v0.12.5
+   Compiling indexmap v2.14.2
+   Compiling web_atoms v0.2.6
+   Compiling toml_parser v1.1.5+spec-1.1.0
+   Compiling miniz_oxide v0.9.1
+   Compiling serde_spanned v1.1.2
+   Compiling digest v0.10.7
+   Compiling aws-lc-sys v0.45.0
+   Compiling futures-io v0.3.34
+   Compiling regex-syntax v0.8.11
+   Compiling futures-task v0.3.34
+   Compiling strsim v0.11.1
+   Compiling percent-encoding v2.3.2
+   Compiling toml_writer v1.1.3+spec-1.1.0
+   Compiling slab v0.4.12
+   Compiling ident_case v1.0.1
+   Compiling futures-util v0.3.34
+   Compiling flate2 v1.1.10
+   Compiling string_cache v0.9.0
+   Compiling semver v1.0.28
+   Compiling synstructure v0.14.0
+   Compiling darling_core v0.24.1
+   Compiling typeid v1.0.3
+   Compiling aws-lc-rs v1.18.1
+   Compiling base64 v0.23.1
+   Compiling dtoa v1.0.11
+   Compiling form_urlencoded v1.2.2
+   Compiling dtoa-short v0.3.5
+   Compiling zeroize_derive v1.5.0
+   Compiling phf_macros v0.13.1
+   Compiling zerofrom-derive v0.1.8
+   Compiling yoke-derive v0.8.4
+   Compiling zerovec-derive v0.11.6
+   Compiling displaydoc v0.2.7
+   Compiling serde_derive v1.0.229
+   Compiling tokio-macros v2.7.2
+   Compiling thiserror-impl v2.0.21
+   Compiling zerofrom v0.1.8
+   Compiling phf v0.13.1
+   Compiling yoke v0.8.3
+   Compiling zerovec v0.11.8
+   Compiling zerotrie v0.2.5
+   Compiling tokio v1.53.1
+   Compiling zeroize v1.9.1
+   Compiling tinystr v0.8.4
+   Compiling potential_utf v0.1.6
+   Compiling icu_locale_core v2.3.0
+   Compiling icu_collections v2.3.0
+   Compiling darling_macro v0.24.1
+   Compiling derive_more-impl v2.1.1
+   Compiling cssparser-macros v0.6.1
+   Compiling icu_provider v2.3.1
+   Compiling icu_normalizer v2.3.0
+   Compiling icu_properties v2.3.0
+   Compiling uuid v1.28.0
+   Compiling tendril v0.5.1
+   Compiling toml_datetime v1.1.2+spec-1.1.0
+   Compiling selectors v0.36.1
+   Compiling block-padding v0.3.3
+   Compiling aho-corasick v1.1.5
+   Compiling indexmap v1.9.3
+   Compiling byteorder v1.5.0
+   Compiling unic-common v0.9.0
+   Compiling erased-serde v0.4.10
+   Compiling thiserror v1.0.69
+   Compiling idna_adapter v1.2.2
+   Compiling camino v1.2.6
+   Compiling idna v1.1.0
+   Compiling unic-char-range v0.9.0
+   Compiling unic-char-property v0.9.0
+   Compiling unic-ucd-version v0.9.0
+   Compiling inout v0.1.4
+   Compiling toml v1.1.8+spec-1.1.0
+   Compiling markup5ever v0.38.0
+   Compiling derive_more v2.1.1
+   Compiling url v2.5.8
+   Compiling cssparser v0.36.0
+   Compiling darling v0.24.1
+   Compiling rustls-pki-types v1.15.1
+   Compiling regex-automata v0.4.18
+   Compiling tracing-attributes v0.1.31
+   Compiling thiserror-impl v1.0.69
+   Compiling serde_derive_internals v0.29.1
+   Compiling miniz_oxide v0.8.9
+   Compiling tracing-core v0.1.36
+   Compiling fdeflate v0.3.7
+   Compiling servo_arc v0.4.3
+   Compiling rustc-hash v2.1.3
+   Compiling num-conv v0.2.2
+   Compiling bit-vec v0.8.0
+   Compiling powerfmt v0.2.1
+   Compiling fnv v1.0.7
+   Compiling anyhow v1.0.104
+   Compiling hashbrown v0.12.3
+   Compiling time-core v0.1.9
+   Compiling schemars v0.8.22
+   Compiling deranged v0.5.8
+   Compiling bit-set v0.8.0
+   Compiling cfb v0.7.3
+   Compiling tracing v0.1.44
+   Compiling regex v1.13.1
+   Compiling schemars_derive v0.8.22
+   Compiling serde_with_macros v3.24.0
+   Compiling time v0.3.55
+   Compiling html5ever v0.38.0
+   Compiling cipher v0.4.4
+   Compiling unic-ucd-ident v0.9.0
+   Compiling cargo-platform v0.1.9
+   Compiling jsonptr v0.6.3
+   Compiling sha2 v0.10.9
+   Compiling http-body v1.1.0
+   Compiling num-integer v0.1.47
+   Compiling quick-xml v0.42.0
+   Compiling rustversion v1.0.23
+   Compiling untrusted v0.9.0
+   Compiling foldhash v0.2.0
+   Compiling same-file v1.0.6
+   Compiling httparse v1.10.1
+   Compiling zerocopy v0.8.62
+   Compiling rustls v0.23.45
+   Compiling ctor-proc-macro v0.0.7
+   Compiling crossbeam-utils v0.8.23
+   Compiling getrandom v0.3.4
+   Compiling base64 v0.22.1
+   Compiling dyn-clone v1.0.20
+   Compiling ctor v0.8.0
+   Compiling walkdir v2.5.0
+   Compiling dom_query v0.27.0
+   Compiling json-patch v3.0.1
+   Compiling cargo_metadata v0.19.2
+   Compiling serde_with v3.24.0
+   Compiling plist v1.10.1
+   Compiling urlpattern v0.3.0
+   Compiling serde-untagged v0.1.9
+   Compiling infer v0.19.0
+   Compiling rustc_version v0.4.1
+   Compiling libdbus-sys v0.2.7
+   Compiling futures-channel v0.3.34
+   Compiling toml_datetime v0.7.5+spec-1.1.0
+   Compiling bitflags v1.3.2
+   Compiling foldhash v0.1.5
+   Compiling tower-service v0.3.3
+   Compiling option-ext v0.2.0
+   Compiling try-lock v0.2.5
+   Compiling allocator-api2 v0.2.21
+   Compiling vcpkg v0.2.15
+   Compiling glob v0.3.4
+   Compiling winnow v0.7.15
+   Compiling want v0.3.2
+   Compiling dirs-sys v0.5.0
+   Compiling hashbrown v0.15.5
+   Compiling tauri-utils v2.9.3
+   Compiling png v0.17.16
+   Compiling embed-resource v3.0.12
+   Compiling libsqlite3-sys v0.30.1
+   Compiling num-bigint v0.4.8
+   Compiling toml v0.9.12+spec-1.1.0
+   Compiling parking v2.2.1
+   Compiling crc-catalog v2.5.0
+   Compiling atomic-waker v1.1.2
+   Compiling crc v3.4.0
+   Compiling hyper v1.12.0
+   Compiling event-listener v5.4.2
+   Compiling crossbeam-queue v0.3.14
+   Compiling num-rational v0.4.2
+   Compiling cargo_toml v0.22.3
+   Compiling encoding_rs v0.8.42
+   Compiling ico v0.5.0
+   Compiling hashlink v0.10.0
+   Compiling rand_core v0.9.5
+   Compiling tauri-winres v0.3.6
+   Compiling futures-intrusive v0.5.0
+   Compiling dirs v6.0.0
+   Compiling num-iter v0.1.46
+   Compiling either v1.19.0
+   Compiling aes v0.8.4
+   Compiling cbc v0.1.2
+   Compiling tokio-stream v0.1.19
+   Compiling hmac v0.12.1
+   Compiling num-complex v0.4.6
+   Compiling sync_wrapper v1.0.2
+   Compiling spin v0.9.9
+   Compiling ipnet v2.12.2
+   Compiling openssl-probe v0.2.1
+   Compiling tower-layer v0.3.3
+   Compiling ppv-lite86 v0.2.21
+   Compiling ryu v1.0.23
+   Compiling heck v0.5.0
+   Compiling tinyvec v1.13.3
+   Compiling weezl v0.1.12
+   Compiling rand_chacha v0.9.0
+   Compiling serde_urlencoded v0.7.1
+   Compiling dbus v0.9.12
+   Compiling unicode-normalization v0.1.26
+   Compiling tower v0.5.3
+   Compiling hyper-util v0.1.21
+   Compiling rustls-native-certs v0.8.4
+   Compiling num v0.4.3
+   Compiling flume v0.11.1
+   Compiling hkdf v0.12.4
+   Compiling sqlx-core v0.8.6
+   Compiling futures-executor v0.3.34
+   Compiling atoi v2.0.0
+   Compiling nom v8.0.0
+   Compiling simdutf8 v0.1.5
+   Compiling bytecount v0.6.9
+   Compiling color_quant v1.1.0
+   Compiling core_detect v1.0.0
+   Compiling zip v2.4.2
+   Compiling pxfm v0.1.30
+   Compiling tauri-build v2.6.3
+   Compiling tauri-codegen v2.6.3
+   Compiling zune-core v0.5.3
+   Compiling multiversion_no_op v1.0.0
+   Compiling unicode-bidi v0.3.18
+   Compiling unicode-properties v0.1.4
+   Compiling quick-error v2.0.1
+   Compiling bumpalo v3.20.3
+   Compiling byteorder-lite v0.1.0
+   Compiling zopfli v0.8.4
+   Compiling image-webp v0.2.4
+   Compiling stringprep v0.1.5
+   Compiling moxcms v0.8.1
+   Compiling zune-jpeg v0.5.15
+   Compiling sqlx-sqlite v0.8.6
+   Compiling nom_locate v5.0.0
+   Compiling gif v0.14.2
+   Compiling dbus-secret-service v4.1.0
+   Compiling tower-http v0.6.11
+   Compiling rand v0.9.5
+   Compiling http-body-util v0.1.5
+   Compiling ecb v0.1.2
+   Compiling png v0.18.1
+   Compiling md-5 v0.10.6
+   Compiling bytemuck v1.25.2
+   Compiling iana-time-zone v0.1.65
+   Compiling rangemap v1.8.0
+   Compiling chrono v0.4.45
+   Compiling lopdf v0.36.0
+   Compiling image v0.25.10
+   Compiling ai-home v0.0.1 (/workspace/scratch/8e3755d5c581/layered_memory/work/AI_Home/src-tauri)
+   Compiling sqlx v0.8.6
+   Compiling keyring v3.6.3
+   Compiling roxmltree v0.20.0
+   Compiling rustls-webpki v0.103.15
+   Compiling tokio-rustls v0.26.6
+   Compiling rustls-platform-verifier v0.7.1
+   Compiling hyper-rustls v0.27.10
+   Compiling reqwest v0.13.5
+warning: multiple fields are never read
+  --> src/providers/mod.rs:49:20
+   |
+48 | pub struct ProviderChatResponse {
+   |            -------------------- fields in this struct
+49 |     content:String,reasoning_content:Option<String>,reasoning_details:Option<Vec<Value>>,reasoning_source:Option<String>,
+   |                    ^^^^^^^^^^^^^^^^^                                                     ^^^^^^^^^^^^^^^^
+50 |     finish_reason:Option<String>,actual_model:Option<String>,usage:ProviderUsage,provider_request_id:Option<String>,actual_provider:Op...
+   |                                  ^^^^^^^^^^^^                                    ^^^^^^^^^^^^^^^^^^^                ^^^^^^^^^^^^^^^
+51 |     continuation_diagnostics:Option<()>,debug_payload:Option<()>,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^            ^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `enable_openrouter_streaming` is never used
+   --> src/providers/request_builders.rs:200:15
+    |
+200 | pub(super) fn enable_openrouter_streaming(body: &mut Value) -> Result<(), String> {
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: `ai-home` (lib) generated 2 warnings
+warning: unused import: `AtomicUsize`
+  --> tests/chat.rs:12:30
+   |
+12 |         atomic::{AtomicBool, AtomicUsize, Ordering},
+   |                              ^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `sqlx::Row`
+ --> tests/chat.rs:8:5
+  |
+8 | use sqlx::Row;
+  |     ^^^^^^^^^
+
+warning: `ai-home` (lib test) generated 2 warnings (2 duplicates)
+warning: `ai-home` (test "chat") generated 2 warnings (run `cargo fix --test "chat" -p ai-home` to apply 1 suggestion)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 53.78s
+     Running unittests src/lib.rs (src-tauri/target/debug/deps/ai_home-90524c3444291721)
+
+running 81 tests
+test connections::chat_runtime::document_context::tests::anthropic_known_dimensions_and_encoded_byte_limits_are_checked ... ok
+test connections::chat_runtime::document_context::tests::google_gif_is_blocked_without_silent_conversion ... ok
+test imports::image::tests::rejects_damage_disguised_files_and_pixel_bombs ... ok
+test imports::parser::tests::invalid_utf8_and_mislabeled_files_are_rejected ... ok
+test providers::discovery::tests::google_filters_embedding_and_preserves_cursor ... ok
+test imports::image::tests::encoded_byte_limit_is_enforced ... ok
+test imports::image::tests::rejects_animated_gif_and_apng_instead_of_silently_using_first_frame ... ok
+test imports::image::tests::static_formats_have_verified_signature_dimensions_and_decode ... ok
+test providers::discovery::tests::invalid_lists_do_not_become_empty_success ... ok
+test providers::discovery::tests::model_formats_and_pagination ... ok
+test providers::executor::tests::anthropic_tool_block_requires_handling_even_with_end_turn ... ok
+test imports::parser::tests::docx_dtd_is_rejected_and_is_not_resolved ... ok
+test providers::executor::tests::categories_match_harness_and_never_retry_authority_limits ... ok
+test providers::executor::tests::google_text_with_function_call_is_incomplete_without_retry ... ok
+test providers::executor::tests::completion_metadata_is_classified_without_private_strings ... ok
+test providers::executor::tests::malformed_google_function_fields_are_not_empty_recovery ... ok
+test providers::executor::tests::cancelled_backoff_makes_no_second_call ... ok
+test providers::executor::tests::optional_openai_tool_fields_preserve_text_and_reject_wrong_types ... ok
+test providers::executor::tests::a_second_transient_failure_stops ... ok
+test providers::executor::tests::malformed_tool_calls_is_invalid_without_recovery_post ... ok
+test imports::parser::tests::empty_and_overlarge_text_are_rejected_without_truncation ... ok
+test providers::executor::tests::retry_after_and_jitter_are_bounded ... ok
+test providers::executor::tests::invalid_credentials_are_rejected_without_attempt ... ok
+test providers::executor::tests::runner_exits_after_ok_without_outer_retries ... ok
+test imports::parser::tests::excessive_pdf_page_count_is_rejected_before_extraction ... ok
+test providers::executor::tests::paginated_discovery_and_retry_keep_one_total_budget ... ok
+test providers::executor::tests::retry_after_cannot_outlive_the_operation_deadline ... ok
+test providers::executor::tests::smaller_total_budget_cannot_be_reset_by_recovery ... ok
+test providers::replay::tests::google_signed_visible_parts_survive_private_round_trip ... ok
+test providers::replay::tests::malformed_private_google_state_fails_closed ... ok
+test providers::replay::tests::replay_stamp_changes_with_route_key_model_and_endpoint ... ok
+test providers::tests::anthropic_signed_turn_keeps_exact_visible_text ... ok
+test providers::tests::anthropic_system_and_required_output_limit ... ok
+test providers::tests::custom_endpoint_rejects_credentials_query_fragment_and_remote_http ... ok
+test providers::tests::fixed_provider_endpoints ... ok
+test providers::tests::google_replay_preserves_full_part_sequence_and_rejects_changed_visible_content ... ok
+test providers::tests::google_signed_literal_text_survives_parser_to_replay ... ok
+test providers::tests::google_system_and_roles ... ok
+test providers::tests::image_payload_shapes_are_preserved ... ok
+test providers::tests::image_payloads_use_provider_specific_parts_and_reject_foreign_media ... ok
+test providers::tests::invalid_inputs_and_google_path_injection_rejected ... ok
+test providers::tests::openai_compatible_output_fields ... ok
+test providers::tests::openrouter_preserves_reasoning_and_provider_routing ... ok
+test providers::tests::openrouter_replay_does_not_cross_profile_model_route_or_credential_revision ... ok
+test providers::tests::response_errors_are_safe_and_empty_output_is_not_success ... ok
+test providers::tests::response_visible_text_excludes_reasoning ... ok
+test providers::tests::usage_fields_are_preserved ... ok
+test providers::executor::tests::successful_semantic_response_is_never_replayed ... ok
+test providers::executor::tests::transient_http_retries_once_with_same_body_and_auth ... ok
+test providers::transport::tests::cancellation_during_request_drops_http_future ... ok
+test providers::transport::tests::cancel_after_partial_response_body ... ok
+test providers::transport::tests::credential_rejects_header_injection_and_missing_binding ... ok
+test providers::transport::tests::credential_scope_is_independent_of_primary_scribe_route ... ok
+test providers::transport::tests::chunked_body_limit_is_checked_without_content_length ... ok
+test providers::executor::tests::refusals_limits_invalid_schema_and_auth_never_replay ... ok
+test providers::transport::tests::credential_mismatch_and_protocol_failure_never_dispatch ... ok
+test providers::transport::tests::declared_body_limit_is_checked ... ok
+test providers::transport::tests::discovery_is_paginated_with_shared_budget ... ok
+test providers::transport::tests::fourth_incomplete_page_is_explicit_failure ... ok
+test providers::transport::tests::discovery_rejects_repeated_models_and_missing_page_budget ... ok
+test providers::transport::tests::http_errors_are_safe_and_not_retried ... ok
+test providers::transport::tests::precancellation_is_sticky_and_does_not_dispatch ... ok
+test providers::transport::tests::invalid_json_and_empty_semantic_output_fail ... ok
+test providers::transport::tests::retry_after_seconds_dates_and_invalid ... ok
+test providers::transport::tests::provider_auth_headers_and_no_secret_query ... ok
+test providers::transport::tests::shared_call_budget_is_atomic_under_concurrency ... ok
+test providers::transport::tests::redirect_is_rejected_without_followup ... ok
+test providers::transport::tests::shared_budget_limits_sequential_physical_calls ... ok
+test providers::transport::tests::successful_chat_uses_native_http_and_parser ... ok
+test providers::executor::tests::explicit_empty_response_can_recover ... ok
+test providers::transport::tests::url_canonicalization_and_rejections ... ok
+test retrieval::tests::importance_breaks_only_matching_score_ties ... ok
+test retrieval::tests::unicode_exact_terms_and_stable_ties ... ok
+test vault::hmac_tests::rfc4231_vector ... ok
+test providers::transport::tests::truncated_body_is_network_failure ... ok
+test providers::executor::tests::invalid_json_has_only_one_recovery ... ok
+test providers::transport::tests::slow_response_body_uses_total_deadline ... ok
+test providers::executor::tests::truncated_body_has_single_recovery ... ok
+test providers::executor::tests::recovery_and_standard_retry_share_four_call_budget ... ok
+test providers::transport::tests::oversized_encoded_request_is_rejected_before_dispatch ... ok
+test providers::transport::tests::total_deadline_includes_wait_for_headers ... ok
+
+test result: ok. 81 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.34s
+
+     Running tests/chat.rs (src-tauri/target/debug/deps/chat-d76a7e5b8aa63061)
+
+running 31 tests
+test actual_v4_database_migrates_without_changing_profile_or_preferences ... FAILED
+test context_overflow_never_trims_or_records_a_user_message ... ok
+test another_send_while_running_is_rejected_without_duplicate_dispatch ... ok
+test cancellation_keeps_user_and_never_commits_late_assistant ... ok
+test document_context_overflow_and_receipt_failure_are_atomic ... ok
+test cancelled_document_send_retains_bound_human_sources_and_single_post ... ok
+test changing_vision_during_image_post_rejects_late_answer ... ok
+test corrupted_document_snapshot_fails_closed_without_more_http ... ok
+test document_scope_duplicates_and_not_ready_never_send_or_bind ... ok
+test draft_saved_during_generation_survives_answer_commit ... ok
+test image_migration_restart_keeps_original_policy_and_replay ... FAILED
+test document_import_preflight_send_and_next_turn_preserve_exact_source ... ok
+test final_storage_failure_does_not_commit_an_orphan_assistant ... ok
+test document_retry_reuses_exact_wire_and_cannot_bind_again ... ok
+test image_policy_cas_scope_and_context_edit_invalidation ... ok
+test restart_marks_pending_chat_interrupted_without_network_replay ... ok
+test receipt_failure_rolls_back_chat_acceptance_without_network ... ok
+test key_change_during_request_never_attaches_stale_answer ... ok
+test image_preflight_overflow_and_receipt_failure_leave_no_bound_sources ... ok
+test image_cancel_and_retry_preserve_one_source_and_exact_payload ... ok
+test route_revision_change_requires_fresh_context_declaration ... ok
+test retry_uses_one_budget_and_commits_only_one_answer ... ok
+test scope_conflict_attachments_and_unknown_context_do_not_dispatch ... ok
+test incomplete_output_and_authentication_failure_never_create_an_answer ... ok
+test image_ready_without_extraction_requires_explicit_scoped_vision_before_send ... ok
+test mixed_text_and_image_sources_keep_explicit_order_and_bytes ... ok
+test stale_vision_save_after_endpoint_change_and_successful_retest_is_rejected ... ok
+test second_turn_contains_full_ordered_history_and_smaller_output_limit ... ok
+test stale_vision_save_after_key_change_and_successful_retest_is_rejected ... ok
+test v6_migration_and_restart_keep_document_versions_without_automatic_post ... FAILED
+test successful_chat_is_atomic_durable_and_replay_is_idempotent ... ok
+
+failures:
+
+---- actual_v4_database_migrates_without_changing_profile_or_preferences stdout ----
+
+thread 'actual_v4_database_migrates_without_changing_profile_or_preferences' (9010) panicked at tests/chat.rs:607:5:
+assertion `left == right` failed
+  left: 10
+ right: 9
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- image_migration_restart_keeps_original_policy_and_replay stdout ----
+
+thread 'image_migration_restart_keeps_original_policy_and_replay' (9052) panicked at tests/chat.rs:856:5:
+assertion `left == right` failed
+  left: 10
+ right: 9
+
+---- v6_migration_and_restart_keep_document_versions_without_automatic_post stdout ----
+
+thread 'v6_migration_and_restart_keep_document_versions_without_automatic_post' (9102) panicked at tests/chat.rs:766:5:
+assertion `left == right` failed
+  left: 10
+ right: 9
+
+
+failures:
+    actual_v4_database_migrates_without_changing_profile_or_preferences
+    image_migration_restart_keeps_original_policy_and_replay
+    v6_migration_and_restart_keep_document_versions_without_automatic_post
+
+test result: FAILED. 28 passed; 3 failed; 0 ignored; 0 measured; 0 filtered out; finished in 15.08s
+
+error: test failed, to rerun pass `--test chat`

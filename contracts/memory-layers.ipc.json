@@ -1,0 +1,1694 @@
+{
+  "contractVersion": 1,
+  "commands": {
+    "memory.record.create": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "enum": [
+              "episodic",
+              "relationship",
+              "longTerm",
+              "intent",
+              "workRule"
+            ]
+          },
+          "annotations": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "intent": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "open",
+                      "completed",
+                      "expired",
+                      "abandoned"
+                    ]
+                  },
+                  "trigger": {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "enum": [
+                          "manual",
+                          "time",
+                          "event"
+                        ]
+                      },
+                      "value": {
+                        "type": "string",
+                        "maxLength": 512
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "value"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "importance": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "expiresAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                },
+                "required": [
+                  "status",
+                  "trigger",
+                  "importance"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "title"
+            ],
+            "additionalProperties": false
+          },
+          "subjectRef": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "kind",
+          "annotations"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "record": {
+            "$ref": "#/$defs/MemoryRecord"
+          },
+          "metadata": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string",
+                "maxLength": 128
+              },
+              "addedBy": {
+                "const": "human"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "intent": {
+                "$ref": "#/$defs/Intent"
+              }
+            },
+            "required": [
+              "title",
+              "addedBy",
+              "createdAt",
+              "updatedAt"
+            ],
+            "additionalProperties": false
+          },
+          "version": {
+            "$ref": "#/$defs/MemoryVersion"
+          },
+          "versionMetadata": {
+            "type": "object",
+            "properties": {
+              "annotations": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "maxLength": 128
+                  },
+                  "addedBy": {
+                    "const": "human"
+                  },
+                  "createdAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "updatedAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "intent": {
+                    "$ref": "#/$defs/Intent"
+                  }
+                },
+                "required": [
+                  "title",
+                  "addedBy",
+                  "createdAt",
+                  "updatedAt"
+                ],
+                "additionalProperties": false
+              },
+              "correctionReason": {
+                "type": "string",
+                "maxLength": 1024
+              },
+              "previousVersionId": {
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  {
+                    "const": null
+                  }
+                ]
+              },
+              "restoredFromVersionId": {
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  {
+                    "const": null
+                  }
+                ]
+              },
+              "sourceContacts": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "messageId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128
+                    },
+                    "conversationId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "role": {
+                      "enum": [
+                        "human",
+                        "assistant"
+                      ]
+                    },
+                    "language": {
+                      "type": "string"
+                    },
+                    "sequence": {
+                      "type": "integer",
+                      "minimum": 1
+                    }
+                  },
+                  "required": [
+                    "messageId",
+                    "conversationId",
+                    "createdAt",
+                    "role",
+                    "language",
+                    "sequence"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "lastContactAt": {
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  {
+                    "const": null
+                  }
+                ]
+              },
+              "committedAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "annotations",
+              "correctionReason",
+              "previousVersionId",
+              "restoredFromVersionId",
+              "sourceContacts",
+              "lastContactAt",
+              "committedAt"
+            ],
+            "additionalProperties": false
+          },
+          "effectiveIntentStatus": {
+            "enum": [
+              "open",
+              "completed",
+              "expired",
+              "abandoned"
+            ]
+          }
+        },
+        "required": [
+          "record",
+          "metadata"
+        ],
+        "additionalProperties": false
+      },
+      "mutates": true,
+      "requiresExpectedRevision": false,
+      "async": false
+    },
+    "memory.record.get": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "recordId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "recordId"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "record": {
+            "$ref": "#/$defs/MemoryRecord"
+          },
+          "version": {
+            "$ref": "#/$defs/MemoryVersion"
+          },
+          "profileRevision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "capacityPolicy": {
+            "$ref": "#/$defs/MemoryCapacityPolicy"
+          },
+          "scribeMode": {
+            "enum": [
+              "automatic",
+              "disabled"
+            ]
+          },
+          "scopeId": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "primary": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "revision": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "modelId": {
+                "type": "string"
+              },
+              "scopeId": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "contextTokens": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2000000
+              },
+              "verified": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "id",
+              "revision",
+              "modelId",
+              "scopeId",
+              "contextTokens",
+              "verified"
+            ],
+            "additionalProperties": false
+          },
+          "scribe": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "revision": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "modelId": {
+                "type": "string"
+              },
+              "scopeId": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "contextTokens": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2000000
+              },
+              "verified": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "id",
+              "revision",
+              "modelId",
+              "scopeId",
+              "contextTokens",
+              "verified"
+            ],
+            "additionalProperties": false
+          },
+          "latestOperation": {
+            "$ref": "#/$defs/Operation"
+          },
+          "attempts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/MemoryWriteAttempt"
+            }
+          },
+          "proposals": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/MemoryProposal"
+            }
+          },
+          "decisions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/MemoryDecisionReceipt"
+            }
+          },
+          "formatRepairCount": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "metadata": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string",
+                "maxLength": 128
+              },
+              "addedBy": {
+                "const": "human"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "intent": {
+                "$ref": "#/$defs/Intent"
+              }
+            },
+            "required": [
+              "title",
+              "addedBy",
+              "createdAt",
+              "updatedAt"
+            ],
+            "additionalProperties": false
+          },
+          "versionMetadata": {
+            "type": "object",
+            "properties": {
+              "annotations": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "maxLength": 128
+                  },
+                  "addedBy": {
+                    "const": "human"
+                  },
+                  "createdAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "updatedAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "intent": {
+                    "$ref": "#/$defs/Intent"
+                  }
+                },
+                "required": [
+                  "title",
+                  "addedBy",
+                  "createdAt",
+                  "updatedAt"
+                ],
+                "additionalProperties": false
+              },
+              "correctionReason": {
+                "type": "string",
+                "maxLength": 1024
+              },
+              "previousVersionId": {
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  {
+                    "const": null
+                  }
+                ]
+              },
+              "restoredFromVersionId": {
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  {
+                    "const": null
+                  }
+                ]
+              },
+              "sourceContacts": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "messageId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128
+                    },
+                    "conversationId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "role": {
+                      "enum": [
+                        "human",
+                        "assistant"
+                      ]
+                    },
+                    "language": {
+                      "type": "string"
+                    },
+                    "sequence": {
+                      "type": "integer",
+                      "minimum": 1
+                    }
+                  },
+                  "required": [
+                    "messageId",
+                    "conversationId",
+                    "createdAt",
+                    "role",
+                    "language",
+                    "sequence"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "lastContactAt": {
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  {
+                    "const": null
+                  }
+                ]
+              },
+              "committedAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "annotations",
+              "correctionReason",
+              "previousVersionId",
+              "restoredFromVersionId",
+              "sourceContacts",
+              "lastContactAt",
+              "committedAt"
+            ],
+            "additionalProperties": false
+          },
+          "effectiveIntentStatus": {
+            "enum": [
+              "open",
+              "completed",
+              "expired",
+              "abandoned"
+            ]
+          }
+        },
+        "required": [
+          "record",
+          "profileRevision",
+          "capacityPolicy",
+          "scribeMode",
+          "scopeId",
+          "attempts",
+          "proposals",
+          "decisions",
+          "formatRepairCount",
+          "metadata"
+        ],
+        "additionalProperties": false
+      },
+      "mutates": false,
+      "requiresExpectedRevision": false,
+      "async": false
+    },
+    "memory.records.list": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "$ref": "#/$defs/PageRequest"
+          }
+        },
+        "required": [
+          "page"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "record": {
+                  "$ref": "#/$defs/MemoryRecord"
+                },
+                "metadata": {
+                  "type": "object",
+                  "properties": {
+                    "title": {
+                      "type": "string",
+                      "maxLength": 128
+                    },
+                    "addedBy": {
+                      "const": "human"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "intent": {
+                      "$ref": "#/$defs/Intent"
+                    }
+                  },
+                  "required": [
+                    "title",
+                    "addedBy",
+                    "createdAt",
+                    "updatedAt"
+                  ],
+                  "additionalProperties": false
+                },
+                "version": {
+                  "$ref": "#/$defs/MemoryVersion"
+                },
+                "versionMetadata": {
+                  "type": "object",
+                  "properties": {
+                    "annotations": {
+                      "type": "object",
+                      "properties": {
+                        "title": {
+                          "type": "string",
+                          "maxLength": 128
+                        },
+                        "addedBy": {
+                          "const": "human"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "intent": {
+                          "$ref": "#/$defs/Intent"
+                        }
+                      },
+                      "required": [
+                        "title",
+                        "addedBy",
+                        "createdAt",
+                        "updatedAt"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "correctionReason": {
+                      "type": "string",
+                      "maxLength": 1024
+                    },
+                    "previousVersionId": {
+                      "oneOf": [
+                        {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 128
+                        },
+                        {
+                          "const": null
+                        }
+                      ]
+                    },
+                    "restoredFromVersionId": {
+                      "oneOf": [
+                        {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 128
+                        },
+                        {
+                          "const": null
+                        }
+                      ]
+                    },
+                    "sourceContacts": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "messageId": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 128
+                          },
+                          "conversationId": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 128
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "role": {
+                            "enum": [
+                              "human",
+                              "assistant"
+                            ]
+                          },
+                          "language": {
+                            "type": "string"
+                          },
+                          "sequence": {
+                            "type": "integer",
+                            "minimum": 1
+                          }
+                        },
+                        "required": [
+                          "messageId",
+                          "conversationId",
+                          "createdAt",
+                          "role",
+                          "language",
+                          "sequence"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "lastContactAt": {
+                      "oneOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "const": null
+                        }
+                      ]
+                    },
+                    "committedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "annotations",
+                    "correctionReason",
+                    "previousVersionId",
+                    "restoredFromVersionId",
+                    "sourceContacts",
+                    "lastContactAt",
+                    "committedAt"
+                  ],
+                  "additionalProperties": false
+                },
+                "effectiveIntentStatus": {
+                  "enum": [
+                    "open",
+                    "completed",
+                    "expired",
+                    "abandoned"
+                  ]
+                }
+              },
+              "required": [
+                "record",
+                "metadata"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "nextCursor": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "additionalProperties": false
+      },
+      "mutates": false,
+      "requiresExpectedRevision": false,
+      "async": false
+    },
+    "memory.record.metadata.set": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "recordId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "annotations": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "intent": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "open",
+                      "completed",
+                      "expired",
+                      "abandoned"
+                    ]
+                  },
+                  "trigger": {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "enum": [
+                          "manual",
+                          "time",
+                          "event"
+                        ]
+                      },
+                      "value": {
+                        "type": "string",
+                        "maxLength": 512
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "value"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "importance": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "expiresAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                },
+                "required": [
+                  "status",
+                  "trigger",
+                  "importance"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "title"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "recordId",
+          "annotations"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "record": {
+            "$ref": "#/$defs/MemoryRecord"
+          },
+          "metadata": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string",
+                "maxLength": 128
+              },
+              "addedBy": {
+                "const": "human"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "intent": {
+                "$ref": "#/$defs/Intent"
+              }
+            },
+            "required": [
+              "title",
+              "addedBy",
+              "createdAt",
+              "updatedAt"
+            ],
+            "additionalProperties": false
+          },
+          "version": {
+            "$ref": "#/$defs/MemoryVersion"
+          },
+          "versionMetadata": {
+            "type": "object",
+            "properties": {
+              "annotations": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "maxLength": 128
+                  },
+                  "addedBy": {
+                    "const": "human"
+                  },
+                  "createdAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "updatedAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "intent": {
+                    "$ref": "#/$defs/Intent"
+                  }
+                },
+                "required": [
+                  "title",
+                  "addedBy",
+                  "createdAt",
+                  "updatedAt"
+                ],
+                "additionalProperties": false
+              },
+              "correctionReason": {
+                "type": "string",
+                "maxLength": 1024
+              },
+              "previousVersionId": {
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  {
+                    "const": null
+                  }
+                ]
+              },
+              "restoredFromVersionId": {
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  {
+                    "const": null
+                  }
+                ]
+              },
+              "sourceContacts": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "messageId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128
+                    },
+                    "conversationId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "role": {
+                      "enum": [
+                        "human",
+                        "assistant"
+                      ]
+                    },
+                    "language": {
+                      "type": "string"
+                    },
+                    "sequence": {
+                      "type": "integer",
+                      "minimum": 1
+                    }
+                  },
+                  "required": [
+                    "messageId",
+                    "conversationId",
+                    "createdAt",
+                    "role",
+                    "language",
+                    "sequence"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "lastContactAt": {
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  {
+                    "const": null
+                  }
+                ]
+              },
+              "committedAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "annotations",
+              "correctionReason",
+              "previousVersionId",
+              "restoredFromVersionId",
+              "sourceContacts",
+              "lastContactAt",
+              "committedAt"
+            ],
+            "additionalProperties": false
+          },
+          "effectiveIntentStatus": {
+            "enum": [
+              "open",
+              "completed",
+              "expired",
+              "abandoned"
+            ]
+          }
+        },
+        "required": [
+          "record",
+          "metadata"
+        ],
+        "additionalProperties": false
+      },
+      "mutates": true,
+      "requiresExpectedRevision": true,
+      "async": false
+    },
+    "memory.record.update": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "recordId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "sourceRefs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/SourceRef"
+            }
+          },
+          "correctionReason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024
+          }
+        },
+        "required": [
+          "recordId",
+          "sourceRefs",
+          "correctionReason"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "$ref": "#/$defs/Accepted"
+      },
+      "mutates": true,
+      "requiresExpectedRevision": true,
+      "async": true
+    },
+    "memory.layers.settings.get": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "profileRevision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "memorySettings": {
+            "$ref": "#/$defs/MemorySettings"
+          },
+          "retrievalTargetTokens": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000
+          }
+        },
+        "required": [
+          "profileRevision",
+          "memorySettings",
+          "retrievalTargetTokens"
+        ],
+        "additionalProperties": false
+      },
+      "mutates": false,
+      "requiresExpectedRevision": false,
+      "async": false
+    },
+    "memory.layers.settings.set": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "policies": {
+            "type": "object",
+            "properties": {
+              "episodic": {
+                "$ref": "#/$defs/MemoryCapacityPolicy"
+              },
+              "relationship": {
+                "$ref": "#/$defs/MemoryCapacityPolicy"
+              },
+              "longTerm": {
+                "$ref": "#/$defs/MemoryCapacityPolicy"
+              },
+              "intent": {
+                "$ref": "#/$defs/MemoryCapacityPolicy"
+              },
+              "workRule": {
+                "$ref": "#/$defs/MemoryCapacityPolicy"
+              }
+            },
+            "required": [
+              "episodic",
+              "relationship",
+              "longTerm",
+              "intent",
+              "workRule"
+            ],
+            "additionalProperties": false
+          },
+          "retrievalTargetTokens": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000
+          }
+        },
+        "required": [
+          "policies",
+          "retrievalTargetTokens"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "profileRevision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "memorySettings": {
+            "$ref": "#/$defs/MemorySettings"
+          },
+          "retrievalTargetTokens": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000
+          }
+        },
+        "required": [
+          "profileRevision",
+          "memorySettings",
+          "retrievalTargetTokens"
+        ],
+        "additionalProperties": false
+      },
+      "mutates": true,
+      "requiresExpectedRevision": true,
+      "async": false
+    },
+    "memory.search": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "maxLength": 4096
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "method": {
+            "const": "lexical_unicode_terms_v1"
+          },
+          "query": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "queryWindow": {
+            "const": "last_4096_characters"
+          },
+          "budgetTokens": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "inputTokens": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "matchedCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "omittedCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "record": {
+                  "$ref": "#/$defs/MemoryRecord"
+                },
+                "version": {
+                  "$ref": "#/$defs/MemoryVersion"
+                },
+                "decision": {
+                  "$ref": "#/$defs/MemoryDecisionReceipt"
+                },
+                "metadata": {
+                  "type": "object",
+                  "properties": {
+                    "title": {
+                      "type": "string",
+                      "maxLength": 128
+                    },
+                    "addedBy": {
+                      "const": "human"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "intent": {
+                      "$ref": "#/$defs/Intent"
+                    }
+                  },
+                  "required": [
+                    "title",
+                    "addedBy",
+                    "createdAt",
+                    "updatedAt"
+                  ],
+                  "additionalProperties": false
+                },
+                "score": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "inputTokens": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "measurement": {
+                  "$ref": "#/$defs/TokenMeasurement"
+                }
+              },
+              "required": [
+                "record",
+                "version",
+                "decision",
+                "metadata",
+                "score",
+                "inputTokens",
+                "measurement"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "method",
+          "query",
+          "queryWindow",
+          "budgetTokens",
+          "inputTokens",
+          "matchedCount",
+          "omittedCount",
+          "items"
+        ],
+        "additionalProperties": false
+      },
+      "mutates": false,
+      "requiresExpectedRevision": false,
+      "async": false
+    },
+    "chat.retrieval.get": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "operationId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "operationId"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "known": {
+            "type": "boolean"
+          },
+          "operationId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "retrieval": {
+            "type": "object",
+            "properties": {
+              "method": {
+                "const": "lexical_unicode_terms_v1"
+              },
+              "query": {
+                "type": "string",
+                "maxLength": 4096
+              },
+              "queryWindow": {
+                "const": "last_4096_characters"
+              },
+              "budgetTokens": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "inputTokens": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "matchedCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "omittedCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "record": {
+                      "$ref": "#/$defs/MemoryRecord"
+                    },
+                    "version": {
+                      "$ref": "#/$defs/MemoryVersion"
+                    },
+                    "decision": {
+                      "$ref": "#/$defs/MemoryDecisionReceipt"
+                    },
+                    "metadata": {
+                      "type": "object",
+                      "properties": {
+                        "title": {
+                          "type": "string",
+                          "maxLength": 128
+                        },
+                        "addedBy": {
+                          "const": "human"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "intent": {
+                          "$ref": "#/$defs/Intent"
+                        }
+                      },
+                      "required": [
+                        "title",
+                        "addedBy",
+                        "createdAt",
+                        "updatedAt"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "score": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "inputTokens": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "measurement": {
+                      "$ref": "#/$defs/TokenMeasurement"
+                    }
+                  },
+                  "required": [
+                    "record",
+                    "version",
+                    "decision",
+                    "metadata",
+                    "score",
+                    "inputTokens",
+                    "measurement"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "method",
+              "query",
+              "queryWindow",
+              "budgetTokens",
+              "inputTokens",
+              "matchedCount",
+              "omittedCount",
+              "items"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "known",
+          "operationId"
+        ],
+        "additionalProperties": false
+      },
+      "mutates": false,
+      "requiresExpectedRevision": false,
+      "async": false
+    },
+    "memory.version.annotations.get": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "recordId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "versionId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "recordId",
+          "versionId"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "versionMetadata": {
+            "type": "object",
+            "properties": {
+              "annotations": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "maxLength": 128
+                  },
+                  "addedBy": {
+                    "const": "human"
+                  },
+                  "createdAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "updatedAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "intent": {
+                    "$ref": "#/$defs/Intent"
+                  }
+                },
+                "required": [
+                  "title",
+                  "addedBy",
+                  "createdAt",
+                  "updatedAt"
+                ],
+                "additionalProperties": false
+              },
+              "correctionReason": {
+                "type": "string",
+                "maxLength": 1024
+              },
+              "previousVersionId": {
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  {
+                    "const": null
+                  }
+                ]
+              },
+              "restoredFromVersionId": {
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  {
+                    "const": null
+                  }
+                ]
+              },
+              "sourceContacts": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "messageId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128
+                    },
+                    "conversationId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "role": {
+                      "enum": [
+                        "human",
+                        "assistant"
+                      ]
+                    },
+                    "language": {
+                      "type": "string"
+                    },
+                    "sequence": {
+                      "type": "integer",
+                      "minimum": 1
+                    }
+                  },
+                  "required": [
+                    "messageId",
+                    "conversationId",
+                    "createdAt",
+                    "role",
+                    "language",
+                    "sequence"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "lastContactAt": {
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  {
+                    "const": null
+                  }
+                ]
+              },
+              "committedAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "annotations",
+              "correctionReason",
+              "previousVersionId",
+              "restoredFromVersionId",
+              "sourceContacts",
+              "lastContactAt",
+              "committedAt"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "versionMetadata"
+        ],
+        "additionalProperties": false
+      },
+      "mutates": false,
+      "requiresExpectedRevision": false,
+      "async": false
+    }
+  }
+}

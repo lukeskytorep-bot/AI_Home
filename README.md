@@ -1,3 +1,15 @@
+# Bieżące przekazanie 4B-4 krok 3 — warstwy pamięci i wyszukiwanie
+
+Wydarzenia, relacje, wiedza trwała, zamiary i zasady pracy mają osobne rekordy/limity, historię i approval Primary. Ludzkie adnotacje są odrębne. Korekty zachowują powód i poprzednią wersję. LexicalRetriever wybiera całe pasujące wpisy w budżecie i jawnie liczy pominięcia. Preflight/send i trwały snapshot chronią kontekst oraz spóźniony wynik. Panel EN/PL dostępny w rozmowach pod Other memory and search / Pozostała pamięć i wyszukiwanie.
+
+316/316 Rust headless, 181/181 UI, TypeScript/build, 26/26 granice i 193/193 P2 PASS lokalnie. Raport: docs/AI_HOME_4B4_KROK_3_RAPORT_PL.md. Plan treść 1.30. Krok 2 ma potwierdzenie zielonego wyniku Edwarda; krok 3 wymaga nowego CI/audytu. Całe 4B-4 pozostaje otwarte; dalej pozostałe przeznaczenia importu.
+
+SQLite 9→10 dodaje dwie tabele metadanych, zachowując wcześniejsze dane. Frozen P2/foundation, zależności/lockfile, provider/vault, CI i uprawnienia bez zmian. Nałożyć paczkę w katalogu package.json, nadpisać, commit/push. Niczego nie usuwać. Realne API/OS vault/Windows/Tauri/WebView nadal osobno.
+
+---
+
+## Historyczne przekazania
+
 # Bieżące przekazanie 4B-4 krok 2 — przywracanie wersji pamięci
 
 Starsza treść wymaga nowej decyzji bieżącego Primary. ACCEPT/MODIFY tworzy nową wersję z restoredFrom/previousVersion i nowym receipt; REJECT/STOP/błąd/restart zachowują poprzedni stan. Restore nie wywołuje Scribe. Budżet i snapshot sprawdzane są przed przyjęciem, każdym POST i commit.

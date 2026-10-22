@@ -1,0 +1,38 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> ai-home@0.0.1 test
+> vitest run
+
+
+ RUN  v4.1.10 /workspace/scratch/8e3755d5c581/layered_memory/work/AI_Home
+
+ ❯ tests/memory-layers-ui.test.tsx (13 tests | 2 failed) 1096ms
+   × unlimited retains a distinct per-kind policy and warning 48ms
+   × uses Polish labels with the same payload protocol 37ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/memory-layers-ui.test.tsx > unlimited retains a distinct per-kind policy and warning
+AssertionError: expected null not to be null
+ ❯ tests/memory-layers-ui.test.tsx:37:209
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  tests/memory-layers-ui.test.tsx > uses Polish labels with the same payload protocol
+AssertionError: expected 'Biblioteka pamięciKażdy rekord ma wła…' to contain 'Źródła'
+
+Expected: "Źródła"
+Received: "Biblioteka pamięciKażdy rekord ma własną historię i pojemność. Ludzkie etykiety i stan zamiaru są adnotacjami, nie zatwierdzeniem. Daty i ID nadaje program.Utwórz pusty rekordRodzaj pamięciWydarzenia (L3)Relacje (L3)Wiedza trwała (L4)ZamiaryZasady pracyEtykieta człowiekaOdniesienie do tematu lub osoby (opcjonalne)Utwórz pusty rekordNiezależne pojemnościWydarzenia (L3)Bez limitu długości pamięciRelacje (L3)Bez limitu długości pamięciWiedza trwała (L4)Bez limitu długości pamięciZamiaryBez limitu długości pamięciZasady pracyBez limitu długości pamięciBudżet wyszukiwania (szacowane tokeny)Zapisz limity warstwOdśwież bibliotekę pamięciWybierz rekord pamięciWybierz profilLabel · Wydarzenia (L3) · emptyLabel · Zamiary · emptyWydarzenie · Wydarzenia (L3) · emptycreated · 2026-10-22T10:00:00Z ·  · Zapisz adnotacje człowiekaEtykieta człowiekaZapisz adnotacje człowiekaWybrany rekord pamięciPrimary rozpatruje źródła rozmowy przed zapisem. Korekta wskazuje poprzednią wersję i zachowuje powód. Import plików do pamięci to kolejny krok.Powód zapisu lub korektyOdśwież pamięć z tej rozmowyOdśwież stan pamięciBrak zapisanego kontekstu roboczego.Wyłącz pamięć z nowych żądań czatu bez kasowania treści i historii. Ponowne włączenie dotyczy tej samej zatwierdzonej wersji, a nie przywracania starszej. Trwające żądanie korzystające z poprzedniego stanu pamięci zakończy się konfliktem kontekstu.Wyłącz pamięć z czatuPokaż historię wersjiSzukaj zatwierdzonej pamięciDokładne dopasowanie słów Unicode, bez wyszukiwania semantycznego. Używa ostatnich 4096 znaków pytania. Uwzględnia aktywne rekordy i otwarte, niewygasłe zamiary. Wybiera całe wpisy w budżecie; pominięte wpisy nie są wysyłane. Zasady pracy pozostają omylnymi danymi odniesienia.Zapytanie wyszukiwaniaSzukaj zatwierdzonej pamięci"
+
+ ❯ tests/memory-layers-ui.test.tsx:45:283
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed | 11 passed (12)
+      Tests  2 failed | 175 passed (177)
+   Start at  10:46:14
+   Duration  4.24s (transform 2.32s, setup 0ms, import 4.23s, tests 8.89s, environment 9.79s)
+
