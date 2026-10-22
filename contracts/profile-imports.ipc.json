@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "note": "4B-4 step 4 supplement. Profile-scoped imported material remains external source data; frozen P2 import DTOs are unchanged.",
+  "commands": {
+    "profile.imports.list": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "afterId": {"type":"string","minLength":1,"maxLength":128},
+          "limit": {"type":"integer","minimum":1,"maximum":100}
+        },
+        "required": ["limit"],
+        "additionalProperties": false
+      },
+      "result": {
+        "type":"object",
+        "properties": {
+          "items": {
+            "type":"array",
+            "items": {
+              "type":"object",
+              "properties": {
+                "material":{"$ref":"#/$defs/ImportedMaterial"},
+                "knowledgeSource":{"$ref":"#/$defs/KnowledgeSource"},
+                "guidance":{"$ref":"#/$defs/PersistentGuidance"}
+              },
+              "required":["material"],
+              "additionalProperties":false
+            }
+          },
+          "nextAfterId":{"type":"string","minLength":0,"maxLength":128}
+        },
+        "required":["items","nextAfterId"],
+        "additionalProperties":false
+      },
+      "mutates":false,"requiresExpectedRevision":false,"async":false,"firstImplementationStage":"4B-4 step4"
+    },
+    "knowledge.enabled.set": {
+      "scope":"profile",
+      "payload":{"type":"object","properties":{"knowledgeSourceId":{"type":"string","minLength":1,"maxLength":128},"enabled":{"type":"boolean"}},"required":["knowledgeSourceId","enabled"],"additionalProperties":false},
+      "result":{"$ref":"#/$defs/KnowledgeSource"},
+      "mutates":true,"requiresExpectedRevision":true,"async":false,"firstImplementationStage":"4B-4 step4"
+    },
+    "chat.profile.context.get": {
+      "scope":"profile",
+      "payload":{"type":"object","properties":{"operationId":{"type":"string","minLength":1,"maxLength":128}},"required":["operationId"],"additionalProperties":false},
+      "result":{"type":"object","properties":{"known":{"type":"boolean"},"operationId":{"type":"string","minLength":1},"profileContext":{}},"required":["known","operationId","profileContext"],"additionalProperties":false},
+      "mutates":false,"requiresExpectedRevision":false,"async":false,"firstImplementationStage":"4B-4 step4"
+    }
+  }
+}

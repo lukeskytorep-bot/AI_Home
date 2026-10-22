@@ -108,11 +108,14 @@ async fn items(
     Ok(values)
 }
 pub(super) async fn view(tx: &mut Tx<'_>, profile: &str) -> Result<Value, Failure> {
-    let p = get(tx, "profiles", "", profile).await?;
-    let rs = routes(tx, &p).await?;
     let r = record(tx, profile).await?;
+    record_view(tx, profile, r).await
+}
+pub(super) async fn record_view(tx:&mut Tx<'_>,profile:&str,r:Value)->Result<Value,Failure>{
+    let p=get(tx,"profiles","",profile).await?;
+    let rs=routes(tx,&p).await?;
     let v = version(tx, &r).await?;
-    let mut result = json!({"record":r,"profileRevision":p["revision"],"capacityPolicy":p["memorySettings"]["working"],"scribeMode":p["scribeMode"],"scopeId":config_scope(&p,&rs),"attempts":[],"proposals":[],"decisions":[],"formatRepairCount":0});
+    let mut result = json!({"record":r,"profileRevision":p["revision"],"capacityPolicy":p["memorySettings"][r["kind"].as_str().ok_or("STORAGE_ERROR")?],"scribeMode":p["scribeMode"],"scopeId":config_scope(&p,&rs),"attempts":[],"proposals":[],"decisions":[],"formatRepairCount":0});
     if let Some(v) = v {
         result["version"] = v;
     }
@@ -209,56 +212,35 @@ async fn resolve(
     tx: &mut Tx<'_>,
     profile: &str,
     refs: &Value,
-) -> Result<(Vec<Value>, Value), Failure> {
+) -> Result<(Vec<Value>, Option<Value>), Failure> {
     let list = refs.as_array().ok_or("VALIDATION_ERROR")?;
-    if list.is_empty() {
-        return Err("VALIDATION_ERROR");
-    }
-    let mut seen = std::collections::HashSet::new();
-    let mut messages = vec![];
-    let mut conversation: Option<Value> = None;
-    let mut bytes = 0usize;
+    if list.is_empty() {return Err("VALIDATION_ERROR");}
+    let mode=list.first().and_then(|s|s["kind"].as_str()).ok_or("VALIDATION_ERROR")?;
+    if !matches!(mode,"message"|"import")||list.iter().any(|s|s["kind"]!=mode){return Err("POLICY_DENIED")}
+    let mut seen = std::collections::HashSet::new();let mut messages = vec![];let mut conversation: Option<Value> = None;let mut bytes = 0usize;
     for s in list {
-        if s["profileId"] != profile {
-            return Err("PROFILE_SCOPE_MISMATCH");
+        if s["profileId"] != profile {return Err("PROFILE_SCOPE_MISMATCH");}
+        let id=s["entityId"].as_str().ok_or("VALIDATION_ERROR")?;if !seen.insert(id){return Err("VALIDATION_ERROR")}
+        if mode=="message"{
+            if s.get("snapshotBlobId").is_some(){return Err("POLICY_DENIED")}
+            let m=get(tx,"messages",profile,id).await?;
+            if m["status"]!="complete"||!matches!(m["role"].as_str(),Some("human"|"assistant")){return Err("POLICY_DENIED")}
+            if s["contentSha256"]!=digest(m["content"].as_str().unwrap()){return Err("REVISION_CONFLICT")}
+            let c=get(tx,"conversations",profile,m["conversationId"].as_str().unwrap()).await?;if c["status"]!="open"{return Err("POLICY_DENIED")}
+            if conversation.as_ref().is_some_and(|v|v["id"]!=c["id"]){return Err("VALIDATION_ERROR")}
+            bytes=bytes.checked_add(m.to_string().len()).ok_or("CONTEXT_BUDGET_EXCEEDED")?;if bytes>8*1024*1024{return Err("CONTEXT_BUDGET_EXCEEDED")}
+            conversation=Some(c);messages.push(m);
+        }else{
+            let m=super::import_runtime::material(tx,profile,id).await?;
+            if m["purpose"]!="memory_import"||m["mediaKind"]!="document"||m["parseState"]!="ready"||m.get("conversationId").is_some(){return Err("POLICY_DENIED")}
+            let blob_id=m["extractedBlobId"].as_str().ok_or("STORAGE_ERROR")?;let sha=m["extractedSha256"].as_str().ok_or("STORAGE_ERROR")?;
+            if s["contentSha256"]!=sha||s["snapshotBlobId"].as_str()!=Some(blob_id){return Err("REVISION_CONFLICT")}
+            let raw=super::import_runtime::blob(tx,profile,blob_id,sha).await?;let content=String::from_utf8(raw).map_err(|_|"STORAGE_ERROR")?;
+            bytes=bytes.checked_add(content.len()).ok_or("CONTEXT_BUDGET_EXCEEDED")?;if bytes>8*1024*1024{return Err("CONTEXT_BUDGET_EXCEEDED")}
+            messages.push(json!({"schemaVersion":1,"id":id,"profileId":profile,"revision":m["revision"],"createdAt":m["importedAt"],"conversationId":"import-source","sequence":0,"role":"human","content":content,"language":"und","status":"complete","sourceRefs":[s]}));
         }
-        if s["kind"] != "message" || s.get("snapshotBlobId").is_some() {
-            return Err("POLICY_DENIED");
-        }
-        let id = s["entityId"].as_str().unwrap();
-        if !seen.insert(id) {
-            return Err("VALIDATION_ERROR");
-        }
-        let m = get(tx, "messages", profile, id).await?;
-        if m["status"] != "complete" || !matches!(m["role"].as_str(), Some("human" | "assistant")) {
-            return Err("POLICY_DENIED");
-        }
-        if s["contentSha256"] != digest(m["content"].as_str().unwrap()) {
-            return Err("REVISION_CONFLICT");
-        }
-        let c = get(
-            tx,
-            "conversations",
-            profile,
-            m["conversationId"].as_str().unwrap(),
-        )
-        .await?;
-        if c["status"] != "open" {
-            return Err("POLICY_DENIED");
-        }
-        if conversation.as_ref().is_some_and(|v| v["id"] != c["id"]) {
-            return Err("VALIDATION_ERROR");
-        }
-        bytes = bytes
-            .checked_add(m.to_string().len())
-            .ok_or("CONTEXT_BUDGET_EXCEEDED")?;
-        if bytes > 8 * 1024 * 1024 {
-            return Err("CONTEXT_BUDGET_EXCEEDED");
-        }
-        conversation = Some(c);
-        messages.push(m);
     }
-    Ok((messages, conversation.unwrap()))
+    Ok((messages, conversation))
 }
 pub(super) struct Job {
     engine: Engine,
@@ -331,7 +313,7 @@ pub(super) async fn accept(
     expected: i64,
 ) -> Result<(Job, Value), Failure> {
     let profile = p["id"].as_str().unwrap();
-    let r = record(tx, profile).await?;
+    let r = get(tx,"memory_records",profile,payload["recordId"].as_str().ok_or("VALIDATION_ERROR")?).await.map_err(|e|if e=="NOT_FOUND"{"REVISION_CONFLICT"}else{e})?;
     if r["id"] != payload["recordId"] || revision(&r)? != expected {
         return Err("REVISION_CONFLICT");
     }
@@ -358,7 +340,7 @@ pub(super) async fn accept(
         return Err("OPERATION_BUDGET_EXCEEDED");
     }
     let cap =
-        memory::Capacity::from_dto(&p["memorySettings"]["working"]).map_err(|_| "STORAGE_ERROR")?;
+        memory::Capacity::from_dto(&p["memorySettings"][r["kind"].as_str().ok_or("STORAGE_ERROR")?]).map_err(|_| "STORAGE_ERROR")?;
     for role in ["primary", "scribe"] {
         if role == "scribe" && p["scribeMode"] == "disabled" {
             continue;
@@ -422,13 +404,17 @@ pub(super) async fn accept(
             .iter()
             .zip(payload["sourceRefs"].as_array().unwrap())
             .map(|(m, r)| memory::Source {
-                message_metadata:Some(json!({"role":m["role"],"language":m["language"],"createdAt":m["createdAt"],"sequence":m["sequence"]})),
+                message_metadata: if r["kind"]=="message" {Some(json!({"role":m["role"],"language":m["language"],"createdAt":m["createdAt"],"sequence":m["sequence"]}))} else {None},
                 reference: r.clone(),
                 text: m["content"].as_str().unwrap().into(),
             })
             .collect(),
     })
     .map_err(|_| "VALIDATION_ERROR")?;
+    let metadata=super::memory_layers::metadata(tx,profile,&r).await?;
+    let reason=payload["correctionReason"].as_str().unwrap_or("");
+    if r["kind"]!="working" && previous.is_some() && reason.trim().is_empty(){return Err("VALIDATION_ERROR");}
+    let context=json!({"record":r,"metadata":metadata,"correctionReason":reason});
     let mut budget_probe = engine.clone();
     let first = budget_probe.next_call().map_err(|_| "STORAGE_ERROR")?;
     let role = if first.role == memory::Role::Scribe {
@@ -436,7 +422,7 @@ pub(super) async fn accept(
     } else {
         "primary"
     };
-    build(&first, &rs[role], p)?;
+    build(&super::memory_layers::prompt(first,&context), &rs[role], p)?;
     // Check the minimum possible Primary decision request before accepting work.
     // One unescaped UTF-8 byte and a shortest allowed claimKind form a lower
     // bound, not a prediction of Scribe's output. This cloned pure engine never
@@ -445,12 +431,12 @@ pub(super) async fn accept(
         .proposal(&json!({"content":"x","language":language,"claimKind":"fact"}).to_string())
         .map_err(|_| "STORAGE_ERROR")?;
     let minimum_decision = budget_probe.next_call().map_err(|_| "STORAGE_ERROR")?;
-    build(&minimum_decision, &rs["primary"], p)?;
+    build(&super::memory_layers::prompt(minimum_decision,&context), &rs["primary"], p)?;
     // run() still builds and validates every actual request with its real data.
     let op = json!({"schemaVersion":1,"id":id(),"profileId":profile,"revision":1,"createdAt":now(),"kind":"memory_update","status":"queued","capacityAttemptCount":0,"physicalCallCount":0,"expectedRecordRevision":expected,"limits":{"maxPhysicalCalls":calls,"maxElapsedMs":elapsed},"recordRefs":[{"profileId":profile,"recordKind":"memory_record","recordId":r["id"]}]});
     put(tx, "operations", &op, true, 0).await?;
     event(tx, profile, "operation.changed", &op).await?;
-    let snapshot = json!({"profile":p,"record":r,"version":previous,"routes":rs,"messages":messages,"sources":payload["sourceRefs"],"conversationId":conv["id"],"language":language,"conversationLanguage":conv["language"],"formatRepairCount":0});
+    let snapshot = json!({"profile":p,"record":r,"version":previous,"routes":rs,"messages":messages,"sources":payload["sourceRefs"],"conversationId":conv.as_ref().map(|c|c["id"].clone()).unwrap_or(Value::Null),"language":language,"conversationLanguage":conv.as_ref().map(|c|c["language"].clone()).unwrap_or(json!("und")),"formatRepairCount":0,"metadata":metadata,"correctionReason":reason});
     sqlx::query("INSERT INTO memory_runs(profile_id,operation_id,record_id,body) VALUES(?,?,?,?)")
         .bind(profile)
         .bind(op["id"].as_str().unwrap())
@@ -488,6 +474,7 @@ pub(super) async fn ensure_current(tx: &mut Tx<'_>, op: &Value) -> Result<(), Fa
     if r != s["record"] || json!(version(tx, &r).await?) != s["version"] {
         return Err("REVISION_CONFLICT");
     }
+    if s.get("metadata").is_some() && super::memory_layers::metadata(tx,profile,&r).await?!=s["metadata"] {return Err("REVISION_CONFLICT");}
     let rs = routes(tx, &p).await?;
     for role in ["primary", "scribe"] {
         if role == "scribe" && (p["scribeMode"] == "disabled" || s.get("restoreSource").is_some()) {
@@ -499,12 +486,8 @@ pub(super) async fn ensure_current(tx: &mut Tx<'_>, op: &Value) -> Result<(), Fa
     }
     if s.get("restoreSource").is_some(){return restore_runtime::ensure_source(tx,profile,&s).await;}
     let (messages, c) = resolve(tx, profile, &s["sources"]).await?;
-    if json!(messages) != s["messages"]
-        || c["id"] != s["conversationId"]
-        || c["language"] != s["conversationLanguage"]
-    {
-        return Err("REVISION_CONFLICT");
-    }
+    let cid=c.as_ref().map(|v|v["id"].clone()).unwrap_or(Value::Null);let clang=c.as_ref().map(|v|v["language"].clone()).unwrap_or(json!("und"));
+    if json!(messages) != s["messages"] || cid != s["conversationId"] || clang != s["conversationLanguage"] {return Err("REVISION_CONFLICT");}
     Ok(())
 }
 pub(super) async fn close_pending(
@@ -596,7 +579,7 @@ async fn persist(
         && (engine.pending_candidate().is_some() || engine.attempts().len() > old_attempts)
     {
         let v: Value = serde_json::from_str(raw).map_err(|_| "STORAGE_ERROR")?;
-        let mut p = json!({"schemaVersion":1,"id":id(),"profileId":profile,"revision":1,"createdAt":now(),"operationId":opid,"memoryRecordId":job.snapshot["record"]["id"],"memoryKind":"working","proposerRole":if prompt.role==memory::Role::Scribe{"scribe"}else{"primary"},"proposerRouteId":prompt.route.id,"content":v["content"],"language":v["language"],"sources":job.snapshot["sources"],"state":if engine.pending_candidate().is_some(){"pending"}else{"failed"},"capacityPolicySnapshot":engine.snapshot().capacity.dto(),"attemptNumber":prompt.attempt,"claimKind":v["claimKind"]});
+        let mut p = json!({"schemaVersion":1,"id":id(),"profileId":profile,"revision":1,"createdAt":now(),"operationId":opid,"memoryRecordId":job.snapshot["record"]["id"],"memoryKind":job.snapshot["record"]["kind"],"proposerRole":if prompt.role==memory::Role::Scribe{"scribe"}else{"primary"},"proposerRouteId":prompt.route.id,"content":v["content"],"language":v["language"],"sources":job.snapshot["sources"],"state":if engine.pending_candidate().is_some(){"pending"}else{"failed"},"capacityPolicySnapshot":engine.snapshot().capacity.dto(),"attemptNumber":prompt.attempt,"claimKind":v["claimKind"]});
         if let Some(base) = &engine.snapshot().base_version_id {
             p["baseVersionId"] = json!(base)
         }
@@ -653,6 +636,7 @@ async fn persist(
                 v["previousVersionId"] = previous.clone()
             }
             put(&mut tx, "memory_versions", &v, true, 0).await?;
+            super::memory_layers::commit_metadata(&mut tx,profile,&v,&job.snapshot).await?;
             bump(&mut r)?;
             r["state"] = json!("active");
             r["activeVersionId"] = v["id"].clone();
@@ -715,7 +699,7 @@ pub(super) async fn run(
   let mut proposal=job.snapshot["restoreProposalId"].as_str().map(str::to_string);let mut receipt=None;
   while job.engine.outcome().is_none(){
    let prompt=match job.engine.next_call(){Ok(p)=>p,Err(_)=>return Err(job.engine.outcome().and_then(|o|if let Outcome::Failed(f)=o{Some(failure(f))}else{None}).unwrap_or("STORAGE_ERROR"))};
-   let prompt=restore_runtime::prompt(prompt,&job.snapshot);
+   let prompt=super::memory_layers::prompt(restore_runtime::prompt(prompt,&job.snapshot),&job.snapshot);
    let role=if prompt.role==memory::Role::Scribe{"scribe"}else{"primary"};let b=&job.snapshot["routes"][role];let request=build(&prompt,b,&job.snapshot["profile"])?;
    {let _guard=service.gate.lock().await;let mut tx=service.pool.begin().await.map_err(|_|"STORAGE_ERROR")?;ensure_current(&mut tx,&op).await?;budget.ensure_active().map_err(transport_code)?;}
    let response=tokio::select!{biased;_=budget.cancelled()=>Err("OPERATION_CANCELLED"),r=tokio::time::timeout_at(budget.deadline(),async {

@@ -609,7 +609,7 @@ async fn actual_v4_database_migrates_without_changing_profile_or_preferences() {
             .fetch_one(&pool)
             .await
             .unwrap(),
-        9
+        11
     );
     assert!(sqlx::query("PRAGMA foreign_key_check")
         .fetch_all(&pool)
@@ -763,7 +763,7 @@ async fn v6_migration_and_restart_keep_document_versions_without_automatic_post(
     sqlx::query("DROP TABLE chat_vision_policies").execute(&pool).await.unwrap();sqlx::query("DROP TABLE message_documents").execute(&pool).await.unwrap();sqlx::query("PRAGMA user_version=6").execute(&pool).await.unwrap();
     drop(app);pool.close().await;
     let store=Store::open(&path).await.unwrap();let pool=store.pool.clone();let app=Application::with_vault(store,Vault::with_backend(vault.clone()));
-    assert_eq!(sqlx::query_scalar::<_,i64>("PRAGMA user_version").fetch_one(&pool).await.unwrap(),9);
+    assert_eq!(sqlx::query_scalar::<_,i64>("PRAGMA user_version").fetch_one(&pool).await.unwrap(),11);
     assert!(s.wires.lock().unwrap().is_empty());
     let r=with_document(&p,&c,&item,"First");let a=app.dispatch(r.clone()).await.response;assert_eq!(a["ok"],true,"{a}");let op=finished(&app,&p,&a["result"]["operation"]["id"]).await;assert_eq!(op["status"],"succeeded");
     let first=last_wire(&s)["messages"][1]["content"].clone();drop(app);pool.close().await;
@@ -853,7 +853,7 @@ async fn image_migration_restart_keeps_original_policy_and_replay(){
     let(app,pool,vault,s,p,c,_)=configure(app,pool,vault).await;let prefs=ok(&app,"app.preferences.get",json!({}),None,None).await;
     sqlx::query("DROP TABLE chat_vision_policies").execute(&pool).await.unwrap();sqlx::query("PRAGMA user_version=7").execute(&pool).await.unwrap();drop(app);pool.close().await;
     let store=Store::open(&path).await.unwrap();let pool=store.pool.clone();let app=Application::with_vault(store,Vault::with_backend(vault.clone()));
-    assert_eq!(sqlx::query_scalar::<_,i64>("PRAGMA user_version").fetch_one(&pool).await.unwrap(),9);assert_eq!(ok(&app,"app.preferences.get",json!({}),None,None).await,prefs);
+    assert_eq!(sqlx::query_scalar::<_,i64>("PRAGMA user_version").fetch_one(&pool).await.unwrap(),11);assert_eq!(ok(&app,"app.preferences.get",json!({}),None,None).await,prefs);
     assert_eq!(ok(&app,"chat.vision.get",json!({}),Some(&p),None).await["support"],"unknown");
     let(app,item,_)=imported_image(app,&pool,vault.clone(),&p,&c).await;let policy=declare_vision(&app,&p,"supported").await;
     let r=with_document(&p,&c,&item,"Describe");let a=app.dispatch(r.clone()).await.response;assert_eq!(a["ok"],true,"{a}");assert_eq!(finished(&app,&p,&a["result"]["operation"]["id"]).await["status"],"succeeded");let first=last_wire(&s)["messages"][1]["content"].clone();drop(app);pool.close().await;

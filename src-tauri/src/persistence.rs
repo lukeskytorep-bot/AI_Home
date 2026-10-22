@@ -14,7 +14,7 @@ impl Store {
         let pool=SqlitePoolOptions::new().max_connections(1).connect_with(options).await?;
         let mut tx=pool.begin().await?;
         let version:i64=sqlx::query_scalar("PRAGMA user_version").fetch_one(&mut *tx).await?;
-        if version>9{return Err(sqlx::Error::Protocol("unsupported storage version".into()))}
+        if version>11{return Err(sqlx::Error::Protocol("unsupported storage version".into()))}
         sqlx::query("CREATE TABLE IF NOT EXISTS preferences (id INTEGER PRIMARY KEY CHECK(id=1), revision INTEGER NOT NULL, body TEXT NOT NULL)").execute(&mut *tx).await?;
         sqlx::query("CREATE TABLE IF NOT EXISTS receipts (request_id TEXT PRIMARY KEY, fingerprint TEXT NOT NULL, response TEXT NOT NULL)").execute(&mut *tx).await?;
         sqlx::query("CREATE TABLE IF NOT EXISTS app_events (sequence INTEGER PRIMARY KEY AUTOINCREMENT, body TEXT NOT NULL)").execute(&mut *tx).await?;
@@ -52,6 +52,18 @@ impl Store {
             "CREATE TABLE IF NOT EXISTS memory_runs (profile_id TEXT NOT NULL, operation_id TEXT NOT NULL, record_id TEXT NOT NULL, body TEXT NOT NULL, PRIMARY KEY(profile_id,operation_id), FOREIGN KEY(profile_id,operation_id) REFERENCES operations(profile_id,id), FOREIGN KEY(profile_id,record_id) REFERENCES memory_records(profile_id,id))",
             "CREATE TABLE IF NOT EXISTS memory_contexts (profile_id TEXT NOT NULL, route_id TEXT NOT NULL, scope_id TEXT NOT NULL, context_tokens INTEGER NOT NULL CHECK(context_tokens>=1024 AND context_tokens<=2000000), PRIMARY KEY(profile_id,route_id), FOREIGN KEY(profile_id,route_id) REFERENCES routes(profile_id,id))",
         ] {sqlx::query(statement).execute(&mut *tx).await?;}
+        // v10: human annotations are separate from frozen DTOs and Primary-approved text.
+        for statement in [
+            "CREATE TABLE IF NOT EXISTS memory_metadata (profile_id TEXT NOT NULL, record_id TEXT NOT NULL, body TEXT NOT NULL, PRIMARY KEY(profile_id,record_id), FOREIGN KEY(profile_id,record_id) REFERENCES memory_records(profile_id,id))",
+            "CREATE TABLE IF NOT EXISTS memory_version_metadata (profile_id TEXT NOT NULL, version_id TEXT NOT NULL, body TEXT NOT NULL, PRIMARY KEY(profile_id,version_id), FOREIGN KEY(profile_id,version_id) REFERENCES memory_versions(profile_id,id))",
+        ] {sqlx::query(statement).execute(&mut *tx).await?;}
+        // v11: profile-scoped imported source material stays independent of conversations.
+        // Knowledge and guidance reference immutable imported material; frozen P2 DTOs already define these records.
+        for statement in [
+            "CREATE TABLE IF NOT EXISTS profile_import_materials (profile_id TEXT NOT NULL REFERENCES profiles(id), id TEXT NOT NULL, operation_id TEXT NOT NULL, original_blob_id TEXT NOT NULL, extracted_blob_id TEXT, revision INTEGER NOT NULL, body TEXT NOT NULL, PRIMARY KEY(profile_id,id), FOREIGN KEY(profile_id,operation_id) REFERENCES operations(profile_id,id), FOREIGN KEY(profile_id,original_blob_id) REFERENCES import_blobs(profile_id,id), FOREIGN KEY(profile_id,extracted_blob_id) REFERENCES import_blobs(profile_id,id))",
+            "CREATE TABLE IF NOT EXISTS knowledge_sources (profile_id TEXT NOT NULL, id TEXT NOT NULL, material_id TEXT NOT NULL, revision INTEGER NOT NULL, body TEXT NOT NULL, PRIMARY KEY(profile_id,id), UNIQUE(profile_id,material_id), FOREIGN KEY(profile_id,material_id) REFERENCES profile_import_materials(profile_id,id))",
+            "CREATE TABLE IF NOT EXISTS persistent_guidance (profile_id TEXT NOT NULL, id TEXT NOT NULL, material_id TEXT NOT NULL, revision INTEGER NOT NULL, body TEXT NOT NULL, PRIMARY KEY(profile_id,id), UNIQUE(profile_id,material_id), FOREIGN KEY(profile_id,material_id) REFERENCES profile_import_materials(profile_id,id))",
+        ] {sqlx::query(statement).execute(&mut *tx).await?;}
         let timestamp=chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis,true);
         let profiles=sqlx::query("SELECT id FROM profiles").fetch_all(&mut *tx).await?;
         for row in profiles {
@@ -78,8 +90,9 @@ impl Store {
         sqlx::query("UPDATE memory_proposals SET revision=revision+1,body=json_set(body,'$.revision',revision+1,'$.state','failed') WHERE json_extract(body,'$.state')='pending' AND EXISTS(SELECT 1 FROM operations o WHERE o.profile_id=memory_proposals.profile_id AND o.id=memory_proposals.operation_id AND json_extract(o.body,'$.status') IN ('failed','cancelled','interrupted'))").execute(&mut *tx).await?;
         // Imported originals survive a crash; interrupted extraction is never presented as ready.
         sqlx::query("UPDATE import_materials SET revision=revision+1,body=json_set(body,'$.revision',revision+1,'$.parseState','failed','$.errorCode','OPERATION_INTERRUPTED') WHERE json_extract(body,'$.parseState')='pending'").execute(&mut *tx).await?;
+        sqlx::query("UPDATE profile_import_materials SET revision=revision+1,body=json_set(body,'$.revision',revision+1,'$.parseState','failed','$.errorCode','OPERATION_INTERRUPTED') WHERE json_extract(body,'$.parseState')='pending'").execute(&mut *tx).await?;
         sqlx::query("UPDATE attachments SET revision=revision+1,body=json_set(body,'$.revision',revision+1,'$.state','failed') WHERE EXISTS(SELECT 1 FROM import_materials m WHERE m.profile_id=attachments.profile_id AND m.id=attachments.material_id AND json_extract(m.body,'$.errorCode')='OPERATION_INTERRUPTED') AND json_extract(body,'$.state')='staged'").execute(&mut *tx).await?;
-        sqlx::query("PRAGMA user_version=9").execute(&mut *tx).await?;tx.commit().await?;
+        sqlx::query("PRAGMA user_version=11").execute(&mut *tx).await?;tx.commit().await?;
         let store=Self{pool};store.preferences().await?;Ok(store)
     }
     pub async fn preferences(&self)->Result<Value,sqlx::Error>{

@@ -99,7 +99,7 @@ async fn working_record_seeded_defaults_and_profile_isolation() {
             .fetch_one(&pool)
             .await
             .unwrap(),
-        9
+        11
     );
     assert!(sqlx::query("PRAGMA foreign_key_check")
         .fetch_all(&pool)
@@ -671,7 +671,7 @@ async fn version_eight_migration_seeds_without_changing_profiles_messages_or_pre
             .fetch_one(&pool)
             .await
             .unwrap(),
-        9
+        11
     );
     assert!(sqlx::query("PRAGMA foreign_key_check")
         .fetch_all(&pool)
@@ -791,4 +791,59 @@ async fn changed_endpoint_rebound_key_and_successful_retest_reject_old_scope_and
     assert!(memory_view(&app, &p).await.get("version").is_none());
     assert_eq!(s.wires.lock().unwrap().len(), 1);
     assert!(other.wires.lock().unwrap().is_empty());
+}
+
+async fn automatic_memory_with_windows(app:&Application,p:&str,conn:&Value,primary_context:i64,scribe_context:i64){
+    let snap=ok(app,"profile.snapshot",json!({}),Some(p),None).await;
+    let route=ok(app,"route.save",json!({"route":{"role":"scribe","connectionId":conn["id"],"modelId":"scribe-model","outputLimitTokens":1024}}),Some(p),snap["profile"]["revision"].as_i64()).await;
+    let snap=ok(app,"profile.snapshot",json!({}),Some(p),None).await;
+    ok(app,"route.assign",json!({"role":"scribe","routeId":route["id"]}),Some(p),snap["profile"]["revision"].as_i64()).await;
+    let v=memory_view(app,p).await;
+    ok(app,"memory.settings.set",json!({"scopeId":v["scopeId"],"capacityPolicy":{"kind":"bounded","tokens":300},"scribeMode":"automatic","primaryContextTokens":primary_context,"scribeContextTokens":scribe_context}),Some(p),v["profileRevision"].as_i64()).await;
+}
+async fn memory_storage_counts(pool:&sqlx::SqlitePool)->Vec<i64>{
+    let mut counts=vec![];
+    for table in ["operations","receipts","profile_events","memory_runs","memory_proposals","memory_decisions","memory_attempts","memory_versions"]{
+        counts.push(sqlx::query_scalar(&format!("SELECT count(*) FROM {table}")).fetch_one(pool).await.unwrap());
+    }
+    counts
+}
+#[tokio::test]
+async fn automatic_scribe_impossible_primary_budget_rejected_before_any_post_or_write(){
+    // 1024 is already smaller than output 1024 + reserve 512. At 2048 those
+    // fit alone, but the minimum decision instructions and source data do not.
+    for primary_context in [1024,2048]{
+        let(app,pool,_,s,p,c,conn)=memory_fixture().await;
+        automatic_memory_with_windows(&app,&p,&conn,primary_context,32768).await;
+        let before=memory_storage_counts(&pool).await;let old=memory_view(&app,&p).await;
+        propose_answer(&s,"Cel.");
+        let response=app.dispatch(memory_request(&app,&p,&c).await).await.response;
+        // Before the correction this receives Accepted, sends one real loopback
+        // POST to Scribe, then fails in the Primary request builder.
+        let unexpected=if response["ok"]==true{Some(finished(&app,&p,&response["result"]["operation"]["id"]).await)}else{None};
+        assert_eq!(response["ok"],false,"known-impossible Primary was accepted: {response}; terminal={unexpected:?}; POSTs={}",s.wires.lock().unwrap().len());
+        assert_eq!(response["error"]["code"],"CONTEXT_BUDGET_EXCEEDED");
+        assert!(schema::dto("Error",&response["error"]));
+        assert!(s.wires.lock().unwrap().is_empty(),"must not pay for Scribe when Primary cannot run");
+        assert_eq!(memory_storage_counts(&pool).await,before,"rejection must not create operation, receipt, event, proposal or version");
+        assert_eq!(memory_view(&app,&p).await,old);
+    }
+}
+#[tokio::test]
+async fn automatic_scribe_impossible_proposer_budget_also_rejected_without_posts(){
+    let(app,pool,_,s,p,c,conn)=memory_fixture().await;
+    automatic_memory_with_windows(&app,&p,&conn,32768,1024).await;
+    let before=memory_storage_counts(&pool).await;
+    let r=app.dispatch(memory_request(&app,&p,&c).await).await.response;
+    assert_eq!(r["error"]["code"],"CONTEXT_BUDGET_EXCEEDED","{r}");
+    assert!(s.wires.lock().unwrap().is_empty());assert_eq!(memory_storage_counts(&pool).await,before);
+}
+#[tokio::test]
+async fn one_physical_call_cannot_cover_proposer_and_primary_decision(){
+    let(app,pool,_,s,p,c,_)=memory_fixture().await;
+    sqlx::query("UPDATE profiles SET revision=revision+1,body=json_set(body,'$.revision',revision+1,'$.contextBudget.maxPhysicalCalls',1) WHERE id=?").bind(&p).execute(&pool).await.unwrap();
+    let before=memory_storage_counts(&pool).await;
+    let r=app.dispatch(memory_request(&app,&p,&c).await).await.response;
+    assert_eq!(r["error"]["code"],"OPERATION_BUDGET_EXCEEDED","{r}");
+    assert!(s.wires.lock().unwrap().is_empty());assert_eq!(memory_storage_counts(&pool).await,before);
 }

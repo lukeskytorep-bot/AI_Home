@@ -183,12 +183,12 @@ impl ImportService {
         &self,
         token: &str,
         profile: &str,
-        conversation: &str,
+        conversation: Option<&str>,
     ) -> Result<Selection, &'static str> {
         let mut snapshots = self.selections.lock().await;
         snapshots.retain(|_, s| s.created.elapsed() < TTL);
         let s = snapshots.get(token).ok_or("NOT_FOUND")?;
-        if s.profile != profile || s.conversation != conversation {
+        if s.profile != profile || conversation.is_some_and(|c| s.conversation != c) {
             return Err("NOT_FOUND");
         }
         Ok(s.clone())

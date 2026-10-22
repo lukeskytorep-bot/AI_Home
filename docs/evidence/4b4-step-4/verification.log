@@ -1,0 +1,10 @@
+BASE AI_HOME_4B4_KROK_3_SOURCE.zip: 7b7f3abccdcd0825721e1c1122e0cefdcf0672a2fcbf4ae552507e80b016e147
+PASS frozen domain.schema/ipc.catalog/defaults/foundation byte-identical
+PASS package.json/package-lock.json/Cargo.toml/Cargo.lock byte-identical
+PASS workflow foundation.yml byte-identical
+PASS 193/193 frozen P2/reference checks
+PASS 26/26 module boundary checks
+NOT RUN Rust tests: cargo/rustc unavailable in sandbox
+NOT RUN frontend/Vitest/TypeScript/Vite: npm dependency install timed out; lockfile unchanged
+NOT VERIFIED Windows/Tauri/WebView, system vault, live API
+STATUS IMPLEMENTED_REQUIRES_CI_AND_AUDIT

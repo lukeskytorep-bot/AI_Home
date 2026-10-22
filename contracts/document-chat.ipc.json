@@ -179,6 +179,122 @@
                 "additionalProperties": false
               }
             ]
+          },
+          "retrieval": {
+            "type": "object",
+            "properties": {
+              "method": {
+                "const": "lexical_unicode_terms_v1"
+              },
+              "query": {
+                "type": "string",
+                "maxLength": 4096
+              },
+              "queryWindow": {
+                "const": "last_4096_characters"
+              },
+              "budgetTokens": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "inputTokens": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "matchedCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "omittedCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "record": {
+                      "$ref": "#/$defs/MemoryRecord"
+                    },
+                    "version": {
+                      "$ref": "#/$defs/MemoryVersion"
+                    },
+                    "decision": {
+                      "$ref": "#/$defs/MemoryDecisionReceipt"
+                    },
+                    "metadata": {
+                      "type": "object",
+                      "properties": {
+                        "title": {
+                          "type": "string",
+                          "maxLength": 128
+                        },
+                        "addedBy": {
+                          "const": "human"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "intent": {
+                          "$ref": "#/$defs/Intent"
+                        }
+                      },
+                      "required": [
+                        "title",
+                        "addedBy",
+                        "createdAt",
+                        "updatedAt"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "score": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "inputTokens": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "measurement": {
+                      "$ref": "#/$defs/TokenMeasurement"
+                    }
+                  },
+                  "required": [
+                    "record",
+                    "version",
+                    "decision",
+                    "metadata",
+                    "score",
+                    "inputTokens",
+                    "measurement"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "method",
+              "query",
+              "queryWindow",
+              "budgetTokens",
+              "inputTokens",
+              "matchedCount",
+              "omittedCount",
+              "items"
+            ],
+            "additionalProperties": false
+          },
+          "knowledge": {
+            "type": "object"
+          },
+          "guidance": {
+            "type": "object"
           }
         },
         "required": [

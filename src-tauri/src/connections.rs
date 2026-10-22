@@ -23,9 +23,14 @@ mod import_runtime;
 mod memory_runtime;
 #[path = "memory_history.rs"]
 mod memory_history;
+#[path = "memory_layers.rs"] mod memory_layers;
+#[path = "memory_retrieval.rs"] mod memory_retrieval;
+#[path = "profile_imports.rs"] mod profile_imports;
 type Failure = &'static str;
 type Tx<'a> = Transaction<'a, Sqlite>;
 const COMMANDS: &[&str] = &[
+    "profile.imports.list", "knowledge.enabled.set", "guidance.enabled.set", "chat.profile.context.get",
+    "memory.version.annotations.get", "memory.records.list", "memory.record.create", "memory.record.get", "memory.record.metadata.set", "memory.record.update", "memory.layers.settings.get", "memory.layers.settings.set", "memory.search", "chat.retrieval.get",
     "memory.restore",
     "memory.versions.list", "memory.version.get", "memory.outdated.set",
     "memory.working.get", "memory.working.sources", "memory.settings.set", "memory.update.request",
@@ -124,6 +129,8 @@ fn validate_record(table: &str, v: &Value) -> bool {
             "messages" => "Message",
             "memory_records" => "MemoryRecord", "memory_versions" => "MemoryVersion",
             "memory_proposals" => "MemoryProposal", "memory_decisions" => "MemoryDecisionReceipt", "memory_attempts" => "MemoryWriteAttempt",
+            "knowledge_sources" => "KnowledgeSource",
+            "persistent_guidance" => "PersistentGuidance",
             _ => "Operation",
         },
         v,
@@ -247,7 +254,9 @@ impl Connections {
         let vision:Value=serde_json::from_str(include_str!("../../contracts/vision.ipc.json")).unwrap();
         let memory:Value=serde_json::from_str(include_str!("../../contracts/memory.ipc.json")).unwrap();
         let memory_chat:Value=serde_json::from_str(include_str!("../../contracts/memory-chat.ipc.json")).unwrap();
+        let layers:Value=serde_json::from_str(include_str!("../../contracts/memory-layers.ipc.json")).unwrap();
         let history:Value=serde_json::from_str(include_str!("../../contracts/memory-history.ipc.json")).unwrap();
+        let profile_imports:Value=serde_json::from_str(include_str!("../../contracts/profile-imports.ipc.json")).unwrap();
         let contract = catalog["commands"]
             .get(command)
             .or_else(|| extra["commands"].get(command))
@@ -259,6 +268,8 @@ impl Connections {
             .or_else(|| memory["commands"].get(command))
             .or_else(|| memory_chat["commands"].get(command))
             .or_else(|| history["commands"].get(command))
+            .or_else(|| layers["commands"].get(command))
+            .or_else(|| profile_imports["commands"].get(command))
             .ok_or("UNKNOWN_COMMAND")?;
         if !schema::dto("CommandEnvelope", r)
             || !schema::valid(&r["payload"], &contract["payload"])
@@ -415,6 +426,11 @@ impl Connections {
                 match command {
                     "memory.versions.list"|"memory.version.get" => memory_history::read(&mut tx,command,profile,payload).await?,
                     "memory.outdated.set" => memory_history::outdated(&mut tx,profile,payload,expected).await?,
+                    "memory.version.annotations.get"|"memory.records.list"|"memory.record.create"|"memory.record.get"|"memory.record.metadata.set"|"memory.layers.settings.get"|"memory.layers.settings.set" => memory_layers::dispatch(&mut tx,command,&mut p,payload,expected).await?,
+                    "memory.search" => memory_retrieval::search(&mut tx,&p,payload).await?,
+                    "chat.retrieval.get" => memory_retrieval::historical(&mut tx,profile,payload).await?,
+                    "profile.imports.list"|"knowledge.enabled.set"|"guidance.enabled.set"|"chat.profile.context.get" => profile_imports::dispatch(&mut tx,command,profile,payload,expected).await?,
+                    "memory.record.update" => {let(job,op)=memory_runtime::accept(&mut tx,&p,payload,expected).await?;memory_launch=Some((job,op.clone()));json!({"operation":op})},
                     "memory.working.get" => memory_runtime::view(&mut tx,profile).await?,
                     "memory.working.sources" => memory_runtime::sources(&mut tx,profile,payload).await?,
                     "memory.settings.set" => memory_runtime::settings(&mut tx,&mut p,payload,expected).await?,
