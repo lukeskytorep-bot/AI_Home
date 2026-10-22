@@ -22,3 +22,14 @@ Nie zmieniono runtime segmentacji, F1/F2, kontraktów IPC, SQLite, providerów a
 ## Status
 
 `IMPLEMENTED / REQUIRES CI`. 4B-5 nie jest `PASS CLOSED` do czasu zielonego pełnego CI i ponownego audytu.
+
+## AUDIT FIX 4 — poprawki po pełnym CI
+
+Pełne CI ujawniło dwa pozostałe problemy niezależne od F1/F2:
+
+1. Rust/Cargo: `profile_imports.rs` wywoływał niedostępny prywatny helper `validate()`. Odczyt `profile.import.latest` waliduje teraz zapisany obiekt przez publicznie używany w projekcie `schema::dto("Operation", &op)` oraz sprawdza zgodność `profileId`.
+2. Vitest: dwa testy kandydatur pamięci używały nieaktualnych angielskich `aria-label` (`Choose memory record`, `Reason for saving or correction`). Aktualne locale to `Memory record for candidate review` oraz `Reason for memory review/correction`; fixture testowe zostały zaktualizowane bez zmiany UI/runtime.
+
+Dodatkowo znormalizowano `docs/evidence/4b5/status.json` do `4B-5 REBASE AUDIT FIX 4`, planu 1.37 i jawnie zachowano wcześniejszy log FIX 2/FIX 3 jako historię evidence.
+
+Zakres F1/F2 nie został zmieniony. 4B-5 nadal wymaga nowego pełnego zielonego CI przed `PASS CLOSED`.

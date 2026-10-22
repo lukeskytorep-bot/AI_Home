@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "date": "2026-10-22",
-  "stage": "4B-5 REBASE AUDIT FIX 2",
-  "planContentVersion": "1.35",
+  "stage": "4B-5 REBASE AUDIT FIX 4",
+  "planContentVersion": "1.37",
   "status": "IMPLEMENTED_REQUIRES_CI_AND_AUDIT",
   "baseSourceSha256": "f5ae15fee8c94ac789bdcdd84fe954d7524b57e5931211ed3dd50565c9c8b2ab",
   "p2ReferenceChecks": 193,
@@ -20,5 +20,10 @@
   "workflowChanged": false,
   "dependenciesChanged": false,
   "next": "4B-6 only after PASS CLOSED 4B-5",
-  "continuity": "read_only_preflight_atomic_send_checkpoint_and_newest_first_summary_budget"
+  "continuity": "read_only_preflight_atomic_send_checkpoint_and_newest_first_summary_budget",
+  "fix4CompileAndUiCiCorrections": "IMPLEMENTED_REQUIRES_CI",
+  "fix4Details": [
+    "profile_import.latest validates Operation through schema::dto and profile scope",
+    "imports-ui candidate tests use current locale aria-labels"
+  ]
 }

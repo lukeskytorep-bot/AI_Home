@@ -10,3 +10,11 @@ FIXED frontend test fixtures from supplied CI: chat.preflight segmentContext and
 NOT RUN npm tests: offline cache missing xmlchars-2.2.0.tgz
 NOT RUN cargo/rustc in this environment
 NOT RUN Windows / Tauri / WebView / OS vault / live API
+
+4B-5 REBASE AUDIT FIX 4
+FIXED Rust compile error: profile_import.latest validates stored Operation with schema::dto plus profile scope
+FIXED imports-ui candidate tests: current EN aria-labels for memory target and candidate reason
+UPDATED evidence status to FIX 4 / plan 1.37
+REQUIRES CI cargo + npm test/typecheck/build
+
+NOTE: earlier FIX 2/FIX 3 entries above are historical evidence. Current evidence index is status.json stage FIX 4 / plan 1.37.

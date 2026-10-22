@@ -391,3 +391,7 @@ SQLite v11 dodaje trzy tabele profile-scoped bez przepisywania wcześniejszych d
 
 Po poprawkach F1/F2 pełny build TypeScript ujawnił trzy błędy kompilacji w warstwie UI/testów. Zakres 1.36 nie zmienia funkcji runtime ani kontraktów. Naprawiono: użycie nieistniejącego typu `Operation` w `AttachmentsPanel` poprzez właściwy `ImportOperation`; inicjalizację `useRef<CandidatePending | undefined>(undefined)` w teście remount; oraz wynikający z tego błąd przypisania `CandidatePending | undefined`. 4B-5 pozostaje otwarte do czasu zielonego pełnego CI i ponownego audytu.
 
+
+## Aktualizacja 1.37 — 22 października 2026 — 4B-5 AUDIT FIX 4 (CI compile/test fix)
+
+Po statycznym PASS F1/F2 oraz FIX 3 pełne CI wykryło dwa pozostałe problemy techniczne. Rust nie kompilował, ponieważ `profile_imports.rs` odwoływał się do prywatnego helpera `validate()` spoza modułu; zastąpiono to walidacją `schema::dto("Operation", ...)` z kontrolą profilu, zgodną z istniejącym stylem persistence. Dwa testy `imports-ui` nie znajdowały kontrolek, ponieważ używały dawnych etykiet aria zamiast aktualnych tekstów locale; fixture zostały zsynchronizowane z bieżącym EN UI. Nie zmieniono F1/F2, SQLite, kontraktów ani semantyki kandydatur pamięci. Status evidence wskazuje FIX 4 / plan 1.37. Formalne zamknięcie 4B-5 wymaga zielonego cargo + frontend test/typecheck/build oraz ponownego odbioru.
