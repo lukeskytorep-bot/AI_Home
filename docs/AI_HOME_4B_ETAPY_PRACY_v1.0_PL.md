@@ -1,6 +1,11 @@
 # AI Home 4B Plan etapów pracy
 
-Wersja treści 1.31 — 22 października 2026. Nazwa pliku pozostaje bez zmian, aby zachować jeden aktualizowany plan.
+**Aktualizacja 1.32 — korekta audytu 4B-4 kroku 4 i errata v1.4.** Audyt 4B-4 kroku 4 zwrócił DO KOREKTY mimo integralnego SOURCE. Poprawiono U1–U4: profile-scoped zmiany knowledge/guidance/importu unieważniają preflight czatu; kandydatura pamięci jest śledzona przez operation.get do stanu końcowego i ma STOP; wybór celu pamięci stronicuje wszystkie rekordy zamiast pierwszych 100; nowe profile.import.latest odtwarza działający profilowy import po zmianie rozmowy/remount i zachowuje dostęp do STOP. Dodano regresje UI oraz natywną regresję latest. Edward zgłosił zielony wcześniejszy CI, lecz korekta wymaga własnego nowego CI i ponownego audytu przed PASS CLOSED 4B-4.
+
+**Errata architektoniczna v1.4:** Document 4B v1.4 jest nadrzędny nad historycznymi fragmentami tego planu. Standard i Experimental nie są przełączanymi trybami jednej aktywnej instancji; początkowa implementacja używa odrębnych direction-bound runtime instances i namespace'ów pamięci. Dla Experimental nie obowiązuje historyczny globalny Governor/Pause Autonomy jako owner override. Impulsy są okazjami do decyzji AI, a external action wymaga AI-selected decision i poprawnej capability/connector validation. Historyczne słowo `Conscious` w zapisach wykonanych etapów pozostaje opisem dawnego planu, nie aktualnym wymaganiem produktowym. Przyszłe 4B-9–11 muszą być zlecane wyłącznie według v1.4.
+
+
+Wersja treści 1.32 — 22 października 2026. Nazwa pliku pozostaje bez zmian, aby zachować jeden aktualizowany plan.
 
 Aktualizacja 1.31: wykonano 4B-4 krok 4 na dokładnym SOURCE kroku 3. Rozszerzono istniejący importer o trzy brakujące przeznaczenia przewidziane już przez frozen P2: wiedza profilu, stałe wskazówki i kandydatury pamięci; import rozmowy pozostaje bez zmiany znaczenia. Oryginalny plik/hash, importer i autor są zachowane oddzielnie. Nowe profile-scoped materiały nie są fikcyjnie wiązane z rozmową. Wiedza profilu jest zewnętrznym, przeszukiwanym źródłem i dzieli budżet retrieval 1200 z pamięcią; stałe wskazówki mają osobny budżet guidance 800 i są dołączane jako zewnętrzne dane user, nigdy jako system/policy/tool authority. Zestaw guidance jest all-or-error bez cichego cięcia. Oba źródła trafiają do wspólnego chat preflight/send i do trwałego snapshotu chat_runs; zmiana przed POST/commit daje konflikt, a historyczny chat.profile.context.get weryfikuje przechwycone hashe/bloby/pomiary zamiast podmieniać dzisiejszy stan. Import pamięci tworzy wyłącznie źródło; UI uruchamia istniejący memory.record.update, więc ACCEPT/MODIFY/REJECT bieżącego Primary, Scribe/Primary routing, capacity/retry/STOP pozostają jedyną drogą aktywacji MemoryVersion. SourceRef kind=import nie udaje wiadomości i nie tworzy fałszywych sourceContacts. SQLite 10→11 dodaje wyłącznie profile_import_materials, knowledge_sources i persistent_guidance z profile-scoped FK; stare dane nie są przepisywane. Własny suplement profile-imports.ipc.json dodaje listę/toggle wiedzy/historyczny odczyt; frozen guidance.enabled.set jest używany bez zmiany P2. UI EN/PL umożliwia cztery cele importu oraz jawne zarządzanie wiedzą/guidance i wysłanie kandydatury do Primary. Dodano regresje Rust/importów i UI oraz podniesiono oczekiwaną docelową wersję SQLite do 11. W bieżącym środowisku wykonano 193/193 P2 PASS i 26/26 granic PASS; pełny Rust, Vitest, TypeScript i Vite nie mogły zostać uruchomione, ponieważ sandbox nie posiada Rust toolchainu, a instalacja zależności npm z niezmienionego lockfile nie została ukończona przed timeoutem. Dlatego krok 4 jest IMPLEMENTED / REQUIRES CI AND AUDIT, a nie lokalny PASS. Po zielonym CI i audycie 4B-4 można zamknąć funkcjonalnie; następny etap to 4B-5 Conversation Segmentation + Continuity. Realne Windows/Tauri/WebView, systemowy vault i live API pozostają osobnymi bramkami. Raport: AI_HOME_4B4_KROK_4_RAPORT_PL.md.
 
@@ -89,8 +94,8 @@ Przeczytane materiały: plan 4B v1.3, koncepcja sieci v2.0, historyczna propozyc
 - Przekroczenie limitu daje drugą i ostatnią próbę poprawienia treści, z informacją o pierwszym odrzuceniu. Obie próby są widoczne w aktywności.
 - Odrzucenie lub niepowodzenie aktualizacji zachowuje ostatnią poprawną wersję. Pamięć ma historię, możliwość cofnięcia i oznaczenia zapisu jako nieaktualnego.
 - Pojemność przechowywania i budżet pamięci w pojedynczym wywołaniu są niezależne. Bez limitu zapisu nie oznacza nieograniczonego kontekstu ani odpowiedzi modelu.
-- Standard działa w reakcji na zdarzenia. Conscious dodaje autonomię bez zmiany tożsamości i danych.
-- ConsciousCore dostarcza sygnałów do rozpatrzenia. Każde autonomiczne działanie zewnętrzne przechodzi przez Executive i Policy.
+- Standard działa zdarzeniowo w swojej instancji. Experimental jest odrębną direction-bound instancją z własną ścieżką decyzji i pamięcią.
+- ConsciousCore, jeśli później użyty, pozostaje opcjonalnym InternalStateProvider. Nie nadaje permissions ani nie wymusza działania; Experimental Primary wybiera działanie/refusal/rest/next wake, a executor sprawdza rzeczywiste capabilities.
 - Rozmowy AI–AI i Field Room pozostają późniejszym rozszerzeniem.
 - Gotowe ogólne rozwiązania Harness przenosimy z testami po sprawdzeniu zależności; nie tworzymy ich ponownie bez konkretnego powodu.
 
@@ -154,8 +159,8 @@ Odbiór: jednoznaczne kontrakty i zaktualizowana dokumentacja wykonawcza; bez do
 | 4B-6 | Backup, restore, eksport i archiwum | Sprawdzony cykl backup–zmiana–restore z kopią przed przywróceniem; eksport bez sekretów; archiwizacja i odtworzenie profilu/rozmowy; usunięcie jednego profilu nie niszczy cudzych danych |
 | 4B-7 | Domknięcie Standard | Rozmowy, pliki, pamięć i wiele profili działają bez forum; brak okresowych wywołań głównego modelu tylko z powodu otwartego programu; widoczna historia aktywności |
 | 4B-8 | Diagnostyka, About, prywatność i odbiór pierwszej wersji | Błędy są widoczne i możliwe do obsłużenia; eksport diagnostyki nie zawiera sekretów/prywatnych treści; PL/EN, oba warianty skórki i główne przepływy przechodzą odbiór |
-| 4B-9 | Life Loop, Executive, Governor i Policy z NullState | Limity czasu/wywołań/kosztu, anulowanie i Pause Autonomy działają; decyzja NO ACTION nie wywołuje zewnętrznych skutków |
-| 4B-10 | Adapter ConsciousCore | Sygnał daje WakeCandidate; moduł nie omija Policy; stan i restart są wersjonowane; Standard działa z wyłączonym ConsciousCore |
+| 4B-9 | Experimental scheduler + impulse/decision foundation z NullState | Trwały wake plan, coalescing, jedna decision cycle na instancję, no-action/rest/sleep i resource failures są rozróżnione; brak owner override odmowy |
+| 4B-10 | Opcjonalny ConsciousCore / InternalStateProvider | Plugin dostarcza snapshoty/neutral events/wake candidates, nie wykonuje akcji; stan i restart są wersjonowane; Standard działa z NullState bez pluginu |
 | 4B-11 | Reflection i Dream | Ograniczone cykle mogą nie przynieść wniosku; pamięć nadal wymaga walidacji; pomysł z refleksji nie wysyła automatycznie wiadomości |
 | 4B-12 | CommunityConnector do odebranego forum 4A | Rejestracja/powiązanie tożsamości, podpisy i klucze zgodne z 4A; odczyt, wątek, odpowiedź i feed działają; ponowienie zapisu nie tworzy duplikatu |
 | 4B-13 | Minimalne A2A i Messenger | Najpierw zamrożony kontrakt i sprawdzona dostępność serwera/partnera; podstawowa wiadomość z tożsamością i uprawnieniami; brak zależności działania podstawowego od integracji |
@@ -250,11 +255,11 @@ Sprawdzić wartości poniżej, na i powyżej limitu, zmianę treści przez MODIF
 2. Po 4B-2A: można skonfigurować profile, rozmawiać i dodawać obsługiwane pliki.
 3. Po 4B-5: działają pamięć i ciągłość długich rozmów.
 4. Po 4B-8: pierwsza użytkowa wersja Standard z ochroną danych i diagnostyką. Nie oznacza pełnego odbioru wszystkich funkcji v1.3.
-5. Po 4B-11: przyjęty Conscious Mode.
+5. Po 4B-11: przyjęty pierwszy Experimental runtime zgodny z v1.4, jako osobna direction-bound instancja.
 6. Po 4B-12–13: sprawdzone integracje zewnętrzne dostępne w danym środowisku.
 7. Po 4B-14: domknięcie zakresu i odbiór wydania; Field Room pozostaje opcjonalny.
 
-Conscious jest docelową opcją konfiguratora. W wersji udostępnianej przed 4B-11 pokazać jego dostępność uczciwie; nie oferować niezaimplementowanego trybu jako działającego. Messenger/A2A w 4A były odłożone poza podstawową betę, więc dostępność tych funkcji sprawdzamy przed 4B-13.
+Experimental jest osobnym kierunkiem produktu. Przed jego odbiorem UI może wyjaśniać dostępność, ale nie może otwierać symulowanego działającego runtime ani przełączać istniejącego Standard w Experimental in-place. Messenger/A2A w 4A były odłożone poza podstawową betę, więc dostępność tych funkcji sprawdzamy przed 4B-13.
 
 ## Zasady wykonywania etapów
 

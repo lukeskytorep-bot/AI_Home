@@ -36,6 +36,12 @@
       },
       "mutates":false,"requiresExpectedRevision":false,"async":false,"firstImplementationStage":"4B-4 step4"
     },
+    "profile.import.latest": {
+      "scope":"profile",
+      "payload":{"type":"object","properties":{},"additionalProperties":false},
+      "result":{"type":"object","properties":{"found":{"type":"boolean"},"operation":{"$ref":"#/$defs/Operation"}},"required":["found"],"additionalProperties":false},
+      "mutates":false,"requiresExpectedRevision":false,"async":false,"firstImplementationStage":"4B-4 step4 audit fix"
+    },
     "knowledge.enabled.set": {
       "scope":"profile",
       "payload":{"type":"object","properties":{"knowledgeSourceId":{"type":"string","minLength":1,"maxLength":128},"enabled":{"type":"boolean"}},"required":["knowledgeSourceId","enabled"],"additionalProperties":false},

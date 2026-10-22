@@ -29,7 +29,7 @@ mod memory_history;
 type Failure = &'static str;
 type Tx<'a> = Transaction<'a, Sqlite>;
 const COMMANDS: &[&str] = &[
-    "profile.imports.list", "knowledge.enabled.set", "guidance.enabled.set", "chat.profile.context.get",
+    "profile.imports.list", "profile.import.latest", "knowledge.enabled.set", "guidance.enabled.set", "chat.profile.context.get",
     "memory.version.annotations.get", "memory.records.list", "memory.record.create", "memory.record.get", "memory.record.metadata.set", "memory.record.update", "memory.layers.settings.get", "memory.layers.settings.set", "memory.search", "chat.retrieval.get",
     "memory.restore",
     "memory.versions.list", "memory.version.get", "memory.outdated.set",
@@ -429,7 +429,7 @@ impl Connections {
                     "memory.version.annotations.get"|"memory.records.list"|"memory.record.create"|"memory.record.get"|"memory.record.metadata.set"|"memory.layers.settings.get"|"memory.layers.settings.set" => memory_layers::dispatch(&mut tx,command,&mut p,payload,expected).await?,
                     "memory.search" => memory_retrieval::search(&mut tx,&p,payload).await?,
                     "chat.retrieval.get" => memory_retrieval::historical(&mut tx,profile,payload).await?,
-                    "profile.imports.list"|"knowledge.enabled.set"|"guidance.enabled.set"|"chat.profile.context.get" => profile_imports::dispatch(&mut tx,command,profile,payload,expected).await?,
+                    "profile.imports.list"|"profile.import.latest"|"knowledge.enabled.set"|"guidance.enabled.set"|"chat.profile.context.get" => profile_imports::dispatch(&mut tx,command,profile,payload,expected).await?,
                     "memory.record.update" => {let(job,op)=memory_runtime::accept(&mut tx,&p,payload,expected).await?;memory_launch=Some((job,op.clone()));json!({"operation":op})},
                     "memory.working.get" => memory_runtime::view(&mut tx,profile).await?,
                     "memory.working.sources" => memory_runtime::sources(&mut tx,profile,payload).await?,

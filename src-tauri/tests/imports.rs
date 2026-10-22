@@ -834,6 +834,14 @@ async fn memory_import_is_source_material_not_direct_memory_approval(){
 }
 
 #[tokio::test]
+async fn profile_import_latest_recovers_profile_scoped_operation(){
+    let f=Fixture::new().await;f.choose(vec![("knowledge.md",b"Profile scoped".to_vec())]);let s=f.select().await;
+    let a=call(&f.app,"material.import",json!({"selectionToken":s["selectionToken"],"purpose":"knowledge","author":{"kind":"unknown","label":"","assertedBy":"importer","verified":false}}),&f.p).await;
+    let latest=call(&f.app,"profile.import.latest",json!({}),&f.p).await;assert_eq!(latest["found"],true);assert_eq!(latest["operation"]["id"],a["operation"]["id"]);
+    let _=f.wait(&a["operation"]).await;let latest=call(&f.app,"profile.import.latest",json!({}),&f.p).await;assert_eq!(latest["operation"]["id"],a["operation"]["id"]);
+}
+
+#[tokio::test]
 async fn profile_imports_are_isolated_between_profiles(){
     let f=Fixture::new().await;f.choose(vec![("private.md",b"Profile A only".to_vec())]);let s=f.select().await;let a=call(&f.app,"material.import",json!({"selectionToken":s["selectionToken"],"purpose":"knowledge","author":{"kind":"unknown","label":"","assertedBy":"importer","verified":false}}),&f.p).await;let _=f.wait(&a["operation"]).await;
     let other=profile(&f.app).await;let list=call(&f.app,"profile.imports.list",json!({"limit":100}),&other).await;assert_eq!(list["items"],json!([]));

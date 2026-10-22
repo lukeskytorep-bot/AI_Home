@@ -18,7 +18,7 @@ const fake:Transport={mode:'desktop',subscribe:async()=>()=>{},dispatch:async<T,
  if(contract.requiresExpectedRevision)expect(r.expectedRevision).toBeGreaterThan(0);
  let result:any;switch(r.command){case 'profile.list':result=paginated?(r.payload.cursor?{items:[{id:'p2',displayName:'Two'}],nextCursor:''}:{items:[{id:'p1',displayName:'One'}],nextCursor:'page-2'}):{items:[{id:'p1',displayName:'One'},{id:'p2',displayName:'Two'}],nextCursor:''};break;
  case 'chat.vision.get':result={routeId:'r1',routeRevision:1,modelId:'mock-model',policyRevision:0,scopeId:'a'.repeat(64),support:'unknown',source:'unconfigured'};break;case 'chat.settings.get':result={routeId:'r1',routeRevision:1,modelId:'model',contextTokens:chatEnabled?32768:0,source:'user_declared',measurement:'utf8_bytes_estimate',outputTokens:1024,inputReserveTokens:512};break;
- case 'conversation.chat.latest':case 'conversation.import.latest':result={found:false};break;
+ case 'conversation.chat.latest':case 'conversation.import.latest':case 'profile.import.latest':result={found:false};break;
  case 'conversation.materials.list':result={items:[],nextAfterId:''};break;
  case 'conversation.messages.list':if(historyFails)throw Error('History unavailable');result={items:[],nextCursor:''};break;
  case 'chat.send':if(sendGate)await sendGate;records[r.payload.conversationId as string]={...records[r.payload.conversationId as string],revision:r.expectedRevision!+1,draftText:''};result={operation:{id:'op1',revision:1,status:'queued',physicalCallCount:0}};break;

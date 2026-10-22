@@ -118,6 +118,10 @@ pub(super) async fn dispatch(tx:&mut Tx<'_>,command:&str,profile:&str,payload:&V
             }
             let next=if rows.len()>limit as usize{items.last().unwrap()["material"]["id"].as_str().unwrap()}else{""};Ok(json!({"items":items,"nextAfterId":next}))
         }
+        "profile.import.latest"=>{
+            let body:Option<String>=sqlx::query_scalar("SELECT o.body FROM operations o WHERE o.profile_id=? AND json_extract(o.body,'$.kind')='import' AND EXISTS(SELECT 1 FROM profile_import_materials m WHERE m.profile_id=o.profile_id AND m.operation_id=o.id) ORDER BY json_extract(o.body,'$.createdAt') DESC,o.rowid DESC LIMIT 1").bind(profile).fetch_optional(&mut **tx).await.map_err(|_|"STORAGE_ERROR")?;
+            if let Some(body)=body{let op:Value=serde_json::from_str(&body).map_err(|_|"STORAGE_ERROR")?;validate(&op,"Operation")?;Ok(json!({"found":true,"operation":op}))}else{Ok(json!({"found":false}))}
+        }
         "knowledge.enabled.set"=>{
             let mut k=get(tx,"knowledge_sources",profile,payload["knowledgeSourceId"].as_str().ok_or("VALIDATION_ERROR")?).await?;if revision(&k)?!=expected{return Err("REVISION_CONFLICT")};
             k["enabled"]=payload["enabled"].clone();let old=expected;bump(&mut k)?;super::put(tx,"knowledge_sources",&k,false,old).await?;Ok(k)
