@@ -1,6 +1,6 @@
 use serde_json::{json,Value};
 use sha2::{Digest,Sha256};
-use sqlx::{Connection,SqliteConnection};
+use sqlx::{Connection,Row,SqliteConnection};
 use std::{fs,fs::OpenOptions,io::{Read,Write},path::{Path,PathBuf}};
 use crate::persistence::Store;
 

@@ -1,8 +1,8 @@
-4B-6 STEP 2 AUDIT FIX 2
+4B-6 STEP 2 AUDIT FIX 3
 193/193 P2 PASS
 28/28 boundaries PASS
-Schema expectation sweep PASS.
-Contract/handler/router parity PASS.
 Rust source-text normalization sweep PASS.
-No manual foundation.sqlite3-wal/-shm deletion in restore path.
-Cargo unavailable locally; GitHub Actions must confirm Rust compile/tests.
+Schema expectation sweep PASS: target schema remains 12; no stale target-11 assertions.
+BackupPanel restore updater uses immutable local attempt; no deferred access to cleared restoreAttemptState.
+sqlx::Row trait restored for SqliteRow::get calls in freeze_operations.
+Cargo/Vitest/typecheck/build require GitHub Actions.
