@@ -459,6 +459,7 @@ async fn snapshot(tx: &mut Tx<'_>, op: &Value) -> Result<Value, Failure> {
 }
 pub(super) async fn ensure_current(tx: &mut Tx<'_>, op: &Value) -> Result<(), Failure> {
     let s = snapshot(tx, op).await?;
+    if s.get("sourceTombstone").is_some() { return Err("POLICY_DENIED"); }
     let profile = op["profileId"].as_str().unwrap();
     let p = get(tx, "profiles", "", profile).await?;
     if p != s["profile"] || p["status"] == "archived" {

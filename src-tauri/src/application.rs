@@ -54,7 +54,7 @@ impl Application {
             return Ok(Dispatch{response:success(r,result),event:None})
         }
         if crate::connections::supports(command){return Ok(Dispatch{response:self.connections.dispatch(r.clone()).await,event:None})}
-        let catalog=embedded(include_str!("../../contracts/ipc.catalog.json"));let foundation=embedded(include_str!("../../contracts/foundation.ipc.json"));let backup=embedded(include_str!("../../contracts/backup.ipc.json"));let export=embedded(include_str!("../../contracts/export.ipc.json"));
+        let catalog=embedded(include_str!("../../contracts/ipc.catalog.json"));let foundation=embedded(include_str!("../../contracts/foundation.ipc.json"));let backup=embedded(include_str!("../../contracts/backup.ipc.json"));
         let implemented=["app.preferences.get","app.preferences.set","app.pack.validate","kernel.status.get","app.events.list","backup.create","backup.list","backup.restore.preflight","backup.restore.request","backup.restore.status"];
         if !implemented.contains(&command){return Ok(reject("UNKNOWN_COMMAND"))}
         if r.get("profileId").is_some(){return Ok(reject("VALIDATION_ERROR"))}

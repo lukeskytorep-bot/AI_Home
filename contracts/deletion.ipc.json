@@ -1,0 +1,95 @@
+{
+  "contractVersion": 1,
+  "commands": {
+    "profile.delete.permanent": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "confirm": {
+            "type": "boolean",
+            "const": true
+          }
+        },
+        "required": [
+          "confirm"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean",
+            "const": true
+          },
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "deleted",
+          "profileId"
+        ],
+        "additionalProperties": false
+      },
+      "mutates": true,
+      "requiresExpectedRevision": true,
+      "async": false,
+      "firstImplementationStage": "4B-6"
+    },
+    "conversation.delete.permanent": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "confirm": {
+            "type": "boolean",
+            "const": true
+          }
+        },
+        "required": [
+          "conversationId",
+          "confirm"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean",
+            "const": true
+          },
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "conversationId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "deleted",
+          "profileId",
+          "conversationId"
+        ],
+        "additionalProperties": false
+      },
+      "mutates": true,
+      "requiresExpectedRevision": true,
+      "async": false,
+      "firstImplementationStage": "4B-6"
+    }
+  }
+}

@@ -1,0 +1,6 @@
+4B-6 STEP 4 AUDIT FIX 2
+F1: connections::Failure / Tx -> pub(crate)
+F2: archive cancellation includes conversation-linked memory_runs; permanent delete redacts raw messages/sources and sets non-resumable sourceTombstone
+F3: tombstone Error uses allowed POLICY_DENIED + localized error.permanently_deleted
+SQLite target: 12
+No migration added

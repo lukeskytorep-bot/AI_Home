@@ -480,3 +480,26 @@ Portable ZIP zawiera teraz niesekretne definicje routes oraz zsanityzowane conne
 `profile.export.read` nie wczytuje już całego ZIP przy każdym chunku. Używa seek/read dokładnie dla żądanego fragmentu do 1 MiB. UI nadal składa pobrany plik przed utworzeniem Blob, więc stałe zużycie pamięci po stronie WebView nie jest deklarowane. Dodano testy UI dla stale list, definitive rejection i ambiguous retry z tym samym requestId oraz testy native dla route/connection portability, memory provenance i zgodności rozmiarów/SHA wpisów manifestu z rzeczywistymi bajtami, w tym oryginalnym source blobem.
 
 SQLite pozostaje v12, bez migracji. Frozen P2 i profile scope pozostają bez zmian. Krok 3 pozostaje otwarty do pełnego zielonego frontend/Cargo CI i re-audytu.
+
+
+## Aktualizacja 1.51 — 23 października 2026 — 4B-6 krok 4 Permanent Deletion
+
+Po zielonym CI kroku 3 wykonano kolejny ograniczony krok 4B-6: trwałe usuwanie wyłącznie z Archive. Nowy suplement `deletion.ipc.json` dodaje profile-scoped `profile.delete.permanent` i `conversation.delete.permanent`. Obie komendy wymagają `expectedRevision` oraz jawnego `confirm:true`; native odrzuca rekord aktywny i przyjmuje tylko status `archived`. Profil z queued/running operation nie może zostać trwale usunięty.
+
+Conversation delete usuwa rekord rozmowy i wszystkie conversation-scoped zależności, a nieużywane blobs/operations są sprzątane dopiero po sprawdzeniu pozostałych referencji. Profile delete usuwa wszystkie rekordy profilu w jawnej kolejności respektującej FK. Obie operacje wykonują `PRAGMA foreign_key_check` przed commitem. Istniejący trwały receipt zapewnia idempotentny replay tego samego requestId; konflikt payloadu pozostaje `IDEMPOTENCY_CONFLICT`. UI Archive wymaga drugiego, jawnego kliknięcia potwierdzającego i informuje, że wcześniejsze backupy/portable exports są niezależnymi kopiami i nie są cofane przez deletion.
+
+Stały verifier command parity został rozszerzony o `deletion.ipc.json`; wynik po zmianie to 51/51. SQLite pozostaje v12, bez migracji. Frozen P2 pozostaje 193/193. Nie rozpoczęto 4B-7. W tym samym kroku wyczyszczono dwa nieblokujące warningi zgłoszone przez zielone CI kroku 3: nieużywaną zmienną `export` w `application.rs` oraz zbędne nawiasy typu w teście export. Krok 4 wymaga pełnego CI i audytu przed dalszym etapem.
+
+## Aktualizacja 1.52 — 23 października 2026 — 4B-6 krok 4 AUDIT FIX (deletion data/receipt safety)
+
+Główny audyt kroku 4 wykazał dwa błędy P1. Po trwałym usunięciu rozmowy pełna treść wiadomości mogła pozostawać w `profile_events`, a substringowe `DELETE FROM receipts WHERE instr(response,?)>0` mogło usuwać receipts należące do innych profili lub obiektów tylko dlatego, że ich zwykła treść zawierała identyczny tekst ID.
+
+Poprawka wprowadza wspólną warstwę deletion safety. Conversation permanent delete redaguje wszystkie event payloads strukturalnie odnoszące się do usuwanej rozmowy do beztreściowego tombstone, zachowując sequence/event metadata. Title, draft i message content są usuwane z logicznie dostępnych eventów aktywnej bazy. Receipts nie są już kasowane przez `instr`, `LIKE` ani inne dopasowanie tekstowe. Strukturalnie powiązane historyczne receipts zachowują requestId i fingerprint, ale ich response jest zastępowany terminalnym `PERMANENTLY_DELETED`. Exact replay nie wykonuje mutacji ponownie; zmieniony payload pod tym samym requestId nadal daje `IDEMPOTENCY_CONFLICT`. Receipt należący do innego profilu nie jest zmieniany tylko dlatego, że target ID występuje w tytule lub treści JSON.
+
+Nie dodano migracji; SQLite pozostaje v12. Bieżący permanent-delete request nadal zapisuje normalny success receipt po commit, więc exact replay samego delete zwraca poprzedni wynik. Dodano native regresje dla event redaction, title/draft/content purge, replay starego create po purge, requestId conflict oraz ochrony foreign receipt/foreign replay. 4B-7 pozostaje poza zakresem do zielonego pełnego CI i ponownego audytu kroku 4.
+
+## Aktualizacja 1.53 — 23 października 2026 — 4B-6 krok 4 AUDIT FIX 2 (memory-run redaction / Error contract)
+
+Reaudyt wcześniejszego AUDIT FIX wykazał trzy pozostałe problemy. Wspólny moduł deletion importował prywatne aliasy `Failure`/`Tx`; nadano im wyłącznie widoczność `pub(crate)`. Permanent conversation delete redagował eventy, ale pozostawiał raw source snapshoty w `memory_runs`. Archiwizacja rozmowy obejmuje teraz także aktywne memory update związane z rozmową, a deletion redaguje `messages`, `sources` i conversation identity w snapshotie, zapisuje trwały `sourceTombstone` i blokuje późniejsze użycie takiego runu przez `ensure_current()`. Zatwierdzona pamięć i jej historia pozostają zachowane.
+
+Wcześniejszy niestandardowy Error code `PERMANENTLY_DELETED` nie należał do frozen P2. Nie rozszerzono enumu po cichu: terminalny replay używa istniejącego `POLICY_DENIED` z lokalizowanym `error.permanently_deleted`. Exact replay pozostaje zablokowany bez ponownej mutacji, a zmieniony payload nadal daje `IDEMPOTENCY_CONFLICT`. Dodano EN/PL i test aktywnego kontraktu Error. SQLite pozostaje v12, bez migracji. 4B-7 pozostaje poza zakresem do zielonego pełnego CI i reaudytu.

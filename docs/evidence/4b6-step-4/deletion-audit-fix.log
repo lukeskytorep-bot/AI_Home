@@ -1,0 +1,2 @@
+PASS: zero substring/LIKE receipt deletion paths; receipts are structurally tombstoned.
+PASS: conversation event payload redaction installed before permanent row removal.

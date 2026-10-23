@@ -28,8 +28,8 @@ mod memory_history;
 #[path = "memory_layers.rs"] mod memory_layers;
 #[path = "memory_retrieval.rs"] mod memory_retrieval;
 #[path = "profile_imports.rs"] mod profile_imports;
-type Failure = &'static str;
-type Tx<'a> = Transaction<'a, Sqlite>;
+pub(crate) type Failure = &'static str;
+pub(crate) type Tx<'a> = Transaction<'a, Sqlite>;
 const COMMANDS: &[&str] = &[
     "profile.imports.list", "profile.import.latest", "knowledge.enabled.set", "guidance.enabled.set", "chat.profile.context.get",
     "memory.version.annotations.get", "memory.records.list", "memory.record.create", "memory.record.get", "memory.record.metadata.set", "memory.record.update", "memory.layers.settings.get", "memory.layers.settings.set", "memory.search", "chat.retrieval.get",
@@ -49,10 +49,12 @@ const COMMANDS: &[&str] = &[
     "conversation.segments.list",
     "conversation.archive",
     "conversation.archived.list",
+    "conversation.delete.permanent",
     "profile.create",
     "profile.list",
     "profile.archive",
     "profile.archived.list",
+    "profile.delete.permanent",
     "profile.snapshot",
     "connection.create",
     "connection.update",
@@ -76,7 +78,7 @@ pub fn mutates(command:&str)->bool {
         include_str!("../../contracts/vision.ipc.json"),include_str!("../../contracts/memory.ipc.json"),
         include_str!("../../contracts/memory-chat.ipc.json"),include_str!("../../contracts/memory-layers.ipc.json"),
         include_str!("../../contracts/memory-history.ipc.json"),include_str!("../../contracts/profile-imports.ipc.json"),
-        include_str!("../../contracts/conversation-segments.ipc.json"),include_str!("../../contracts/lifecycle.ipc.json")
+        include_str!("../../contracts/conversation-segments.ipc.json"),include_str!("../../contracts/lifecycle.ipc.json"),include_str!("../../contracts/deletion.ipc.json")
     ];
     sources.iter().filter_map(|raw|serde_json::from_str::<Value>(raw).ok()).find_map(|v|v["commands"].get(command).and_then(|c|c["mutates"].as_bool())).unwrap_or(false)
 }
@@ -282,6 +284,7 @@ impl Connections {
         let profile_imports:Value=serde_json::from_str(include_str!("../../contracts/profile-imports.ipc.json")).unwrap();
         let segments:Value=serde_json::from_str(include_str!("../../contracts/conversation-segments.ipc.json")).unwrap();
         let lifecycle:Value=serde_json::from_str(include_str!("../../contracts/lifecycle.ipc.json")).unwrap();
+        let deletion:Value=serde_json::from_str(include_str!("../../contracts/deletion.ipc.json")).unwrap();
         let contract = catalog["commands"]
             .get(command)
             .or_else(|| extra["commands"].get(command))
@@ -297,6 +300,7 @@ impl Connections {
             .or_else(|| profile_imports["commands"].get(command))
             .or_else(|| segments["commands"].get(command))
             .or_else(|| lifecycle["commands"].get(command))
+            .or_else(|| deletion["commands"].get(command))
             .ok_or("UNKNOWN_COMMAND")?;
         if !schema::dto("CommandEnvelope", r)
             || !schema::valid(&r["payload"], &contract["payload"])
@@ -367,10 +371,11 @@ impl Connections {
                 }
                 let result: Value =
                     serde_json::from_str(row.get("response")).map_err(|_| "STORAGE_ERROR")?;
-                if result["ok"] != true
-                    || result["requestId"] != r["requestId"]
-                    || !schema::valid(&result["result"], &contract["result"])
-                {
+                if result["requestId"] != r["requestId"] { return Err("STORAGE_ERROR"); }
+                if result["ok"] == false && result["error"]["messageKey"] == "error.permanently_deleted" {
+                    return Ok(result);
+                }
+                if result["ok"] != true || !schema::valid(&result["result"], &contract["result"]) {
                     return Err("STORAGE_ERROR");
                 }
                 if command == "connection.create" || command == "connection.credential.set" {
@@ -393,6 +398,20 @@ impl Connections {
         let mut import_launch = None;
         let mut cancel_after = Vec::new();
         let result = match command {
+            "conversation.delete.permanent" => conversation_storage::execute(&mut tx,command,profile,payload,expected).await?,
+            "profile.delete.permanent" => {
+                if payload["confirm"] != true { return Err("VALIDATION_ERROR"); }
+                let p=get(&mut tx,"profiles","",profile).await?;
+                if revision(&p)? != expected { return Err("REVISION_CONFLICT"); }
+                if p["status"] != "archived" { return Err("POLICY_DENIED"); }
+                let running:i64=sqlx::query_scalar("SELECT COUNT(*) FROM operations WHERE profile_id=? AND json_extract(body,'$.status') IN ('queued','running')").bind(profile).fetch_one(&mut *tx).await.map_err(|_|"STORAGE_ERROR")?;if running!=0{return Err("POLICY_DENIED");}
+                for table in ["message_documents","chat_replay","attachments","chat_runs","context_segments","messages","knowledge_sources","persistent_guidance","memory_version_metadata","memory_versions","memory_attempts","memory_decisions","memory_proposals","memory_runs","memory_metadata","memory_records","profile_import_materials","import_materials","chat_vision_policies","chat_policies","memory_contexts","connection_models","routes","connections","import_blobs","operations","conversation_cursors","conversations","profile_events"]{let q=if table=="conversation_cursors"{format!("DELETE FROM {table} WHERE profile_id=?")}else{format!("DELETE FROM {table} WHERE profile_id=?")};sqlx::query(&q).bind(profile).execute(&mut *tx).await.map_err(|_|"STORAGE_ERROR")?;}
+                crate::deletion::tombstone_profile_receipts(&mut tx,profile).await?;
+                sqlx::query("DELETE FROM profiles WHERE id=?").bind(profile).execute(&mut *tx).await.map_err(|_|"STORAGE_ERROR")?;
+                sqlx::query("DELETE FROM profile_cursors").execute(&mut *tx).await.map_err(|_|"STORAGE_ERROR")?;
+                let fk:Vec<(String,i64,String,i64)>=sqlx::query_as("PRAGMA foreign_key_check").fetch_all(&mut *tx).await.map_err(|_|"STORAGE_ERROR")?;if !fk.is_empty(){return Err("STORAGE_ERROR");}
+                json!({"deleted":true,"profileId":profile})
+            }
             "profile.create" => {
                 let name = payload["displayName"].as_str().unwrap().trim();
                 if name.is_empty() || name.len() > 256 {
@@ -515,8 +534,8 @@ impl Connections {
                             let conversation_id = payload["conversationId"].as_str().ok_or("VALIDATION_ERROR")?;
                             let current = get(&mut tx,"conversations",profile,conversation_id).await?;
                             if revision(&current)? != expected { return Err("REVISION_CONFLICT"); }
-                            let rows = sqlx::query("SELECT DISTINCT o.id FROM operations o WHERE o.profile_id=? AND json_extract(o.body,'$.status') IN ('queued','running') AND (EXISTS(SELECT 1 FROM chat_runs r WHERE r.profile_id=o.profile_id AND r.operation_id=o.id AND r.conversation_id=?) OR EXISTS(SELECT 1 FROM import_materials m WHERE m.profile_id=o.profile_id AND m.operation_id=o.id AND m.conversation_id=?))")
-                                .bind(profile).bind(conversation_id).bind(conversation_id).fetch_all(&mut *tx).await.map_err(|_|"STORAGE_ERROR")?;
+                            let rows = sqlx::query("SELECT DISTINCT o.id FROM operations o WHERE o.profile_id=? AND json_extract(o.body,'$.status') IN ('queued','running') AND (EXISTS(SELECT 1 FROM chat_runs r WHERE r.profile_id=o.profile_id AND r.operation_id=o.id AND r.conversation_id=?) OR EXISTS(SELECT 1 FROM import_materials m WHERE m.profile_id=o.profile_id AND m.operation_id=o.id AND m.conversation_id=?) OR EXISTS(SELECT 1 FROM memory_runs mr WHERE mr.profile_id=o.profile_id AND mr.operation_id=o.id AND json_extract(mr.body,'$.conversationId')=?))")
+                                .bind(profile).bind(conversation_id).bind(conversation_id).bind(conversation_id).fetch_all(&mut *tx).await.map_err(|_|"STORAGE_ERROR")?;
                             for row in rows {
                                 let opid:String=row.get("id");
                                 let mut op=get(&mut tx,"operations",profile,&opid).await?;
@@ -524,6 +543,7 @@ impl Connections {
                                     let old=revision(&op)?;
                                     terminal(&mut op,"cancelled","OPERATION_CANCELLED")?;
                                     if op["kind"]=="import" { import_runtime::cancel_pending(&mut tx,profile,&opid,"OPERATION_CANCELLED").await?; }
+                                    if matches!(op["kind"].as_str(),Some("memory_update"|"restore")) { memory_runtime::close_pending(&mut tx,profile,&opid).await?; }
                                     put(&mut tx,"operations",&op,false,old).await?;
                                     event(&mut tx,profile,"operation.changed",&op).await?;
                                     cancel_after.push(opid);
