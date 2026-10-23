@@ -1,0 +1,9 @@
+4B-6 STEP 4 AUDIT FIX 3
+- GitHub Actions failure traced to invalid direct-SQL Operation fixture, not production deletion logic.
+- memory_update fixture now includes capacityAttemptCount, expectedRecordRevision, limits and recordRefs.
+- fixture validates with schema::dto("Operation", &op) before INSERT.
+- P2 reference checks: 193/193 PASS.
+- boundaries: 29/29 PASS.
+- Rust source-text normalization: PASS.
+- SQLite version: 12; no migration.
+- Full Cargo/frontend CI required externally.

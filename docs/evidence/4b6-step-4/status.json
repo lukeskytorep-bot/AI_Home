@@ -1,22 +1,19 @@
 {
   "schemaVersion": 1,
   "date": "2026-10-23",
-  "stage": "4B-6 STEP 4 PERMANENT DELETION AUDIT FIX 2",
-  "planContentVersion": "1.53",
+  "stage": "4B-6 STEP 4 PERMANENT DELETION AUDIT FIX 3",
+  "planContentVersion": "1.54",
   "status": "IMPLEMENTED_REQUIRES_CI_AND_REAUDIT",
-  "baseSource": "AI_HOME_4B6_KROK_4_AUDIT_FIX_SOURCE.zip",
+  "baseSource": "AI_HOME_4B6_KROK_4_AUDIT_FIX_2_SOURCE.zip",
   "storageVersion": 12,
   "p2ReferenceChecks": 193,
   "boundaryChecks": 29,
   "commandParityChecks": 51,
   "scope": [
-    "F1 crate-private shared Rust aliases",
-    "F2 redact conversation-linked raw memory_runs sources",
-    "cancel active conversation-linked memory updates on archive",
-    "mark redacted memory runs non-resumable",
-    "F3 allowed Error code with localized permanent-deletion message"
+    "repair invalid memory_update Operation fixture in lifecycle regression",
+    "self-validate Operation fixture before direct SQL insert"
   ],
-  "outOfScope": ["4B-7", "secure sector erase", "backup deletion", "portable export deletion"],
+  "outOfScope": ["4B-7", "production deletion semantics changes", "schema migration"],
   "migrationAdded": false,
   "rust": "REQUIRES_CI",
   "frontend": "REQUIRES_CI"

@@ -1,4 +1,4 @@
-use ai_home::{application::Application,persistence::Store,vault::{SecretStore,Vault,VaultError}};
+use ai_home::{application::Application,persistence::Store,schema,vault::{SecretStore,Vault,VaultError}};
 use serde_json::{json,Value};
 use std::{collections::HashMap,sync::{Arc,Mutex}};
 #[derive(Default)]struct MemoryVault{values:Mutex<HashMap<String,String>>}
@@ -105,7 +105,7 @@ async fn permanent_conversation_delete_redacts_memory_run_sources_and_cancels_ac
  let record_id=format!("working-{pid}");
  let record=json!({"schemaVersion":1,"id":record_id,"profileId":pid,"revision":1,"createdAt":"2026-10-23T00:00:00Z","kind":"working","state":"active","activeVersionId":null});
  sqlx::query("UPDATE memory_records SET body=? WHERE profile_id=? AND id=?").bind(record.to_string()).bind(&pid).bind(&record_id).execute(&pool).await.unwrap();
- let opid=uuid::Uuid::new_v4().to_string();let op=json!({"schemaVersion":1,"id":opid,"profileId":pid,"revision":1,"createdAt":"2026-10-23T00:00:00Z","kind":"memory_update","status":"queued","physicalCallCount":0});
+ let opid=uuid::Uuid::new_v4().to_string();let op=json!({"schemaVersion":1,"id":opid,"profileId":pid,"revision":1,"createdAt":"2026-10-23T00:00:00Z","kind":"memory_update","status":"queued","capacityAttemptCount":0,"physicalCallCount":0,"expectedRecordRevision":1,"limits":{"maxPhysicalCalls":3,"maxElapsedMs":120000},"recordRefs":[{"profileId":pid,"recordKind":"memory_record","recordId":record_id}]});assert!(schema::dto("Operation",&op),"invalid Operation fixture: {op}");
  sqlx::query("INSERT INTO operations(profile_id,id,revision,body) VALUES(?,?,1,?)").bind(&pid).bind(&opid).bind(op.to_string()).execute(&pool).await.unwrap();
  let source=json!({"id":"memory-source-message","profileId":pid,"conversationId":cid,"sequence":1,"role":"human","content":"RAW_MEMORY_SOURCE_MARKER"});
  let run=json!({"conversationId":cid,"conversationLanguage":"en","messages":[source],"sources":[{"profileId":pid,"kind":"message","entityId":"memory-source-message","contentSha256":"deadbeef"}],"formatRepairCount":0});
