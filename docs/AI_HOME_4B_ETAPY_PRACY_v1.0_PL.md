@@ -528,3 +528,20 @@ Dodano acceptance test Standard, który po samym otwarciu desktopowego UI i upł
 Główny audyt 4B-7 wykazał dwa problemy. Activity reader nie rozpoznawał legalnego tombstone `permanent_deletion` pozostawionego przez trwałe usuwanie rozmowy i próbował traktować jego payload jak pełny `Operation`, co mogło zakończyć całą stronę `STORAGE_ERROR`. `activity::project()` rozpoznaje teraz wyłącznie znany tombstone `{tombstone:true,reason:"permanent_deletion"}` i pomija go, zachowując postęp kursora. Inne malformed `operation.changed` nadal pozostają błędem; nie dodano ogólnego maskowania STORAGE_ERROR. Dodano native regresję: conversation create -> legalny operation.changed z result.conversationId -> archive -> permanent delete -> activity.list z `limit:1` -> późniejszy wpis -> restart -> activity.list; równolegle profil B pozostaje nienaruszony.
 
 ActivityPanel miał też statyczną listę profili z momentu montowania. Refresh jest teraz dostępny również bez wybranego profilu, najpierw ponawia `profile.list`, godzi aktualny wybór z bieżącą listą i dopiero dla nadal istniejącego profilu odświeża Activity. Odczyt profili ma własną generację, więc spóźniony wynik nie może nadpisać nowszej listy. Dodano testy: nowy profil po mount, zarchiwizowanie wybranego profilu oraz retry po błędzie początkowego `profile.list`. `verify-standard-closure.py` rozszerzono z 6/6 do 8/8 o tombstone-aware Activity i profile-refresh. SQLite pozostaje v12, frozen P2 pozostaje bez zmian. 4B-8 nie został rozpoczęty.
+
+## Aktualizacja 1.58 — 4B-8 Diagnostics / About / Privacy / Standard v1 acceptance
+
+Rozpoczęto 4B-8 na bazie zielonego `AI_HOME_4B7_AUDIT_FIX_SOURCE.zip`. Dodano supplemental kontrakt `diagnostics.ipc.json` z app-scoped, read-only komendami `diagnostics.snapshot.get` i `diagnostics.export.create`. Diagnostyka zawiera wyłącznie wersje, ustawienia prezentacji, agregaty liczności oraz zagregowane kody błędów operacji. `diagnosticsContentIncludedByDefault=false` pozostaje bez zmian. Raport nie odczytuje treści rozmów, pamięci, importowanych źródeł, identyfikatorów profili, endpointów, provider payloadów ani credentials/vault.
+
+Dodano `DiagnosticsPanel` z sekcjami About i Privacy w EN/PL oraz pobieraniem content-free JSON. UI jawnie opisuje lokalne przechowywanie danych, OS credential store, niezależność backupów/portable exports oraz brak treści prywatnych w diagnostyce. Status etapu w pakietach językowych ustawiono na 4B-8.
+
+Dodano native privacy regression wstawiający prywatny marker do profilu, rozmowy, pamięci i connection oraz wymagający jego całkowitego braku w diagnostycznym eksporcie. Dodano testy UI diagnostyki/pobierania oraz `verify-standard-release.py`: parity kluczy EN/PL, Orbital/Aurora light+dark, obecność kontraktu diagnostics, content-free konstrukcja, nawigacja, domyślna polityka privacy i etykieta 4B-8. Command parity obejmuje teraz diagnostics i wynosi 54/54. Granice modułów: 31/31. SQLite pozostaje v12, bez migracji. Frozen P2 pozostaje 193/193.
+
+Pełne Cargo, Vitest, TypeScript/Vite i desktop/WebView wymagają CI/smoke przed oznaczeniem 4B-8 jako PASS CLOSED. 4B-9 nie został rozpoczęty.
+
+## Aktualizacja 1.59 — 4B-8 AUDIT FIX
+
+- Poprawiono blokujący test UI diagnostyki: komunikat prywatności jest teraz oczekiwanym elementem interfejsu, a nie błędnie traktowanym markerem prywatnej treści.
+- Dowód braku wycieku pozostaje w natywnym privacy regression z unikalnym markerem danych źródłowych.
+- Doprecyzowano nazwę agregatu błędów do „Most frequent error codes” / „Najczęstsze kody błędów”; supplemental DTO zachowuje istniejące pole `recentErrors`, aby nie wprowadzać niepotrzebnej zmiany kontraktu.
+- Brak migracji SQLite; storageVersion pozostaje 12. Frozen P2 bez zmian.
