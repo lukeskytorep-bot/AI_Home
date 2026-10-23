@@ -1,3 +1,21 @@
+# 4B-7 — Domknięcie Standard, 23.10.2026
+
+Baza 4B-6 krok 4 AUDIT FIX 4 ma potwierdzony zielony GitHub Actions Edwarda. 4B-7 wykonano lokalnie; wymaga nowego CI/audytu.
+
+- [x] Existing frozen `activity.list` ma native route i profile scope.
+- [x] Activity Log jest widoczny w UI EN/PL i odporny na stale profile response.
+- [x] Activity przeżywa restart i nie miesza profili.
+- [x] Historia nie ujawnia message content, kluczy ani raw provider payloads.
+- [x] Standard pozostaje `NullState`, bez ConsciousCore/Life Loop.
+- [x] 60 s bezczynnego desktop UI nie inicjuje chat/memory/import/test provider.
+- [x] Brak runtime package dependency od forum/community; aplikacja nadal działa lokalnie bez forum.
+- [x] P2 193/193, boundaries 30/30, command parity 52/52, Standard static 6/6.
+- [x] SQLite v12, bez migracji.
+- [ ] Pełne GitHub Actions i niezależny audyt 4B-7.
+- [ ] 4B-8 diagnostics/About/Privacy dopiero po odbiorze 4B-7.
+
+---
+
 # 4B-4 krok 3 — warstwy i wyszukiwanie, 22.10.2026
 
 Krok 2 ma potwierdzenie zielonego wyniku Edwarda, bez danych przebiegu i nowego tekstu audytu. Krok 3 wykonano lokalnie; do nowego CI/audytu.

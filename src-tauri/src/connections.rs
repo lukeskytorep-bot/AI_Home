@@ -28,10 +28,11 @@ mod memory_history;
 #[path = "memory_layers.rs"] mod memory_layers;
 #[path = "memory_retrieval.rs"] mod memory_retrieval;
 #[path = "profile_imports.rs"] mod profile_imports;
+#[path = "activity.rs"] mod activity;
 pub(crate) type Failure = &'static str;
 pub(crate) type Tx<'a> = Transaction<'a, Sqlite>;
 const COMMANDS: &[&str] = &[
-    "profile.imports.list", "profile.import.latest", "knowledge.enabled.set", "guidance.enabled.set", "chat.profile.context.get",
+    "activity.list", "profile.imports.list", "profile.import.latest", "knowledge.enabled.set", "guidance.enabled.set", "chat.profile.context.get",
     "memory.version.annotations.get", "memory.records.list", "memory.record.create", "memory.record.get", "memory.record.metadata.set", "memory.record.update", "memory.layers.settings.get", "memory.layers.settings.set", "memory.search", "chat.retrieval.get",
     "memory.restore",
     "memory.versions.list", "memory.version.get", "memory.outdated.set",
@@ -499,6 +500,7 @@ impl Connections {
                 } else {
                     if p["status"] == "archived" { return Err("POLICY_DENIED"); }
                     match command {
+                    "activity.list" => activity::list(&mut tx,profile,payload).await?,
                     "memory.versions.list"|"memory.version.get" => memory_history::read(&mut tx,command,profile,payload).await?,
                     "memory.outdated.set" => memory_history::outdated(&mut tx,profile,payload,expected).await?,
                     "memory.version.annotations.get"|"memory.records.list"|"memory.record.create"|"memory.record.get"|"memory.record.metadata.set"|"memory.layers.settings.get"|"memory.layers.settings.set" => memory_layers::dispatch(&mut tx,command,&mut p,payload,expected).await?,

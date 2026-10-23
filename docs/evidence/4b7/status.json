@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-23",
+  "stage": "4B-7 STANDARD CLOSURE AUDIT FIX",
+  "planContentVersion": "1.57",
+  "status": "IMPLEMENTED_REQUIRES_CI_AND_REAUDIT",
+  "baseSource": "AI_HOME_4B7_SOURCE.zip",
+  "storageVersion": 12,
+  "p2ReferenceChecks": 193,
+  "boundaryChecks": 30,
+  "commandParityChecks": 52,
+  "standardClosureChecks": 8,
+  "scope": [
+    "Activity permanent-deletion tombstone compatibility",
+    "Activity profile-list refresh/retry/reconciliation"
+  ],
+  "outOfScope": [
+    "4B-8",
+    "Community/A2A",
+    "ConsciousCore/Life Loop",
+    "release smoke"
+  ],
+  "migrationAdded": false,
+  "rust": "REQUIRES_CI",
+  "frontend": "REQUIRES_CI"
+}

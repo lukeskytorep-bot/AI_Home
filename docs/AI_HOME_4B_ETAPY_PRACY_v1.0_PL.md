@@ -512,3 +512,19 @@ GitHub Actions ujawnił wadliwy fixture nowego testu memory-run deletion. Ręczn
 ## Aktualizacja 1.55 — 23 października 2026 — 4B-6 krok 4 AUDIT FIX 4 (public schema import CI fix)
 
 Pełne Cargo po AUDIT FIX 3 ujawniło błąd kompilacji wyłącznie w nowym teście lifecycle: `src-tauri/tests/lifecycle.rs` importował `schema` bezpośrednio z root crate (`ai_home::schema`), mimo że publiczna ścieżka projektu to `ai_home::domain::schema`. Import został poprawiony bez rozszerzania publicznego API crate i bez zmian produkcyjnej semantyki permanent deletion. Pełny sweep testów potwierdził, że pozostałe użycia validatora korzystają już z publicznej ścieżki `domain::schema`. Stały Rust source-text verifier został rozszerzony o zakaz `ai_home::schema` w testach. SQLite pozostaje v12, bez migracji. 4B-7 pozostaje poza zakresem do zielonego CI i reaudytu.
+
+
+## Aktualizacja 1.56 — 23 października 2026 — 4B-7 Domknięcie Standard
+
+Po potwierdzonym przez Edwarda zielonym pełnym GitHub Actions dla `AI_HOME_4B6_KROK_4_AUDIT_FIX_4_SOURCE` zamknięto implementacyjny zakres 4B-6 i rozpoczęto 4B-7. Krok nie dodaje forum, CommunityConnector, A2A ani ConsciousCore. Standard pozostaje lokalnym, event-driven runtime z `NullState`.
+
+Uruchomiono istniejący frozen command `activity.list` z `ipc.catalog.json`. Native projektuje beztreściową historię z trwałych `operation.changed` w `profile_events` do istniejącego DTO `Activity`; zachowuje profile scope, sekwencję, czas, status i bezpieczne metadata, bez treści rozmów, kluczy lub raw provider payloads. Dodano panel Activity EN/PL z ochroną stale profile response oraz widocznym dostępem z nawigacji. Historia jest trwała i czytelna po restarcie.
+
+Dodano acceptance test Standard, który po samym otwarciu desktopowego UI i upływie 60 sekund zabrania spontanicznych `chat.send`, memory update/restore, importów i connection tests. Polling pozostaje dozwolony wyłącznie dla już istniejącej aktywnej operacji. Dodatkowy native test sprawdza trwałość i izolację Activity pomiędzy dwoma profilami po restarcie. Statyczny `verify-standard-closure.py` kontroluje route Activity, `NullState`, brak okresowych interval schedulerów oraz brak runtime package dependency od forum/community. Command parity obejmuje teraz frozen katalogowy `activity.list`, wynik 52/52. SQLite pozostaje v12, bez migracji. Frozen P2 pozostaje 193/193. 4B-8 nie został rozpoczęty.
+
+
+## Aktualizacja 1.57 — 23 października 2026 — 4B-7 AUDIT FIX (Activity tombstone + profile refresh)
+
+Główny audyt 4B-7 wykazał dwa problemy. Activity reader nie rozpoznawał legalnego tombstone `permanent_deletion` pozostawionego przez trwałe usuwanie rozmowy i próbował traktować jego payload jak pełny `Operation`, co mogło zakończyć całą stronę `STORAGE_ERROR`. `activity::project()` rozpoznaje teraz wyłącznie znany tombstone `{tombstone:true,reason:"permanent_deletion"}` i pomija go, zachowując postęp kursora. Inne malformed `operation.changed` nadal pozostają błędem; nie dodano ogólnego maskowania STORAGE_ERROR. Dodano native regresję: conversation create -> legalny operation.changed z result.conversationId -> archive -> permanent delete -> activity.list z `limit:1` -> późniejszy wpis -> restart -> activity.list; równolegle profil B pozostaje nienaruszony.
+
+ActivityPanel miał też statyczną listę profili z momentu montowania. Refresh jest teraz dostępny również bez wybranego profilu, najpierw ponawia `profile.list`, godzi aktualny wybór z bieżącą listą i dopiero dla nadal istniejącego profilu odświeża Activity. Odczyt profili ma własną generację, więc spóźniony wynik nie może nadpisać nowszej listy. Dodano testy: nowy profil po mount, zarchiwizowanie wybranego profilu oraz retry po błędzie początkowego `profile.list`. `verify-standard-closure.py` rozszerzono z 6/6 do 8/8 o tombstone-aware Activity i profile-refresh. SQLite pozostaje v12, frozen P2 pozostaje bez zmian. 4B-8 nie został rozpoczęty.

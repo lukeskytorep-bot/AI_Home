@@ -1,3 +1,11 @@
+# Bieżące przekazanie: 4B-7 — Domknięcie Standard
+
+Na bazie zielonego 4B-6 dodano trwały, profile-scoped Activity Log oraz bramki odbiorowe Standard. Samo otwarcie aplikacji nie może inicjować Primary/Scribe ani innych operacji modelowych; Activity pozostaje widoczne po restarcie i nie zawiera treści rozmów ani sekretów. Standard nadal używa NullState i nie zależy od forum.
+
+Lokalne statyczne wyniki: P2 193/193, boundaries 30/30, command parity 52/52, Standard closure 6/6. Pełne frontend/Cargo pozostaje do CI. Raport: `docs/AI_HOME_4B7_RAPORT_PL.md`; plan treść 1.56. 4B-8 nie został rozpoczęty.
+
+---
+
 # Bieżące przekazanie 4B-5 REBASE — poprawki N1/N2 + segmenty kontekstu
 
 Baza: dokładny `AI_HOME_4B4_KROK_4_AUDIT_FIX_SOURCE.zip`, SHA-256 `d60f8d47b1f5fe37f031479cdcf7ec5fac348ce2c524aaa180edf9aec5858d40`. Paczka najpierw domyka dwie uwagi ponownego audytu 4B-4: N1 unieważnia profile-context/preflight natychmiast po Accepted importu niezależnie od późniejszego błędu odświeżenia listy, a N2 przenosi monitoring kandydatury pamięci i niepewny requestId do profile-scoped stanu `Conversations`, więc zmiana rozmowy/remount nie odbiera statusu ani STOP.

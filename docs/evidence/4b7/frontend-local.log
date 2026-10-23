@@ -1,0 +1,1 @@
+REQUIRES CI: local node_modules is absent. New ActivityPanel regressions were added but no local Vitest/typecheck/build PASS is claimed.
