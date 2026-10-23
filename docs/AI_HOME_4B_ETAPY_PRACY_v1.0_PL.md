@@ -507,3 +507,8 @@ Wcześniejszy niestandardowy Error code `PERMANENTLY_DELETED` nie należał do f
 ## Aktualizacja 1.54 — 4B-6 krok 4 AUDIT FIX 3
 
 GitHub Actions ujawnił wadliwy fixture nowego testu memory-run deletion. Ręcznie tworzony `memory_update Operation` nie spełniał frozen DTO `Operation`, przez co standardowy odczyt `get()` słusznie zwracał `STORAGE_ERROR`. Fixture został uzupełniony do pełnego kształtu runtime i przed INSERT-em waliduje się przez `schema::dto("Operation", &op)`. Produkcyjny kod archiwizacji, redakcji memory runs i permanent deletion pozostaje bez zmian. SQLite pozostaje v12, bez migracji.
+
+
+## Aktualizacja 1.55 — 23 października 2026 — 4B-6 krok 4 AUDIT FIX 4 (public schema import CI fix)
+
+Pełne Cargo po AUDIT FIX 3 ujawniło błąd kompilacji wyłącznie w nowym teście lifecycle: `src-tauri/tests/lifecycle.rs` importował `schema` bezpośrednio z root crate (`ai_home::schema`), mimo że publiczna ścieżka projektu to `ai_home::domain::schema`. Import został poprawiony bez rozszerzania publicznego API crate i bez zmian produkcyjnej semantyki permanent deletion. Pełny sweep testów potwierdził, że pozostałe użycia validatora korzystają już z publicznej ścieżki `domain::schema`. Stały Rust source-text verifier został rozszerzony o zakaz `ai_home::schema` w testach. SQLite pozostaje v12, bez migracji. 4B-7 pozostaje poza zakresem do zielonego CI i reaudytu.

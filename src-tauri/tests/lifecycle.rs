@@ -1,4 +1,4 @@
-use ai_home::{application::Application,persistence::Store,schema,vault::{SecretStore,Vault,VaultError}};
+use ai_home::{application::Application,domain::schema,persistence::Store,vault::{SecretStore,Vault,VaultError}};
 use serde_json::{json,Value};
 use std::{collections::HashMap,sync::{Arc,Mutex}};
 #[derive(Default)]struct MemoryVault{values:Mutex<HashMap<String,String>>}

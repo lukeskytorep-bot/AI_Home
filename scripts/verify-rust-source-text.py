@@ -25,3 +25,13 @@ if problems:
     print("\n".join(problems))
     sys.exit(1)
 print("PASS: Rust source-text normalization sweep.")
+
+# Integration tests must use the public validator path exposed by the crate.
+for path in Path("src-tauri/tests").rglob("*.rs"):
+    text = path.read_text(encoding="utf-8")
+    if "ai_home::schema" in text or "persistence::Store,schema" in text:
+        problems.append(f"{path}: nonexistent root schema import; use ai_home::domain::schema")
+if problems:
+    print("FAIL: Rust source-text normalization sweep:")
+    print("\n".join(problems))
+    sys.exit(1)

@@ -1,1 +1,1 @@
-PASS: storage target v12; no stale target-v11 assertions found in active test expectations.
+PASS: no target schema expectations pinned to SQLite 11 in src-tauri/tests.

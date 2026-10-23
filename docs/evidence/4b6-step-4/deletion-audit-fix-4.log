@@ -1,0 +1,5 @@
+4B-6 STEP 4 AUDIT FIX 4
+CI failure: E0432 unresolved import ai_home::schema in src-tauri/tests/lifecycle.rs
+Fix: use ai_home::domain::schema, matching existing public test imports.
+Full test-tree sweep: no remaining ai_home::schema root import.
+Production deletion runtime unchanged.
