@@ -1,3 +1,11 @@
+# Aktualizacja 1.49 — 23.10.2026 — 4B-6 krok 3 Portable Export
+
+- Po zielonym GitHub Actions dla 4B-6 krok 2 AUDIT FIX 4 rozpoczęto ograniczony krok 3: portable export profilu.
+- Eksport ma profile scope, jest tworzony jako spójny read-snapshot i zawiera Markdown/TXT, strukturalny JSON, manifest z hashami, pamięć/provenance oraz oryginalne importowane źródła.
+- Vault credentials, provider private replay, receipts/request fingerprints, raw provider payloads i prywatne refleksje są wykluczone ze zwykłego eksportu.
+- ZIP jest pobierany przez chunked IPC bez ujawnienia ścieżki filesystem. `profile.export.create` zachowuje requestId/idempotency.
+- SQLite pozostaje v12. Permanent deletion i 4B-7 pozostają poza tym krokiem.
+
 # Aktualizacja 1.44 — 22.10.2026 — 4B-6 krok 2 Backup + Restore
 
 - Edward potwierdził zielony GitHub Actions po 4B-6 kroku 1 AUDIT FIX 4 i upoważnił przejście dalej. Ten zapis nie zastępuje osobnego audytu desktopowego.
@@ -449,3 +457,26 @@ Po audycie backup/restore przebudowano restore jako crash-safe workflow. Trwały
 Startup restore nie usuwa ręcznie WAL/SHM, nie połyka błędu i nie pozwala `Store::open(create_if_missing=true)` utworzyć pustej bazy po nieudanym restore. Zweryfikowany safety służy do recovery, staging jest sprawdzany przed instalacją, a poprzedni current pozostaje zachowany do czasu potwierdzenia. Jeżeli nowa baza została już fizycznie zainstalowana, lecz receipt nie został zapisany, następny start rozpoznaje jej SHA i domyka wynik bez drugiego restore. Sidecary request/result są immutable create-once i nie mają okna delete-before-rename.
 
 UI zachowuje requestId przez remount i pokazuje wymagany restart. Krok 2 pozostaje `IMPLEMENTED_REQUIRES_CI_AND_AUDIT`; krok 3 nie jest rozpoczęty. Stałe bramki handoffu: schema expectation sweep, contract/handler/router parity, brak ręcznego usuwania aktywnego WAL/SHM, restore idempotency sweep.
+
+
+## Aktualizacja 1.46 — 22 października 2026 — 4B-6 krok 2 AUDIT FIX 2 (normalizacja Rust source / CI compile fix)
+
+GitHub Actions ujawnił zniekształcenie `src-tauri/tests/backup.rs`, w którym do repo trafiły literalne sekwencje `\n` oraz `\_` zamiast prawidłowych znaków źródła Rust. Finalny SOURCE poprzedniej paczki zawierał poprawną treść, więc poprawka wymusza pełne ponowne nadpisanie pliku testowego poprawnymi bajtami. Usunięto też nieużywany import `Row` z `src-tauri/src/backup.rs`. Dodano `scripts/verify-rust-source-text.py` oraz `npm run verify:rust-source-text` jako stałą bramkę wykrywającą znane wzorce korupcji tekstu źródłowego przed kolejnym handoffem. Nie zmieniono semantyki crash-safe restore, SQLite v12, frozen P2 ani kontraktów backup/restore.
+
+## Aktualizacja 1.47 — 23 października 2026 — 4B-6 krok 2 AUDIT FIX 3 (CI compile/UI state fix)
+
+Pełne GitHub Actions po FIX 2 ujawniło dwa mechaniczne błędy. W `src-tauri/src/backup.rs` nowa funkcja `freeze_operations()` korzysta z `SqliteRow::get`, więc wymagany trait `sqlx::Row` został przywrócony do importów. W `BackupPanel` callback `setStatus` korzystał z mutable globalnego `restoreAttemptState`, który był zerowany przed wykonaniem updatera React; powodowało to crash `requestId` zarówno w happy path, jak i przy remount. Restore attempt jest teraz przechwytywany jako lokalny immutable `attempt`, a updater nie zależy od później czyszczonego stanu globalnego. Nie zmieniono crash-safe restore, write-freeze, idempotency ledger, SQLite v12 ani kontraktów. Etap nadal wymaga pełnego zielonego CI i ponownego audytu przed krokiem 3.
+
+## Aktualizacja 1.48 — 23 października 2026 — 4B-6 krok 2 AUDIT FIX 4 (Store constructor CI fix)
+
+Pełne Cargo po FIX 3 ujawniło historyczne testowe konstrukcje `Store{pool:...}`. Po wprowadzeniu prywatnego `Store.path` w 4B-6 takie literały nie kompilują się. Pełny sweep wykazał cztery miejsca: po dwa w `src-tauri/tests/chat.rs` i `src-tauri/tests/chat_memory.rs`. Dodano `Store::from_existing_pool(pool)`, który zachowuje istniejący pool i jawnie nie przypisuje ścieżki file-backed, oraz zastąpiono wszystkie cztery literały. `verify-rust-source-text.py` od tej wersji odrzuca każdy zewnętrzny `Store { ... }` poza modułem persistence. Nie zmieniono crash-safe restore, SQLite v12, kontraktów ani migracji. Etap nadal wymaga zielonego pełnego CI i re-audytu przed krokiem 3.
+
+## Aktualizacja 1.50 — 23 października 2026 — 4B-6 krok 3 AUDIT FIX
+
+Po głównym audycie Portable Export poprawiono E1–E4 bez rozpoczynania permanent deletion ani 4B-7. `ExportPanel` używa teraz `ArrayBuffer[]` dla BlobPart, chroni listę eksportów generation/scope guardem i nie przyjmuje spóźnionych wyników poprzedniego profilu. Jawna odpowiedź native `ok:false` rozlicza próbę i usuwa pending dla danego profilu; jedynie niejednoznaczny błąd transportu zachowuje ten sam requestId do ponowienia. Pending jest mapą per profile i nie blokuje przełączania innych profili.
+
+Portable ZIP zawiera teraz niesekretne definicje routes oraz zsanityzowane connections z `requiresCredentialRebind:true`, bez `credentialRef` i bez danych vault. Dodano `memory-proposals.json` oraz `memory-decisions.json`, dzięki czemu wewnętrzny łańcuch `MemoryVersion.decisionReceiptId -> MemoryDecisionReceipt.proposalId -> MemoryProposal` jest rozwiązywalny w paczce. Profil może nadal wskazywać route IDs, ale odpowiadające rekordy routes są obecne. Techniczne receipts, chat replay i surowe odpowiedzi providerów pozostają wykluczone.
+
+`profile.export.read` nie wczytuje już całego ZIP przy każdym chunku. Używa seek/read dokładnie dla żądanego fragmentu do 1 MiB. UI nadal składa pobrany plik przed utworzeniem Blob, więc stałe zużycie pamięci po stronie WebView nie jest deklarowane. Dodano testy UI dla stale list, definitive rejection i ambiguous retry z tym samym requestId oraz testy native dla route/connection portability, memory provenance i zgodności rozmiarów/SHA wpisów manifestu z rzeczywistymi bajtami, w tym oryginalnym source blobem.
+
+SQLite pozostaje v12, bez migracji. Frozen P2 i profile scope pozostają bez zmian. Krok 3 pozostaje otwarty do pełnego zielonego frontend/Cargo CI i re-audytu.

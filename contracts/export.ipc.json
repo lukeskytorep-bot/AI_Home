@@ -1,0 +1,160 @@
+{
+  "contractVersion": 1,
+  "commands": {
+    "profile.export.create": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "exportVersion": {
+            "const": 1
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "profileId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "fileName": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "entryCount": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "excluded": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "exportVersion",
+          "id",
+          "profileId",
+          "createdAt",
+          "fileName",
+          "sizeBytes",
+          "sha256",
+          "entryCount",
+          "excluded"
+        ],
+        "additionalProperties": false
+      },
+      "firstImplementationStage": "4B-6",
+      "mutates": true,
+      "requiresExpectedRevision": false,
+      "async": false
+    },
+    "profile.export.list": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "additionalProperties": false
+      },
+      "firstImplementationStage": "4B-6",
+      "mutates": false,
+      "requiresExpectedRevision": false,
+      "async": false
+    },
+    "profile.export.read": {
+      "scope": "profile",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "exportId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "exportId",
+          "offset"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "dataBase64": {
+            "type": "string"
+          },
+          "nextOffset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "totalBytes": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "fileName": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        },
+        "required": [
+          "dataBase64",
+          "nextOffset",
+          "totalBytes",
+          "fileName",
+          "sha256"
+        ],
+        "additionalProperties": false
+      },
+      "firstImplementationStage": "4B-6",
+      "mutates": false,
+      "requiresExpectedRevision": false,
+      "async": false
+    }
+  }
+}

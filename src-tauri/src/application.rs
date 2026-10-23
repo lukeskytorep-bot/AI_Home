@@ -33,13 +33,28 @@ impl Application {
         let command=r["command"].as_str().unwrap();
         if crate::backup::restore_pending_for_store(&self.store) && command!="backup.restore.request" {
             let mutates=if crate::connections::supports(command){crate::connections::mutates(command)}else{
-                let catalog=embedded(include_str!("../../contracts/ipc.catalog.json"));let foundation=embedded(include_str!("../../contracts/foundation.ipc.json"));let backup=embedded(include_str!("../../contracts/backup.ipc.json"));
-                catalog["commands"].get(command).or_else(||foundation["commands"].get(command)).or_else(||backup["commands"].get(command)).and_then(|c|c["mutates"].as_bool()).unwrap_or(false)
+                let catalog=embedded(include_str!("../../contracts/ipc.catalog.json"));let foundation=embedded(include_str!("../../contracts/foundation.ipc.json"));let backup=embedded(include_str!("../../contracts/backup.ipc.json"));let export=embedded(include_str!("../../contracts/export.ipc.json"));
+                catalog["commands"].get(command).or_else(||foundation["commands"].get(command)).or_else(||backup["commands"].get(command)).or_else(||export["commands"].get(command)).and_then(|c|c["mutates"].as_bool()).unwrap_or(false)
             };
             if mutates{return Ok(reject("RESTORE_RESTART_REQUIRED"))}
         }
+        if matches!(command,"profile.export.create"|"profile.export.list"|"profile.export.read") {
+            let export=embedded(include_str!("../../contracts/export.ipc.json"));
+            let Some(profile)=r["profileId"].as_str() else{return Ok(reject("VALIDATION_ERROR"))};
+            let Some(contract)=export["commands"].get(command) else{return Ok(reject("UNKNOWN_COMMAND"))};
+            if !schema::valid(&r["payload"],&contract["payload"]){return Ok(reject("VALIDATION_ERROR"))}
+            let exists:Option<i64>=sqlx::query_scalar("SELECT 1 FROM profiles WHERE id=?").bind(profile).fetch_optional(&self.store.pool).await?;
+            if exists.is_none(){return Ok(reject("NOT_FOUND"))}
+            let result=match command{
+                "profile.export.create"=>match crate::export::create(&self.store,profile,r["requestId"].as_str().unwrap()).await{Ok(v)=>v,Err(e)=>return Ok(reject(if e.to_string().contains("idempotency conflict"){"IDEMPOTENCY_CONFLICT"}else{"EXPORT_INVALID"}))},
+                "profile.export.list"=>match crate::export::list(&self.store,profile){Ok(v)=>v,Err(_)=>return Ok(reject("EXPORT_INVALID"))},
+                "profile.export.read"=>match crate::export::read(&self.store,profile,r["payload"]["exportId"].as_str().unwrap(),r["payload"]["offset"].as_u64().unwrap() as usize){Ok(v)=>v,Err(_)=>return Ok(reject("EXPORT_INVALID"))},
+                _=>unreachable!()
+            };
+            return Ok(Dispatch{response:success(r,result),event:None})
+        }
         if crate::connections::supports(command){return Ok(Dispatch{response:self.connections.dispatch(r.clone()).await,event:None})}
-        let catalog=embedded(include_str!("../../contracts/ipc.catalog.json"));let foundation=embedded(include_str!("../../contracts/foundation.ipc.json"));let backup=embedded(include_str!("../../contracts/backup.ipc.json"));
+        let catalog=embedded(include_str!("../../contracts/ipc.catalog.json"));let foundation=embedded(include_str!("../../contracts/foundation.ipc.json"));let backup=embedded(include_str!("../../contracts/backup.ipc.json"));let export=embedded(include_str!("../../contracts/export.ipc.json"));
         let implemented=["app.preferences.get","app.preferences.set","app.pack.validate","kernel.status.get","app.events.list","backup.create","backup.list","backup.restore.preflight","backup.restore.request","backup.restore.status"];
         if !implemented.contains(&command){return Ok(reject("UNKNOWN_COMMAND"))}
         if r.get("profileId").is_some(){return Ok(reject("VALIDATION_ERROR"))}

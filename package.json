@@ -9,7 +9,9 @@
     "build": "npm run typecheck && vite build",
     "test": "vitest run",
     "tauri": "tauri",
-    "verify:boundaries": "node scripts/verify-boundaries.mjs"
+    "verify:boundaries": "node scripts/verify-boundaries.mjs",
+    "verify:rust-source-text": "python3 scripts/verify-rust-source-text.py",
+    "verify:command-parity": "python3 scripts/verify-command-parity.py"
   },
   "dependencies": {
     "@tauri-apps/api": "2.11.1",

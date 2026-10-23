@@ -390,6 +390,13 @@
     "error.backup_invalid": "The backup or restore state is invalid.",
     "action.refresh": "Refresh",
     "backup.lastFailed": "Last restore failed. The current database was kept.",
-    "error.restore_restart_required": "Restart AI Home to finish the pending restore before making more changes."
+    "error.restore_restart_required": "Restart AI Home to finish the pending restore before making more changes.",
+    "export.title": "Portable export",
+    "export.notice": "Create a portable profile package with readable conversations, structured JSON, provenance and source originals. Credentials and private provider state are excluded.",
+    "export.profile": "Export profile",
+    "export.none": "Choose a profile",
+    "export.create": "Create portable export",
+    "export.entries": "entries",
+    "export.download": "Download export"
   }
 }

@@ -390,6 +390,13 @@
     "error.backup_invalid": "Kopia lub stan przywracania jest nieprawidłowy.",
     "action.refresh": "Odśwież",
     "backup.lastFailed": "Ostatnie przywracanie nie powiodło się. Bieżąca baza została zachowana.",
-    "error.restore_restart_required": "Uruchom ponownie AI Home, aby dokończyć oczekujące przywracanie przed wprowadzaniem kolejnych zmian."
+    "error.restore_restart_required": "Uruchom ponownie AI Home, aby dokończyć oczekujące przywracanie przed wprowadzaniem kolejnych zmian.",
+    "export.title": "Eksport przenośny",
+    "export.notice": "Utwórz przenośny pakiet profilu z czytelnymi rozmowami, JSON, pochodzeniem danych i oryginalnymi źródłami. Dane logowania i prywatny stan providera są wykluczone.",
+    "export.profile": "Profil do eksportu",
+    "export.none": "Wybierz profil",
+    "export.create": "Utwórz eksport przenośny",
+    "export.entries": "plików",
+    "export.download": "Pobierz eksport"
   }
 }

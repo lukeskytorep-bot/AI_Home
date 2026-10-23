@@ -6,6 +6,7 @@ pub mod providers;
 pub mod vault;
 pub mod imports;
 pub mod backup;
+mod export;
 pub mod memory;
 pub mod retrieval;
 mod connections;
