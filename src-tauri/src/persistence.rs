@@ -99,6 +99,9 @@ impl Store {
         let store=Self{pool,path};store.preferences().await?;Ok(store)
     }
 
+    /// Re-wrap an already-open pool for internal/test composition. Backup/restore is unavailable because no filesystem path is attached.
+    pub fn from_existing_pool(pool:SqlitePool)->Self{Self{pool,path:None}}
+
     pub fn database_path(&self)->Option<&Path>{self.path.as_deref()}
     pub async fn preferences(&self)->Result<Value,sqlx::Error>{
         let row=sqlx::query("SELECT revision,body FROM preferences WHERE id=1").fetch_one(&self.pool).await?;

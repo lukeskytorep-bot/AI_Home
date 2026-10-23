@@ -177,7 +177,7 @@ async fn imported(app:Application,pool:&sqlx::SqlitePool,vault:Arc<MemoryVault>,
     let path=std::env::temp_dir().join(format!("aihome-chat-source-{}.md",uuid::Uuid::new_v4()));
     std::fs::write(&path,text).unwrap();
     drop(app);
-    let app=Application::with_file_picker(Store{pool:pool.clone()},Vault::with_backend(vault),Arc::new(DocumentPicker(path.clone())));
+    let app=Application::with_file_picker(Store::from_existing_pool(pool.clone()),Vault::with_backend(vault),Arc::new(DocumentPicker(path.clone())));
     let selected=ok(&app,"material.select",json!({"conversationId":c["id"]}),Some(p),None).await;
     let accepted=ok(&app,"material.import",json!({"selectionToken":selected["selectionToken"],"purpose":"conversation","conversationId":c["id"],"author":{"kind":"ai","label":"Author X","assertedBy":"importer","verified":false}}),Some(p),None).await;
     let op=finished(&app,p,&accepted["operation"]["id"]).await;assert_eq!(op["status"],"succeeded","{op}");
@@ -189,7 +189,7 @@ async fn imported(app:Application,pool:&sqlx::SqlitePool,vault:Arc<MemoryVault>,
 async fn imported_image(app:Application,pool:&sqlx::SqlitePool,vault:Arc<MemoryVault>,p:&str,c:&Value)->(Application,Value,Vec<u8>){
     let mut encoded=std::io::Cursor::new(vec![]);image::DynamicImage::new_rgb8(3,2).write_to(&mut encoded,image::ImageFormat::Png).unwrap();let bytes=encoded.into_inner();
     let path=std::env::temp_dir().join(format!("aihome-chat-image-{}.png",uuid::Uuid::new_v4()));std::fs::write(&path,&bytes).unwrap();drop(app);
-    let app=Application::with_file_picker(Store{pool:pool.clone()},Vault::with_backend(vault),Arc::new(DocumentPicker(path.clone())));
+    let app=Application::with_file_picker(Store::from_existing_pool(pool.clone()),Vault::with_backend(vault),Arc::new(DocumentPicker(path.clone())));
     let s=ok(&app,"material.select",json!({"conversationId":c["id"]}),Some(p),None).await;
     let a=ok(&app,"material.import",json!({"selectionToken":s["selectionToken"],"purpose":"conversation","conversationId":c["id"],"author":{"kind":"human","label":"Photo author","assertedBy":"importer","verified":false}}),Some(p),None).await;
     let op=finished(&app,p,&a["operation"]["id"]).await;assert_eq!(op["status"],"succeeded","{op}");std::fs::remove_file(path).unwrap();

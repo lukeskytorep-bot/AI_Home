@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
   "date": "2026-10-23",
-  "stage": "4B-6 STEP 2 AUDIT FIX 3",
-  "planContentVersion": "1.47",
+  "stage": "4B-6 STEP 2 AUDIT FIX 4",
+  "planContentVersion": "1.48",
   "status": "IMPLEMENTED_REQUIRES_CI_AND_AUDIT",
-  "baseSource": "AI_HOME_4B6_KROK_2_AUDIT_FIX_2_SOURCE.zip",
+  "baseSource": "AI_HOME_4B6_KROK_2_AUDIT_FIX_3_SOURCE.zip",
   "storageVersion": 12,
   "p2ReferenceChecks": 193,
   "boundaryChecks": 28,
@@ -12,8 +12,8 @@
     "restore crash-safe workflow unchanged",
     "restore idempotency unchanged",
     "restart-required write freeze unchanged",
-    "restore UI immutable attempt capture",
-    "sqlx Row trait compile fix"
+    "Store test composition uses controlled constructor",
+    "external Store struct-literal sweep"
   ],
   "migrationAdded": false,
   "rust": "REQUIRES_CI",

@@ -1,8 +1,5 @@
-4B-6 STEP 2 AUDIT FIX 3
-193/193 P2 PASS
-28/28 boundaries PASS
-Rust source-text normalization sweep PASS.
+4B-6 STEP 2 AUDIT FIX 4
+PASS: Rust source-text normalization sweep.
 Schema expectation sweep PASS: target schema remains 12; no stale target-11 assertions.
-BackupPanel restore updater uses immutable local attempt; no deferred access to cleared restoreAttemptState.
-sqlx::Row trait restored for SqliteRow::get calls in freeze_operations.
+Store constructor sweep PASS: no external Store struct literals outside persistence.rs.
 Cargo/Vitest/typecheck/build require GitHub Actions.
