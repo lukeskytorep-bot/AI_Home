@@ -14,7 +14,7 @@ impl Store {
         let pool=SqlitePoolOptions::new().max_connections(1).connect_with(options).await?;
         let mut tx=pool.begin().await?;
         let version:i64=sqlx::query_scalar("PRAGMA user_version").fetch_one(&mut *tx).await?;
-        if version>12{return Err(sqlx::Error::Protocol("unsupported storage version".into()))}
+        if version>13{return Err(sqlx::Error::Protocol("unsupported storage version".into()))}
         sqlx::query("CREATE TABLE IF NOT EXISTS preferences (id INTEGER PRIMARY KEY CHECK(id=1), revision INTEGER NOT NULL, body TEXT NOT NULL)").execute(&mut *tx).await?;
         sqlx::query("CREATE TABLE IF NOT EXISTS receipts (request_id TEXT PRIMARY KEY, fingerprint TEXT NOT NULL, response TEXT NOT NULL)").execute(&mut *tx).await?;
         sqlx::query("CREATE TABLE IF NOT EXISTS app_events (sequence INTEGER PRIMARY KEY AUTOINCREMENT, body TEXT NOT NULL)").execute(&mut *tx).await?;
@@ -95,7 +95,21 @@ impl Store {
         sqlx::query("UPDATE import_materials SET revision=revision+1,body=json_set(body,'$.revision',revision+1,'$.parseState','failed','$.errorCode','OPERATION_INTERRUPTED') WHERE json_extract(body,'$.parseState')='pending'").execute(&mut *tx).await?;
         sqlx::query("UPDATE profile_import_materials SET revision=revision+1,body=json_set(body,'$.revision',revision+1,'$.parseState','failed','$.errorCode','OPERATION_INTERRUPTED') WHERE json_extract(body,'$.parseState')='pending'").execute(&mut *tx).await?;
         sqlx::query("UPDATE attachments SET revision=revision+1,body=json_set(body,'$.revision',revision+1,'$.state','failed') WHERE EXISTS(SELECT 1 FROM import_materials m WHERE m.profile_id=attachments.profile_id AND m.id=attachments.material_id AND json_extract(m.body,'$.errorCode')='OPERATION_INTERRUPTED') AND json_extract(body,'$.state')='staged'").execute(&mut *tx).await?;
-        sqlx::query("PRAGMA user_version=12").execute(&mut *tx).await?;tx.commit().await?;
+
+        // 4B-9 EXP-0: durable Experimental foundation. These records store technical continuity
+        // and AI-selected plans/decisions; no scheduler or model call is activated by this migration.
+        for statement in [
+            "CREATE TABLE IF NOT EXISTS experimental_instances (profile_id TEXT NOT NULL REFERENCES profiles(id), id TEXT NOT NULL, revision INTEGER NOT NULL, body TEXT NOT NULL, PRIMARY KEY(profile_id,id), UNIQUE(profile_id))",
+            "CREATE TABLE IF NOT EXISTS experimental_wake_plans (profile_id TEXT NOT NULL, instance_id TEXT NOT NULL, id TEXT NOT NULL, revision INTEGER NOT NULL, body TEXT NOT NULL, PRIMARY KEY(profile_id,id), FOREIGN KEY(profile_id,instance_id) REFERENCES experimental_instances(profile_id,id))",
+            "CREATE TABLE IF NOT EXISTS experimental_decisions (profile_id TEXT NOT NULL, instance_id TEXT NOT NULL, id TEXT NOT NULL, revision INTEGER NOT NULL, body TEXT NOT NULL, PRIMARY KEY(profile_id,id), FOREIGN KEY(profile_id,instance_id) REFERENCES experimental_instances(profile_id,id))",
+            "CREATE TABLE IF NOT EXISTS experimental_refusals (profile_id TEXT NOT NULL, instance_id TEXT NOT NULL, id TEXT NOT NULL, revision INTEGER NOT NULL, body TEXT NOT NULL, PRIMARY KEY(profile_id,id), FOREIGN KEY(profile_id,instance_id) REFERENCES experimental_instances(profile_id,id))",
+            "CREATE TABLE IF NOT EXISTS experimental_work_episodes (profile_id TEXT NOT NULL, instance_id TEXT NOT NULL, id TEXT NOT NULL, revision INTEGER NOT NULL, body TEXT NOT NULL, PRIMARY KEY(profile_id,id), FOREIGN KEY(profile_id,instance_id) REFERENCES experimental_instances(profile_id,id))",
+            "CREATE TABLE IF NOT EXISTS experimental_technical_checkpoints (profile_id TEXT NOT NULL, instance_id TEXT NOT NULL, episode_id TEXT NOT NULL, id TEXT NOT NULL, revision INTEGER NOT NULL, body TEXT NOT NULL, PRIMARY KEY(profile_id,id), FOREIGN KEY(profile_id,instance_id) REFERENCES experimental_instances(profile_id,id), FOREIGN KEY(profile_id,episode_id) REFERENCES experimental_work_episodes(profile_id,id))",
+            "CREATE TABLE IF NOT EXISTS experimental_semantic_checkpoints (profile_id TEXT NOT NULL, instance_id TEXT NOT NULL, episode_id TEXT NOT NULL, technical_checkpoint_id TEXT NOT NULL, id TEXT NOT NULL, revision INTEGER NOT NULL, body TEXT NOT NULL, PRIMARY KEY(profile_id,id), FOREIGN KEY(profile_id,instance_id) REFERENCES experimental_instances(profile_id,id), FOREIGN KEY(profile_id,episode_id) REFERENCES experimental_work_episodes(profile_id,id), FOREIGN KEY(profile_id,technical_checkpoint_id) REFERENCES experimental_technical_checkpoints(profile_id,id))",
+            "CREATE TABLE IF NOT EXISTS experimental_actions (profile_id TEXT NOT NULL, instance_id TEXT NOT NULL, id TEXT NOT NULL, revision INTEGER NOT NULL, body TEXT NOT NULL, PRIMARY KEY(profile_id,id), FOREIGN KEY(profile_id,instance_id) REFERENCES experimental_instances(profile_id,id))",
+            "CREATE TABLE IF NOT EXISTS experimental_event_cursors (profile_id TEXT NOT NULL, instance_id TEXT NOT NULL, id TEXT NOT NULL, revision INTEGER NOT NULL, body TEXT NOT NULL, PRIMARY KEY(profile_id,id), UNIQUE(profile_id,instance_id), FOREIGN KEY(profile_id,instance_id) REFERENCES experimental_instances(profile_id,id))"
+        ] { sqlx::query(statement).execute(&mut *tx).await?; }
+        sqlx::query("PRAGMA user_version=13").execute(&mut *tx).await?;tx.commit().await?;
         let store=Self{pool,path};store.preferences().await?;Ok(store)
     }
 

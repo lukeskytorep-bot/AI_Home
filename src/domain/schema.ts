@@ -1,6 +1,6 @@
-import schema from '../../contracts/domain.schema.json';import foundation from '../../contracts/foundation.schema.json';
+import schema from '../../contracts/domain.schema.json';import foundation from '../../contracts/foundation.schema.json';import experimental from '../../contracts/experimental.schema.json';
 export type JsonSchema = { $ref?:string; oneOf?:JsonSchema[]; type?:string; const?:unknown; enum?:unknown[]; properties?:Record<string,JsonSchema>; required?:string[]; additionalProperties?:boolean|JsonSchema; items?:JsonSchema; minItems?:number; uniqueItems?:boolean; minProperties?:number; minLength?:number; maxLength?:number; pattern?:string; format?:string; minimum?:number; maximum?:number; exclusiveMinimum?:number };
-const definitions={...schema.$defs,...foundation.$defs} as unknown as Record<string,JsonSchema>;
+const definitions={...schema.$defs,...foundation.$defs,...experimental.$defs} as unknown as Record<string,JsonSchema>;
 export function valid(value:unknown,s:JsonSchema):boolean {
  if(s.$ref)return valid(value,definitions[s.$ref.split('/').at(-1)!]);
  if(s.oneOf)return s.oneOf.filter(x=>valid(value,x)).length===1;

@@ -550,3 +550,25 @@ Pełne Cargo, Vitest, TypeScript/Vite i desktop/WebView wymagają CI/smoke przed
 ## Aktualizacja 1.60 — 4B-8 AUDIT FIX 2 / repair overlay
 
 Po CI wykryto brak `src/ui/DiagnosticsPanel.tsx` w repozytorium mimo obecności tego pliku w pełnym SOURCE 4B-8. Poprawka 1.60 nie zmienia funkcji diagnostyki. Wprowadza jawny repair overlay zawierający komplet nowych plików runtime/testowych 4B-8, aby stan repo po nakładce był kompletny i niezależny od wcześniejszego błędu handoffu. SQLite pozostaje v12, frozen P2 bez zmian.
+
+## Aktualizacja 1.61 — 24 października 2026 — 4B-9 EXP-0 Experimental Contract Freeze / Work Continuity Foundation
+
+Po zielonym GitHub Actions dla `AI_HOME_4B8_AUDIT_FIX_2_SOURCE` rozpoczęto wyłącznie fundament 4B-9 / EXP-0. Nie uruchomiono schedulera, impulse loop, ConsciousCore, MCP, Community, Messenger ani A2A i nie dodano komendy wykonującej model. Standard pozostaje bez zmian funkcjonalnych.
+
+Dodano supplemental `contracts/experimental.schema.json`, bez modyfikacji frozen P2. Kontrakt zamraża pierwszą wersję rekordów `ExperimentalInstance`, `WakePlan`, `DecisionRecord`, `RefusalRecord`, `WorkEpisode`, `TechnicalWorkCheckpoint`, `SemanticWorkCheckpoint`, `ActionRecord`, `ExperimentalEventCursor` oraz wersjonowany `ExperimentalSourceRef`. `ExperimentalInstance` jest jawnie direction-bound. WakePlan rozróżnia interval/deadline/event-only. DecisionRecord wymaga właściwego durable reference dla action/refusal/sleep/wait. Technical checkpoint nie ma pól raw/semantic content; ActionRecord nie przechowuje raw payloadu, tylko payload hash/ref oraz jawne sender/destination/visibility.
+
+SQLite przechodzi z v12 do v13 i dodaje dziewięć profile/instance-scoped tabel `experimental_*` z FK pomiędzy instance, WorkEpisode i checkpointami. Sama migracja nie aktywuje runtime. Dodano regresję rzeczywistej migracji v12->v13 zachowującą istniejący Standard profile oraz FK integrity. Wszystkie bieżące oczekiwania docelowej wersji schematu w żywych testach zaktualizowano do v13; historyczne fixtures nadal mogą świadomie tworzyć wcześniejsze `PRAGMA user_version` dla testu migracji.
+
+TypeScript i Rust validators wczytują supplemental Experimental schema obok frozen domain/foundation. Dodano testy obu validatorów, m.in. odrzucające próby użycia TechnicalWorkCheckpoint/ActionRecord jako shadow store raw treści oraz dopuszczające source ref `permanently_deleted` bez kopiowania skasowanej zawartości.
+
+Dodano `scripts/verify-experimental-foundation.py` i `npm run verify:experimental-foundation`. Bramka wymaga obecności wszystkich rekordów EXP-0, schema v13, dziewięciu tabel, privacy-safe Action/TechnicalCheckpoint, publicznych validatorów supplemental schema oraz braku live `experimental.start`/`experimental.impulse`/ExperimentalDecisionService w tym kroku. Kanon wykonawczy zapisano w `docs/AI_HOME_EXPERIMENTAL_KANON_v1.0_PL.md`.
+
+EXP-0 wymaga pełnego CI i audytu przed EXP-1. Następny krok po akceptacji: NullState + fake Clock/provider + trwały impulse/decision loop z restartem, bez realnego forum i bez płatnych API.
+
+## Aktualizacja 1.62 — 24 października 2026 — 4B-9 EXP-0 AUDIT FIX (lifecycle + ActionRecord evidence)
+
+Główny audyt EXP-0 wykazał dwie luki P2 w nowym fundamencie. E1: `profile.delete.permanent` nie usuwał tabel `experimental_*`, więc profil z nawet nieaktywną Experimental instance kończył się FK failure. Poprawka nie dodaje owner override ani wymuszonego shutdownu: permanent delete jest dozwolony wyłącznie wtedy, gdy każda powiązana Experimental instance ma status `inactive`. Dla `ready/running/interrupted/recovery_required` zwracany jest `POLICY_DENIED`. Dla inactive usuwane jest całe dziewięciotabelowe drzewo Experimental w kolejności respektującej FK; drugi profil pozostaje nienaruszony, a końcowy `foreign_key_check` nadal obowiązuje.
+
+E2: `ActionRecord` dopuszczał `state=accepted` z pustym `receiptRef`. Kontrakt został rozdzielony na warianty semantyczne. `accepted` wymaga niepustej referencji do dowodu. `reconciled` wymaga niepustego dowodu oraz `reconciliationOutcome` z wartościami `confirmed_accepted`, `confirmed_not_executed` albo `still_unknown`; reconciliation nie jest więc automatycznie sukcesem. Stany prepared/sent/failed/uncertain/cancelled zachowują osobny wariant. Dodano Rust/TypeScript regressions oraz lifecycle test pełnego drzewa Experimental.
+
+SQLite pozostaje v13. Frozen P2 pozostaje bez zmian. `verify:experimental-foundation` rozszerzono do 12/12. EXP-1 pozostaje poza zakresem do zielonego CI i ponownego audytu.

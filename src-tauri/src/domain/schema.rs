@@ -5,7 +5,9 @@ fn definitions() -> &'static Value {
     DEFINITIONS.get_or_init(|| {
         let mut base: Value = serde_json::from_str(include_str!("../../../contracts/domain.schema.json")).expect("embedded P2 schema");
         let extra: Value = serde_json::from_str(include_str!("../../../contracts/foundation.schema.json")).expect("embedded foundation schema");
+        let experimental: Value = serde_json::from_str(include_str!("../../../contracts/experimental.schema.json")).expect("embedded experimental schema");
         base["$defs"].as_object_mut().unwrap().extend(extra["$defs"].as_object().unwrap().clone());
+        base["$defs"].as_object_mut().unwrap().extend(experimental["$defs"].as_object().unwrap().clone());
         base["$defs"].clone()
     })
 }

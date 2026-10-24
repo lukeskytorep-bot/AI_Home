@@ -1,8 +1,10 @@
-# Bieżące przekazanie: 4B-7 — Domknięcie Standard
+# Bieżące przekazanie: 4B-9 / EXP-0 AUDIT FIX — lifecycle + ActionRecord evidence
 
-Na bazie zielonego 4B-6 dodano trwały, profile-scoped Activity Log oraz bramki odbiorowe Standard. Samo otwarcie aplikacji nie może inicjować Primary/Scribe ani innych operacji modelowych; Activity pozostaje widoczne po restarcie i nie zawiera treści rozmów ani sekretów. Standard nadal używa NullState i nie zależy od forum.
+Na bazie `AI_HOME_4B9_EXP0_SOURCE.zip` poprawiono wyłącznie dwie luki wskazane przez główny audyt EXP-0. Permanent deletion profilu rozpoznaje teraz powiązaną Experimental instance: usuwa całe drzewo `experimental_*` tylko wtedy, gdy instance ma status `inactive`; każdy inny stan (`ready`, `running`, `interrupted`, `recovery_required`) kończy operację jawnym `POLICY_DENIED`, bez wymuszonego shutdownu lub zmiany decyzji Experimental.
 
-Lokalne statyczne wyniki: P2 193/193, boundaries 30/30, command parity 52/52, Standard closure 6/6. Pełne frontend/Cargo pozostaje do CI. Raport: `docs/AI_HOME_4B7_RAPORT_PL.md`; plan treść 1.56. 4B-8 nie został rozpoczęty.
+`ActionRecord` został zamknięty wariantami semantycznymi. `accepted` wymaga niepustego `receiptRef`. `reconciled` wymaga niepustego dowodu oraz `reconciliationOutcome = confirmed_accepted | confirmed_not_executed | still_unknown`, więc samo reconciliation nie oznacza sukcesu. Stany `prepared/sent/failed/uncertain/cancelled` pozostają odrębne. Nie dodano live schedulera, model calls, forum, MCP ani ConsciousCore.
+
+Nowe regresje obejmują pełne drzewo dziewięciu tabel Experimental przy permanent delete, ochronę drugiego profilu, FK integrity, odmowę delete dla non-inactive instance oraz walidację accepted/reconciled w Rust i TypeScript. SQLite pozostaje v13, frozen P2 bez zmian. Stała bramka `verify:experimental-foundation` ma teraz 12/12 kontroli. Raport: `docs/AI_HOME_4B9_EXP0_AUDIT_FIX_RAPORT_PL.md`; plan treść 1.62. EXP-1 pozostaje zablokowane do zielonego CI i ponownego audytu.
 
 ---
 

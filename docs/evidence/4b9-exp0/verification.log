@@ -1,0 +1,14 @@
+4B-9 EXP-0 local static verification
+- check_contracts.py: 193/193 PASS
+- verify-boundaries.mjs: 31/31 PASS
+- verify-command-parity.py: 54/54 PASS
+- verify-standard-closure.py: 8/8 PASS
+- verify-standard-release.py: 8/8 PASS
+- verify-rust-source-text.py: PASS
+- verify-experimental-foundation.py: 10/10 PASS
+- SQLite target: 13
+- backup/export/diagnostics current schema constants: 13
+- frozen P2: unchanged
+- live Experimental scheduler/model calls: intentionally absent
+- Cargo: NOT RUN (toolchain unavailable locally)
+- Vitest/typecheck/Vite: NOT RUN (node_modules unavailable locally)

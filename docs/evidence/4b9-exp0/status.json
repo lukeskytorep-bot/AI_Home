@@ -1,0 +1,15 @@
+{
+  "stage": "4B-9 EXP-0",
+  "status": "IMPLEMENTED_REQUIRES_CI_AND_AUDIT",
+  "planVersion": "1.61",
+  "storageVersion": 13,
+  "frozenP2Changed": false,
+  "liveExperimentalScheduler": false,
+  "nextAfterAcceptance": "4B-9 EXP-1 NullState fake-clock/fake-provider impulse loop",
+  "baseSource": "AI_HOME_4B8_AUDIT_FIX_2_SOURCE.zip",
+  "baseSourceSha256": "1c98627019bb5117fffa7ae2b2ce783f8e9060a38452c29867d6fdfc81786804",
+  "p2ReferenceChecks": 193,
+  "boundaries": 31,
+  "commandParity": 54,
+  "experimentalFoundationChecks": 10
+}
