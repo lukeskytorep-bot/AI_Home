@@ -1,0 +1,5 @@
+4B-8 AUDIT FIX 2 repair overlay
+Cause: CI repository lacked src/ui/DiagnosticsPanel.tsx although the full 4B-8 AUDIT FIX SOURCE contained it.
+Repair: handoff overlay explicitly carries the complete 4B-8 runtime/UI/test file set, including DiagnosticsPanel.tsx.
+Static gates: verify-source PASS; P2 193/193; boundaries 31/31; command parity 54/54; Rust source-text PASS; Standard closure 8/8; Standard release 8/8.
+Full Vitest/typecheck/Vite/Cargo: requires GitHub Actions.

@@ -33,10 +33,22 @@ impl Application {
         let command=r["command"].as_str().unwrap();
         if crate::backup::restore_pending_for_store(&self.store) && command!="backup.restore.request" {
             let mutates=if crate::connections::supports(command){crate::connections::mutates(command)}else{
-                let catalog=embedded(include_str!("../../contracts/ipc.catalog.json"));let foundation=embedded(include_str!("../../contracts/foundation.ipc.json"));let backup=embedded(include_str!("../../contracts/backup.ipc.json"));let export=embedded(include_str!("../../contracts/export.ipc.json"));
-                catalog["commands"].get(command).or_else(||foundation["commands"].get(command)).or_else(||backup["commands"].get(command)).or_else(||export["commands"].get(command)).and_then(|c|c["mutates"].as_bool()).unwrap_or(false)
+                let catalog=embedded(include_str!("../../contracts/ipc.catalog.json"));let foundation=embedded(include_str!("../../contracts/foundation.ipc.json"));let backup=embedded(include_str!("../../contracts/backup.ipc.json"));let export=embedded(include_str!("../../contracts/export.ipc.json"));let diagnostics=embedded(include_str!("../../contracts/diagnostics.ipc.json"));
+                catalog["commands"].get(command).or_else(||foundation["commands"].get(command)).or_else(||backup["commands"].get(command)).or_else(||export["commands"].get(command)).or_else(||diagnostics["commands"].get(command)).and_then(|c|c["mutates"].as_bool()).unwrap_or(false)
             };
             if mutates{return Ok(reject("RESTORE_RESTART_REQUIRED"))}
+        }
+        if matches!(command,"diagnostics.snapshot.get"|"diagnostics.export.create") {
+            if r.get("profileId").is_some(){return Ok(reject("VALIDATION_ERROR"))}
+            let diagnostics=embedded(include_str!("../../contracts/diagnostics.ipc.json"));
+            let Some(contract)=diagnostics["commands"].get(command) else{return Ok(reject("UNKNOWN_COMMAND"))};
+            if !schema::valid(&r["payload"],&contract["payload"]){return Ok(reject("VALIDATION_ERROR"))}
+            let result=match command{
+                "diagnostics.snapshot.get"=>crate::diagnostics::snapshot(&self.store).await?,
+                "diagnostics.export.create"=>crate::diagnostics::export(&self.store).await?,
+                _=>unreachable!()
+            };
+            return Ok(Dispatch{response:success(r,result),event:None})
         }
         if matches!(command,"profile.export.create"|"profile.export.list"|"profile.export.read") {
             let export=embedded(include_str!("../../contracts/export.ipc.json"));

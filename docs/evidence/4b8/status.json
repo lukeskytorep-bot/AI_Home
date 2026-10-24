@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "date": "2026-10-24",
-  "stage": "4B-8 AUDIT FIX",
+  "stage": "4B-8 AUDIT FIX 2 REPAIR OVERLAY",
   "planContentVersion": "1.59",
-  "status": "AUDIT_FIX_IMPLEMENTED_REQUIRES_CI_REAUDIT_DESKTOP_SMOKE",
+  "status": "IMPLEMENTED_REQUIRES_CI",
   "baseSource": "AI_HOME_4B7_AUDIT_FIX_SOURCE.zip",
   "storageVersion": 12,
   "p2ReferenceChecks": 193,
@@ -15,5 +15,7 @@
   "diagnosticsContentIncludedByDefault": false,
   "rust": "REQUIRES_CI",
   "frontend": "REQUIRES_CI",
-  "desktopSmoke": "REQUIRED"
+  "desktopSmoke": "REQUIRED",
+  "planVersion": "1.60",
+  "notes": "Repair overlay explicitly carries DiagnosticsPanel and all new 4B-8 runtime/test files after CI showed missing source file."
 }

@@ -1,0 +1,44 @@
+{
+  "contractVersion": 1,
+  "scope": "app",
+  "commands": {
+    "diagnostics.snapshot.get": {
+      "mutates": false,
+      "payload": {"type":"object","properties":{},"required":[],"additionalProperties":false},
+      "result": {
+        "type":"object",
+        "properties": {
+          "schemaVersion":{"const":1},
+          "generatedAt":{"type":"string","minLength":1},
+          "appVersion":{"type":"string","minLength":1},
+          "storageSchemaVersion":{"type":"integer","minimum":1},
+          "mode":{"const":"standard"},
+          "stateProvider":{"const":"null"},
+          "preferences":{"type":"object","properties":{"locale":{"enum":["en","pl"]},"themeId":{"enum":["orbital","aurora"]},"themeVariant":{"enum":["light","dark","system"]}},"required":["locale","themeId","themeVariant"],"additionalProperties":false},
+          "counts":{"type":"object","properties":{"profiles":{"type":"integer","minimum":0},"conversations":{"type":"integer","minimum":0},"memoryRecords":{"type":"integer","minimum":0},"operations":{"type":"integer","minimum":0},"failedOperations":{"type":"integer","minimum":0}},"required":["profiles","conversations","memoryRecords","operations","failedOperations"],"additionalProperties":false},
+          "recentErrors":{"type":"array","maxItems":20,"items":{"type":"object","properties":{"code":{"type":"string","minLength":1},"count":{"type":"integer","minimum":1}},"required":["code","count"],"additionalProperties":false}},
+          "contentIncluded":{"const":false}
+        },
+        "required":["schemaVersion","generatedAt","appVersion","storageSchemaVersion","mode","stateProvider","preferences","counts","recentErrors","contentIncluded"],
+        "additionalProperties":false
+      }
+    },
+    "diagnostics.export.create": {
+      "mutates": false,
+      "payload": {"type":"object","properties":{},"required":[],"additionalProperties":false},
+      "result": {
+        "type":"object",
+        "properties": {
+          "fileName":{"type":"string","minLength":1},
+          "mimeType":{"const":"application/json"},
+          "dataBase64":{"type":"string"},
+          "sizeBytes":{"type":"integer","minimum":1},
+          "sha256":{"type":"string","pattern":"^[0-9a-f]{64}$"},
+          "contentIncluded":{"const":false}
+        },
+        "required":["fileName","mimeType","dataBase64","sizeBytes","sha256","contentIncluded"],
+        "additionalProperties":false
+      }
+    }
+  }
+}

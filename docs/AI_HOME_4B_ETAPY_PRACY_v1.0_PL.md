@@ -545,3 +545,8 @@ Pełne Cargo, Vitest, TypeScript/Vite i desktop/WebView wymagają CI/smoke przed
 - Dowód braku wycieku pozostaje w natywnym privacy regression z unikalnym markerem danych źródłowych.
 - Doprecyzowano nazwę agregatu błędów do „Most frequent error codes” / „Najczęstsze kody błędów”; supplemental DTO zachowuje istniejące pole `recentErrors`, aby nie wprowadzać niepotrzebnej zmiany kontraktu.
 - Brak migracji SQLite; storageVersion pozostaje 12. Frozen P2 bez zmian.
+
+
+## Aktualizacja 1.60 — 4B-8 AUDIT FIX 2 / repair overlay
+
+Po CI wykryto brak `src/ui/DiagnosticsPanel.tsx` w repozytorium mimo obecności tego pliku w pełnym SOURCE 4B-8. Poprawka 1.60 nie zmienia funkcji diagnostyki. Wprowadza jawny repair overlay zawierający komplet nowych plików runtime/testowych 4B-8, aby stan repo po nakładce był kompletny i niezależny od wcześniejszego błędu handoffu. SQLite pozostaje v12, frozen P2 bez zmian.
