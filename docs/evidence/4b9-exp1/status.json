@@ -1,0 +1,16 @@
+{
+  "stage": "4B-9 EXP-1",
+  "status": "IMPLEMENTED_REQUIRES_CI_AND_AUDIT",
+  "planVersion": "1.63",
+  "storageVersion": 13,
+  "frozenP2Changed": false,
+  "productionBackgroundScheduler": false,
+  "realProviderCalls": false,
+  "nextAfterAcceptance": "4B-9 EXP-2 Work Continuity and context rollover",
+  "baseSource": "AI_HOME_4B9_EXP0_AUDIT_FIX_SOURCE.zip",
+  "p2ReferenceChecks": 193,
+  "boundaries": 31,
+  "commandParity": 54,
+  "experimentalFoundationChecks": 12,
+  "experimentalRuntimeChecks": 12
+}

@@ -14,7 +14,8 @@
     "verify:command-parity": "python3 scripts/verify-command-parity.py",
     "verify:standard": "python3 scripts/verify-standard-closure.py",
     "verify:standard-release": "python3 scripts/verify-standard-release.py",
-    "verify:experimental-foundation": "python3 scripts/verify-experimental-foundation.py"
+    "verify:experimental-foundation": "python3 scripts/verify-experimental-foundation.py",
+    "verify:experimental-runtime": "python3 scripts/verify-experimental-runtime.py"
   },
   "dependencies": {
     "@tauri-apps/api": "2.11.1",

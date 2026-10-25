@@ -7,6 +7,7 @@ pub mod vault;
 pub mod imports;
 pub mod backup;
 pub mod diagnostics;
+pub mod experimental_runtime;
 mod export;
 mod deletion;
 pub mod memory;

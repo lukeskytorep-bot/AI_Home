@@ -572,3 +572,34 @@ Główny audyt EXP-0 wykazał dwie luki P2 w nowym fundamencie. E1: `profile.del
 E2: `ActionRecord` dopuszczał `state=accepted` z pustym `receiptRef`. Kontrakt został rozdzielony na warianty semantyczne. `accepted` wymaga niepustej referencji do dowodu. `reconciled` wymaga niepustego dowodu oraz `reconciliationOutcome` z wartościami `confirmed_accepted`, `confirmed_not_executed` albo `still_unknown`; reconciliation nie jest więc automatycznie sukcesem. Stany prepared/sent/failed/uncertain/cancelled zachowują osobny wariant. Dodano Rust/TypeScript regressions oraz lifecycle test pełnego drzewa Experimental.
 
 SQLite pozostaje v13. Frozen P2 pozostaje bez zmian. `verify:experimental-foundation` rozszerzono do 12/12. EXP-1 pozostaje poza zakresem do zielonego CI i ponownego audytu.
+
+## Aktualizacja 1.63 — 24 października 2026 — 4B-9 EXP-1 NullState deterministic impulse loop
+
+Po zielonym CI dla `AI_HOME_4B9_EXP0_AUDIT_FIX_SOURCE` rozpoczęto EXP-1 bez rozszerzania zakresu do ConsciousCore, produkcyjnych konektorów lub UI Experimental.
+
+Dodano natywny `experimental_runtime` z wstrzykiwanymi granicami `Clock`, `DecisionProvider` i `ActionExecutor`. Pierwsza wersja nie uruchamia background timera ani prawdziwego providera. Deterministyczny scheduler sprawdza trwały WakePlan i tworzy opportunity tylko wtedy, gdy upłynął wybrany termin albo pojawiło się AI-selected interrupt event. Obsługiwane decyzje obejmują action, no_action, rest, sleep, wait_event, refusal oraz podstawowe statusy Work Episode.
+
+Runtime używa SQLite CAS / runtimeGeneration do claimowania maksymalnie jednego cyklu na instancję. Restart zmienia rozpoczęty `running` cycle na `interrupted`, a ActionRecord pozostawiony w `sent` na `uncertain`; nie fabrykuje sukcesu ani odmowy. Missed interval jest coalesced do jednej okazji. RefusalRecord pozostaje trwały i wraca w późniejszym OpportunityPacket. Fake local peer pozwala potwierdzić ActionRecord + receipt bez prawdziwego forum.
+
+Nie dodano `experimental.start`/`experimental.impulse` IPC, production scheduler hosta, ConsciousCore, MCP, Community, Messenger ani A2A. SQLite pozostaje v13; frozen P2 pozostaje bez zmian. Następny krok po CI i audycie: EXP-2 Work Continuity / context rollover, context-pressure preflight, stale result/revision conflicts i szersze recovery.
+
+## Aktualizacja 1.64 — 24 października 2026 — 4B-9 EXP-1 AUDIT FIX (event cursor, error finalization, retry gate, direction-bound profile)
+
+Główny audyt EXP-1 wykazał cztery luki runtime i wszystkie zostały poprawione bez rozszerzania zakresu do EXP-2. R1: `claim()` kwalifikuje teraz wyłącznie zdarzenia o `sequence > committedThrough`; stare, już zatwierdzone zdarzenie nie może ponownie przerwać nowego WAIT_EVENT ani SLEEP, również po restarcie. `receivedThrough` pozostaje osobnym wskaźnikiem obserwacji, a eventy po technical failure nie są commitowane.
+
+R2: każda ścieżka błędu po claimie ma jawne techniczne rozliczenie chronione `runtimeGeneration`. Błędne Sleep(0), WaitEvent([]), niepoprawny ActionIntent i brak WorkEpisode nie pozostawiają instancji w `running`. Jeżeli executor mógł wykonać akcję, ale zwrócił `Accepted` bez receipt, ActionRecord przechodzi do `uncertain`, cykl zostaje bezpiecznie domknięty i nie jest ślepo powtarzany.
+
+R3: resource unavailable otrzymuje trwały techniczny `retryNotBefore`, `retryAttempt` i `lastTechnicalError` z bounded exponential backoff. Nie zmienia to AI-selected WakePlan i nie jest zapisywane jako refusal ani decyzja AI. Kolejne ticki przed retry deadline nie wywołują providera ponownie.
+
+R4: `create_instance` nie przyjmuje już istniejącego profilu. Atomowo tworzy nowy, direction-bound namespace profilu i ExperimentalInstance/WakePlan/EventCursor. Frozen P2 pozostaje bez zmian; legacy `Profile.mode=conscious` jest używany wyłącznie jako istniejący zamrożony techniczny discriminator, natomiast autorytatywny kierunek pozostaje `ExperimentalInstance.direction=experimental`. Standard `profile.list` filtruje profile powiązane z Experimental, a standardowe profile-scoped workflow odrzuca taki profil `POLICY_DENIED`, więc nie powstaje hybryda Standard/Experimental.
+
+Dodano regresje R1–R4, w tym powtórzone sequence po commit i restart, invalid decisions, uncertain receipt, backoff providera, odrzucenie konwersji istniejącego Standard profilu oraz atomowe utworzenie direction-bound Experimental profile. `verify:experimental-runtime` rozszerzono z 12/12 do 20/20. SQLite pozostaje v13; frozen P2 pozostaje 193/193; brak live IPC, background schedulera, ConsciousCore, MCP i produkcyjnych konektorów.
+
+
+## Aktualizacja 1.65 — 25 października 2026 — 4B-9 EXP-1 AUDIT FIX 2 (post-effect execution fence)
+
+Reaudyt EXP-1 pozostawił jedno ustalenie F1: po rzeczywistym wywołaniu executora błąd utrwalenia receipt/finalizacji mógł zostać potraktowany jak zwykły błąd decyzji i po backoffie uruchomić nowy decision cycle. Poprawka wprowadza trwałą barierę Action Ledger: każdy `sent` lub `uncertain` blokuje nowy claim i zwraca `ReconciliationRequired` do czasu jawnego uzgodnienia wyniku. Bariera działa niezależnie od tego, czy pomocniczy zapis `recovery_required` powiedzie się.
+
+Po granicy możliwego skutku zewnętrznego nie jest używany zwykły retry decyzji i nie powstaje nowy idempotency key. Zachowywany jest oryginalny kod błędu. `ActionOutcome::Uncertain` oraz Accepted bez receipt przechodzą do `recovery_required`. Dodano natywne fault-injection regressions dla awarii UPDATE wyniku akcji oraz końcowego `finish_cycle`, także przez restart.
+
+`verify:experimental-runtime` rozszerzono do 24/24. SQLite pozostaje v13, frozen P2 pozostaje 193/193. Nadal brak live IPC, background schedulera, ConsciousCore, MCP i produkcyjnych konektorów. EXP-2 może rozpocząć się dopiero po zielonym CI i reaudytcie tej poprawki.

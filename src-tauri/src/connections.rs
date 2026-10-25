@@ -398,6 +398,10 @@ impl Connections {
         let mut memory_launch = None;
         let mut import_launch = None;
         let mut cancel_after = Vec::new();
+        if !profile.is_empty() && command != "profile.delete.permanent" {
+            let experimental_bound:Option<i64>=sqlx::query_scalar("SELECT 1 FROM experimental_instances WHERE profile_id=?").bind(profile).fetch_optional(&mut *tx).await.map_err(|_|"STORAGE_ERROR")?;
+            if experimental_bound.is_some(){return Err("POLICY_DENIED");}
+        }
         let result = match command {
             "conversation.delete.permanent" => conversation_storage::execute(&mut tx,command,profile,payload,expected).await?,
             "profile.delete.permanent" => {
@@ -446,7 +450,7 @@ impl Connections {
                     if bound != cursor { return Err("VALIDATION_ERROR"); }
                     after = candidate;
                 }
-                let rows = sqlx::query("SELECT id FROM profiles WHERE id>? AND (json_extract(body,'$.status')='archived')=? ORDER BY id LIMIT ?")
+                let rows = sqlx::query("SELECT p.id FROM profiles p WHERE p.id>? AND (json_extract(p.body,'$.status')='archived')=? AND NOT EXISTS(SELECT 1 FROM experimental_instances e WHERE e.profile_id=p.id) ORDER BY p.id LIMIT ?")
                     .bind(after)
                     .bind(archived)
                     .bind(limit + 1)
