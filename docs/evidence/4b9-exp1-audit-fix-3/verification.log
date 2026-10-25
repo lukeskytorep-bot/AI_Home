@@ -1,0 +1,9 @@
+contracts.log: PASS
+boundaries.log: PASS
+command-parity.log: PASS
+rust-source-text.log: PASS
+standard-closure.log: PASS
+standard-release.log: PASS
+experimental-foundation.log: PASS
+experimental-runtime.log: PASS
+Cargo: NOT AVAILABLE LOCALLY

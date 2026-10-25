@@ -25,7 +25,7 @@ ok('committedThrough' in rt and 'sequence>committed' in rt,'R1: wake eligibility
 ok('release_if_running_with_retry' in rt and 'ACTION_OUTCOME_UNCERTAIN' in rt,'R2: every failed claimed cycle must finalize without fabricating external success')
 ok('retryNotBefore' in rt and 'retryAttempt' in rt and 'RESOURCE_UNAVAILABLE' in rt,'R3: resource unavailability needs a persisted technical retry gate')
 ok('existing_standard_profile_cannot_be_converted_to_experimental' in t and 'create_instance_atomically_creates_direction_bound_profile' in t,'R4: direction-bound profile creation regressions missing')
-ok('committed_event_cannot_wake_wait_event_twice_and_new_sequence_can' in t and 'accepted_without_receipt_becomes_uncertain_and_does_not_leave_running' in t,'R1/R2 native regressions missing')
+ok('committed_event_cannot_wake_wait_event_twice_and_new_sequence_can' in t and 'accepted_without_receipt_becomes_uncertain_and_requires_reconciliation' in t,'R1/R2 native regressions missing')
 ok('resource_unavailable_uses_technical_backoff_not_ai_wake_plan' in t,'R3 retry regression missing')
 conn=(root/'src-tauri/src/connections.rs').read_text()
 ok('command != "profile.delete.permanent"' in conn and 'experimental_instances WHERE profile_id=?' in conn and 'POLICY_DENIED' in conn,'R4: Standard profile-scoped dispatcher must reject Experimental-bound profiles')

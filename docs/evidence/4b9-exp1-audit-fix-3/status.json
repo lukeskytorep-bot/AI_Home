@@ -1,0 +1,8 @@
+{
+  "stage": "4B-9 EXP-1 AUDIT FIX 3",
+  "planContentVersion": "1.66",
+  "status": "IMPLEMENTED_REQUIRES_NATIVE_CI",
+  "storageVersion": 13,
+  "runtimeChanged": false,
+  "reason": "align stale native tests with F1 reconciliation fence"
+}
