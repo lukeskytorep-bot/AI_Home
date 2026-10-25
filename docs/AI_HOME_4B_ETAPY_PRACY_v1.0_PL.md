@@ -603,3 +603,21 @@ Reaudyt EXP-1 pozostawił jedno ustalenie F1: po rzeczywistym wywołaniu executo
 Po granicy możliwego skutku zewnętrznego nie jest używany zwykły retry decyzji i nie powstaje nowy idempotency key. Zachowywany jest oryginalny kod błędu. `ActionOutcome::Uncertain` oraz Accepted bez receipt przechodzą do `recovery_required`. Dodano natywne fault-injection regressions dla awarii UPDATE wyniku akcji oraz końcowego `finish_cycle`, także przez restart.
 
 `verify:experimental-runtime` rozszerzono do 24/24. SQLite pozostaje v13, frozen P2 pozostaje 193/193. Nadal brak live IPC, background schedulera, ConsciousCore, MCP i produkcyjnych konektorów. EXP-2 może rozpocząć się dopiero po zielonym CI i reaudytcie tej poprawki.
+
+
+## Aktualizacja 1.66 — 25 października 2026 — 4B-9 EXP-1 AUDIT FIX 3 (CI regression alignment po F1)
+
+Pełny natywny CI po AUDIT FIX 2 ujawnił dwa nieaktualne oczekiwania w `src-tauri/tests/experimental_runtime.rs`. Produkcyjny runtime nie został cofnięty ani zmieniony. Po F1 poprawne zachowanie to: `Accepted` bez receipt zapisuje akcję jako `uncertain`, instancję jako `recovery_required`, a następny `run_due()` zwraca `ReconciliationRequired` bez ponownego wywołania executora. Analogicznie restart z trwałą akcją `sent` odzyskuje ją jako `uncertain`; nowa decyzja jest zablokowana do reconciliation.
+
+Test `accepted_without_receipt_becomes_uncertain_and_does_not_leave_running` został zastąpiony semantycznie poprawnym `accepted_without_receipt_becomes_uncertain_and_requires_reconciliation` i sprawdza dodatkowo brak drugiego wykonania. Test restartu oczekuje teraz `ReconciliationRequired`, zerowej liczby nowych wywołań `DecisionProvider` oraz `recovery_required`. Static verifier został zsynchronizowany z nazwą regresji. Brak zmian runtime, schema, frozen P2 i zakresu produktu. SQLite pozostaje v13. EXP-2 nadal czeka na zielony natywny CI i końcowy odbiór EXP-1.
+
+
+## Aktualizacja 1.67 — 25 października 2026 — 4B-9 EXP-2 Work Continuity / Context Rollover
+
+Po zielonym natywnym CI dla `AI_HOME_4B9_EXP1_AUDIT_FIX_3_SOURCE` rozpoczęto EXP-2. Dodano `WorkContinuityService`, który faktycznie używa tabel Work Episode i obu checkpointów zamrożonych w EXP-0. Technical checkpoint jest trwałym stanem technicznym z CAS `parentCheckpointId` i nie może wyprzedzić `committedThrough` event cursora. Semantic checkpoint jest oddzielny, wskazuje konkretny technical checkpoint i nie może zostać dopisany do przestarzałego stanu pracy.
+
+Dodano `ResumePacket`, który po rollover/restart składa trwały Episode, technical checkpoint, odpowiedni semantic checkpoint, aktywne refusal, unresolved `sent/uncertain` actions oraz committed event sequence. `OpportunityPacket` w realnym deterministic runtime EXP-1 otrzymuje Resume Packet automatycznie, gdy istnieje aktywna/waiting/interrupted praca z checkpointem. Resume nie oznacza automatycznego Continue i nie odtwarza hidden chain-of-thought.
+
+Context preflight jest deterministyczny i jawnie estymowany (`caller_estimated_tokens`). Uwzględnia context window, reserved output, input reserve oraz osobną rezerwę na checkpoint. Wyniki to `Fits`, `CheckpointRequired` i `Impossible`; zmiana route/context window wymaga nowego preflight. Duże tool results są przechowywane poza aktywnym contextem i reprezentowane przez source refs/hash, nie jako raw shadow content.
+
+Checkpoint source refs uczestniczą w lifecycle permanent deletion: conversation/message refs są oznaczane `permanently_deleted`, bez kopiowania skasowanej treści. Dodano natywne regresje restart/rollover, stale semantic checkpoint, CAS technical checkpoint, unresolved external action, runtime Resume Packet, route re-preflight oraz deletion lifecycle. SQLite pozostaje v13, frozen P2 bez zmian. Nadal brak ConsciousCore, live Experimental IPC, background host schedulera, MCP i produkcyjnych konektorów. Po zielonym CI i audycie EXP-2 można zamknąć 4B-9 i przejść do 4B-10.

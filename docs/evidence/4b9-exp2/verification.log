@@ -1,0 +1,13 @@
+4B-9 EXP-2 local verification
+P2 193/193 PASS
+boundaries 31/31 PASS
+command parity 54/54 PASS
+Rust source-text PASS
+Standard closure 8/8 PASS
+Standard release 8/8 PASS
+Experimental foundation 12/12 PASS
+Experimental runtime 24/24 PASS
+Experimental continuity 20/20 PASS
+SQLite schema target 13
+Cargo unavailable locally
+npm ci timed out before frontend test/build; CI required

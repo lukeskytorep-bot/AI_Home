@@ -4,6 +4,7 @@ use sha2::{Digest,Sha256};
 use sqlx::{Row,SqlitePool};
 use std::sync::Arc;
 use crate::domain::schema;
+use crate::experimental_continuity::{ResumePacket,WorkContinuityService};
 
 #[derive(Clone,Debug,PartialEq,Eq)]
 pub struct OpportunityEvent { pub sequence:i64, pub kind:String }
@@ -18,6 +19,7 @@ pub struct OpportunityPacket {
     pub wake_reason:String,
     pub events:Vec<OpportunityEvent>,
     pub active_refusals:Vec<Value>,
+    pub resume_packet:Option<ResumePacket>,
 }
 
 #[derive(Clone,Debug)]
@@ -105,10 +107,14 @@ impl<C:Clock,D:DecisionProvider,A:ActionExecutor> ExperimentalRuntime<C,D,A>{
             return Ok(RunResult::ReconciliationRequired)
         }
         let claim=self.claim(profile_id,instance_id,now,events).await?;
-        let Some((packet,generation))=claim else {
+        let Some((mut packet,generation))=claim else {
             let status:Option<String>=sqlx::query_scalar("SELECT json_extract(body,'$.status') FROM experimental_instances WHERE profile_id=? AND id=?").bind(profile_id).bind(instance_id).fetch_optional(&self.pool).await.map_err(storage)?;
             return Ok(match status.as_deref(){Some("running")=>RunResult::Busy,Some("inactive")=>RunResult::Inactive,Some("recovery_required")=>RunResult::ReconciliationRequired,_=>RunResult::NotDue})
         };
+        match WorkContinuityService::new(self.pool.clone()).latest_resume_packet(profile_id,instance_id,now).await {
+            Ok(resume)=>packet.resume_packet=resume,
+            Err(code)=>{self.release_if_running_with_retry(profile_id,instance_id,generation,now,&code).await?;return Err(code)}
+        }
         let choice=match self.decision.decide(&packet){
             Ok(v)=>v,
             Err(_)=>{
@@ -155,7 +161,7 @@ impl<C:Clock,D:DecisionProvider,A:ActionExecutor> ExperimentalRuntime<C,D,A>{
         let changed=sqlx::query("UPDATE experimental_instances SET revision=?,body=? WHERE profile_id=? AND id=? AND revision=?").bind(revision).bind(instance.to_string()).bind(profile_id).bind(instance_id).bind(row.get::<i64,_>("revision")).execute(&mut *tx).await.map_err(storage)?;
         if changed.rows_affected()!=1{return Ok(None)}
         let refusals=self.active_refusals(&mut tx,profile_id,instance_id).await?;
-        let packet=OpportunityPacket{opportunity_id:uuid::Uuid::new_v4().to_string(),profile_id:profile_id.into(),instance_id:instance_id.into(),runtime_generation:generation,now,wake_reason,events:fresh_events,active_refusals:refusals};
+        let packet=OpportunityPacket{opportunity_id:uuid::Uuid::new_v4().to_string(),profile_id:profile_id.into(),instance_id:instance_id.into(),runtime_generation:generation,now,wake_reason,events:fresh_events,active_refusals:refusals,resume_packet:None};
         tx.commit().await.map_err(storage)?; Ok(Some((packet,generation)))
     }
 

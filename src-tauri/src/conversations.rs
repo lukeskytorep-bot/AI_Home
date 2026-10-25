@@ -66,6 +66,7 @@ pub(super) async fn execute(
             let v=get(tx,"conversations",profile,cid).await?;
             if revision(&v)? != expected { return Err("REVISION_CONFLICT"); }
             if v["status"] != "archived" { return Err("POLICY_DENIED"); }
+            let message_ids:Vec<String>=sqlx::query_scalar("SELECT id FROM messages WHERE profile_id=? AND conversation_id=? ORDER BY rowid").bind(profile).bind(cid).fetch_all(&mut **tx).await.map_err(|_|"STORAGE_ERROR")?;
             let op_rows=sqlx::query("SELECT operation_id FROM chat_runs WHERE profile_id=? AND conversation_id=? UNION SELECT operation_id FROM import_materials WHERE profile_id=? AND conversation_id=?").bind(profile).bind(cid).bind(profile).bind(cid).fetch_all(&mut **tx).await.map_err(|_|"STORAGE_ERROR")?;
             let mut opids=Vec::new();for row in op_rows{opids.push(row.get::<String,_>("operation_id"));}
             let blob_rows=sqlx::query("SELECT original_blob_id,extracted_blob_id FROM import_materials WHERE profile_id=? AND conversation_id=?").bind(profile).bind(cid).fetch_all(&mut **tx).await.map_err(|_|"STORAGE_ERROR")?;
@@ -79,6 +80,8 @@ pub(super) async fn execute(
             for bid in blobs{let refs:i64=sqlx::query_scalar("SELECT (SELECT COUNT(*) FROM import_materials WHERE profile_id=? AND (original_blob_id=? OR extracted_blob_id=?))+(SELECT COUNT(*) FROM profile_import_materials WHERE profile_id=? AND (original_blob_id=? OR extracted_blob_id=?))").bind(profile).bind(&bid).bind(&bid).bind(profile).bind(&bid).bind(&bid).fetch_one(&mut **tx).await.map_err(|_|"STORAGE_ERROR")?;if refs==0{sqlx::query("DELETE FROM import_blobs WHERE profile_id=? AND id=?").bind(profile).bind(bid).execute(&mut **tx).await.map_err(|_|"STORAGE_ERROR")?;}}
             crate::deletion::redact_conversation_events(tx,profile,cid).await?;
             crate::deletion::redact_conversation_memory_runs(tx,profile,cid).await?;
+            crate::deletion::redact_experimental_source_refs(tx,profile,"conversation",cid).await?;
+            for mid in &message_ids { crate::deletion::redact_experimental_source_refs(tx,profile,"message",mid).await?; }
             crate::deletion::tombstone_conversation_receipts(tx,profile,cid).await?;
             sqlx::query("DELETE FROM conversations WHERE profile_id=? AND id=?").bind(profile).bind(cid).execute(&mut **tx).await.map_err(|_|"STORAGE_ERROR")?;
             let fk:Vec<(String,i64,String,i64)>=sqlx::query_as("PRAGMA foreign_key_check").fetch_all(&mut **tx).await.map_err(|_|"STORAGE_ERROR")?;if !fk.is_empty(){return Err("STORAGE_ERROR");}

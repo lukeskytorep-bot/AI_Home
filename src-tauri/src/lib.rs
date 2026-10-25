@@ -8,6 +8,7 @@ pub mod imports;
 pub mod backup;
 pub mod diagnostics;
 pub mod experimental_runtime;
+pub mod experimental_continuity;
 mod export;
 mod deletion;
 pub mod memory;

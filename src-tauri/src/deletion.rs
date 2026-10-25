@@ -108,3 +108,53 @@ pub(crate) async fn redact_conversation_memory_runs(tx:&mut Tx<'_>,profile:&str,
     }
     Ok(())
 }
+
+pub(crate) async fn redact_experimental_source_refs(tx:&mut Tx<'_>,profile:&str,source_kind:&str,source_id:&str)->Result<(),Failure>{
+    for table in ["experimental_technical_checkpoints","experimental_semantic_checkpoints"] {
+        let q=format!("SELECT id,body FROM {table} WHERE profile_id=? ORDER BY rowid");
+        let rows=sqlx::query(&q).bind(profile).fetch_all(&mut **tx).await.map_err(|_|"STORAGE_ERROR")?;
+        for row in rows {
+            let id=row.get::<String,_>("id");
+            let mut body:Value=serde_json::from_str(row.get::<&str,_>("body")).map_err(|_|"STORAGE_ERROR")?;
+            let mut changed=false;
+            if let Some(refs)=body.get_mut("sourceRefs").and_then(Value::as_array_mut) {
+                for r in refs {
+                    if r.get("sourceKind").and_then(Value::as_str)==Some(source_kind) && r.get("sourceId").and_then(Value::as_str)==Some(source_id) {
+                        r["availability"]=json!("permanently_deleted");
+                        changed=true;
+                    }
+                }
+            }
+            if changed {
+                let q=format!("UPDATE {table} SET revision=revision+1,body=json_set(?,'$.revision',revision+1) WHERE profile_id=? AND id=?");
+                sqlx::query(&q).bind(body.to_string()).bind(profile).bind(id).execute(&mut **tx).await.map_err(|_|"STORAGE_ERROR")?;
+            }
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests{
+    use super::*;
+    use crate::persistence::Store;
+    use serde_json::json;
+
+    #[tokio::test]
+    async fn experimental_checkpoint_source_refs_are_tombstoned_on_source_deletion(){
+        let store=Store::memory().await.unwrap();
+        sqlx::query("INSERT INTO profiles(id,revision,body) VALUES('p',1,'{}')").execute(&store.pool).await.unwrap();
+        sqlx::query("INSERT INTO experimental_instances(profile_id,id,revision,body) VALUES('p','exp',1,'{}')").execute(&store.pool).await.unwrap();
+        sqlx::query("INSERT INTO experimental_work_episodes(profile_id,instance_id,id,revision,body) VALUES('p','exp','ep',1,'{}')").execute(&store.pool).await.unwrap();
+        let source=json!({"sourceKind":"conversation","sourceId":"c1","sourceRevision":1,"sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","availability":"available"});
+        let tech=json!({"schemaVersion":1,"id":"t1","instanceId":"exp","episodeId":"ep","revision":1,"parentCheckpointId":"","sourceEventSequence":0,"status":"active","decisionRefs":[],"actionRefs":[],"sourceRefs":[source.clone()],"createdAt":"2026-10-25T12:00:00Z"});
+        sqlx::query("INSERT INTO experimental_technical_checkpoints(profile_id,instance_id,episode_id,id,revision,body) VALUES('p','exp','ep','t1',1,?)").bind(tech.to_string()).execute(&store.pool).await.unwrap();
+        let sem=json!({"schemaVersion":1,"id":"s1","instanceId":"exp","episodeId":"ep","revision":1,"parentCheckpointId":"","technicalCheckpointId":"t1","proposer":"primary","primaryDisposition":"accepted","sourceEventSequence":0,"sourceRefs":[source],"content":{"focus":"","currentIntention":"","findings":[],"openQuestions":[],"nextSuggestedStep":""},"createdAt":"2026-10-25T12:00:00Z"});
+        sqlx::query("INSERT INTO experimental_semantic_checkpoints(profile_id,instance_id,episode_id,technical_checkpoint_id,id,revision,body) VALUES('p','exp','ep','t1','s1',1,?)").bind(sem.to_string()).execute(&store.pool).await.unwrap();
+        let mut tx=store.pool.begin().await.unwrap();redact_experimental_source_refs(&mut tx,"p","conversation","c1").await.unwrap();tx.commit().await.unwrap();
+        for table in ["experimental_technical_checkpoints","experimental_semantic_checkpoints"]{
+            let availability:String=sqlx::query_scalar(&format!("SELECT json_extract(body,'$.sourceRefs[0].availability') FROM {table} WHERE profile_id='p'")).fetch_one(&store.pool).await.unwrap();
+            assert_eq!(availability,"permanently_deleted");
+        }
+    }
+}

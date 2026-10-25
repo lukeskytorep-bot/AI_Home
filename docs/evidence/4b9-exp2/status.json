@@ -1,0 +1,15 @@
+{
+  "stage": "4B-9 EXP-2",
+  "planContentVersion": "1.67",
+  "status": "IMPLEMENTED_REQUIRES_CI_AUDIT",
+  "storageVersion": 13,
+  "p2ReferenceChecks": "193/193",
+  "standardClosure": "8/8",
+  "standardRelease": "8/8",
+  "experimentalFoundation": "12/12",
+  "experimentalRuntime": "24/24",
+  "experimentalContinuity": "20/20",
+  "baseSourceSha256": "ce1f02c5af5bc8773df8663c9e8c02eb62467ecbdeccca2f04a738fa4ade1097",
+  "cargoLocal": "unavailable",
+  "frontendLocal": "npm ci timed out before vitest/build"
+}
