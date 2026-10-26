@@ -4,7 +4,7 @@ use sqlx::{Connection,Row,SqliteConnection};
 use std::{fs,fs::OpenOptions,io::{Read,Write},path::{Path,PathBuf}};
 use crate::persistence::Store;
 
-const CURRENT_SCHEMA:i64=13;
+const CURRENT_SCHEMA:i64=14;
 const MANIFEST_VERSION:i64=1;
 
 fn io_error(message:&str)->sqlx::Error{sqlx::Error::Protocol(message.into())}

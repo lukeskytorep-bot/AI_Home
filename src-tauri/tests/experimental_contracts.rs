@@ -53,10 +53,10 @@ fn experimental_dtos_validate_and_reject_privacy_shortcuts(){
 }
 
 #[tokio::test]
-async fn schema_13_persists_experimental_foundation_with_foreign_keys(){
+async fn schema_14_persists_experimental_and_internal_state_foundation_with_foreign_keys(){
     let store=Store::memory().await.unwrap();
     let pool=&store.pool;
-    assert_eq!(sqlx::query_scalar::<_,i64>("PRAGMA user_version").fetch_one(pool).await.unwrap(),13);
+    assert_eq!(sqlx::query_scalar::<_,i64>("PRAGMA user_version").fetch_one(pool).await.unwrap(),14);
     let profile=json!({"schemaVersion":1,"id":"profile-a","revision":1,"displayName":"Experimental","createdAt":"2026-10-24T12:00:00Z","updatedAt":"2026-10-24T12:00:00Z"});
     sqlx::query("INSERT INTO profiles(id,revision,body) VALUES(?,1,?)").bind("profile-a").bind(profile.to_string()).execute(pool).await.unwrap();
     let inst=instance("profile-a");
@@ -67,21 +67,26 @@ async fn schema_13_persists_experimental_foundation_with_foreign_keys(){
     sqlx::query("INSERT INTO experimental_technical_checkpoints(profile_id,instance_id,episode_id,id,revision,body) VALUES(?,?,?,?,1,?)").bind("profile-a").bind("exp-a").bind("episode-a").bind("tech-a").bind(technical.to_string()).execute(pool).await.unwrap();
     assert!(sqlx::query("PRAGMA foreign_key_check").fetch_all(pool).await.unwrap().is_empty());
     let tables:i64=sqlx::query_scalar("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name LIKE 'experimental_%'").fetch_one(pool).await.unwrap();
-    assert_eq!(tables,9);
+    assert_eq!(tables,13);
 }
 
 #[tokio::test]
-async fn actual_v12_database_migrates_to_v13_without_changing_standard_profile(){
-    let path=std::env::temp_dir().join(format!("ai-home-exp0-v12-{}.db",uuid::Uuid::new_v4()));
+async fn actual_v13_database_migrates_to_v14_without_changing_existing_experimental_or_standard_data(){
+    let path=std::env::temp_dir().join(format!("ai-home-exp-state-v13-{}.db",uuid::Uuid::new_v4()));
     let store=Store::open(&path).await.unwrap();let pool=store.pool.clone();
     let profile_body=json!({"id":"standard-a","marker":"keep-standard-byte-content"}).to_string();
     sqlx::query("INSERT INTO profiles(id,revision,body) VALUES('standard-a',1,?)").bind(&profile_body).execute(&pool).await.unwrap();
-    for table in ["experimental_semantic_checkpoints","experimental_technical_checkpoints","experimental_event_cursors","experimental_actions","experimental_refusals","experimental_decisions","experimental_wake_plans","experimental_work_episodes","experimental_instances"] {sqlx::query(&format!("DROP TABLE {table}")).execute(&pool).await.unwrap();}
-    sqlx::query("PRAGMA user_version=12").execute(&pool).await.unwrap();drop(store);pool.close().await;
+    let exp_profile=json!({"id":"experimental-a","marker":"keep-experimental-byte-content"}).to_string();
+    sqlx::query("INSERT INTO profiles(id,revision,body) VALUES('experimental-a',1,?)").bind(&exp_profile).execute(&pool).await.unwrap();
+    let inst=json!({"schemaVersion":1,"id":"exp-a","profileId":"experimental-a","direction":"experimental","revision":1,"runtimeGeneration":1,"status":"inactive","eventCursor":0,"createdAt":"2026-10-25T12:00:00Z","updatedAt":"2026-10-25T12:00:00Z"});
+    sqlx::query("INSERT INTO experimental_instances(profile_id,id,revision,body) VALUES('experimental-a','exp-a',1,?)").bind(inst.to_string()).execute(&pool).await.unwrap();
+    for table in ["experimental_wake_candidates","experimental_internal_state_events","experimental_internal_state_snapshots","experimental_internal_state_blobs"] {sqlx::query(&format!("DROP TABLE {table}")).execute(&pool).await.unwrap();}
+    sqlx::query("PRAGMA user_version=13").execute(&pool).await.unwrap();drop(store);pool.close().await;
     let store=Store::open(&path).await.unwrap();let pool=store.pool.clone();
-    assert_eq!(sqlx::query_scalar::<_,i64>("PRAGMA user_version").fetch_one(&pool).await.unwrap(),13);
-    let body:String=sqlx::query("SELECT body FROM profiles WHERE id='standard-a'").fetch_one(&pool).await.unwrap().get(0);
-    assert_eq!(body,profile_body);
+    assert_eq!(sqlx::query_scalar::<_,i64>("PRAGMA user_version").fetch_one(&pool).await.unwrap(),14);
+    let body:String=sqlx::query("SELECT body FROM profiles WHERE id='standard-a'").fetch_one(&pool).await.unwrap().get(0);assert_eq!(body,profile_body);
+    let exp_body:String=sqlx::query("SELECT body FROM profiles WHERE id='experimental-a'").fetch_one(&pool).await.unwrap().get(0);assert_eq!(exp_body,exp_profile);
+    let instance_count:i64=sqlx::query_scalar("SELECT COUNT(*) FROM experimental_instances WHERE profile_id='experimental-a'").fetch_one(&pool).await.unwrap();assert_eq!(instance_count,1);
     assert!(sqlx::query("PRAGMA foreign_key_check").fetch_all(&pool).await.unwrap().is_empty());
     drop(store);pool.close().await;let _=std::fs::remove_file(path);
 }

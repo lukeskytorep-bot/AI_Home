@@ -5,6 +5,7 @@ use sqlx::{Row,SqlitePool};
 use std::sync::Arc;
 use crate::domain::schema;
 use crate::experimental_continuity::{ResumePacket,WorkContinuityService};
+use crate::experimental_internal_state::{claim_context,consume_candidates};
 
 #[derive(Clone,Debug,PartialEq,Eq)]
 pub struct OpportunityEvent { pub sequence:i64, pub kind:String }
@@ -20,6 +21,9 @@ pub struct OpportunityPacket {
     pub events:Vec<OpportunityEvent>,
     pub active_refusals:Vec<Value>,
     pub resume_packet:Option<ResumePacket>,
+    pub internal_state:Option<Value>,
+    pub internal_state_events:Vec<Value>,
+    pub wake_candidates:Vec<Value>,
 }
 
 #[derive(Clone,Debug)]
@@ -154,14 +158,18 @@ impl<C:Clock,D:DecisionProvider,A:ActionExecutor> ExperimentalRuntime<C,D,A>{
         let max_event=events.iter().map(|e|e.sequence).max().unwrap_or(0);
         if max_event>0 { self.update_cursor_received(&mut tx,profile_id,instance_id,max_event,now).await?; }
         let active_wake=self.active_wake(&mut tx,profile_id,instance_id).await?;
-        let reason=if status=="interrupted" {Some("resume_interrupted".to_string())} else {due_reason(active_wake.as_ref(),now,&fresh_events)?};
+        let (internal_state,internal_state_events,wake_candidates)=claim_context(&mut tx,profile_id,instance_id,now).await?;
+        let reason=if status=="interrupted" {Some("resume_interrupted".to_string())} else {
+            let ordinary=due_reason(active_wake.as_ref(),now,&fresh_events)?;
+            if ordinary.is_some(){ordinary}else{internal_wake_reason(active_wake.as_ref(),&wake_candidates)}
+        };
         let Some(wake_reason)=reason else{return Ok(None)};
         let revision=instance["revision"].as_i64().unwrap()+1; let generation=instance["runtimeGeneration"].as_i64().unwrap()+1;
         instance["revision"]=json!(revision);instance["runtimeGeneration"]=json!(generation);instance["status"]=json!("running");instance["updatedAt"]=json!(ts(now));validate("ExperimentalInstance",&instance)?;
         let changed=sqlx::query("UPDATE experimental_instances SET revision=?,body=? WHERE profile_id=? AND id=? AND revision=?").bind(revision).bind(instance.to_string()).bind(profile_id).bind(instance_id).bind(row.get::<i64,_>("revision")).execute(&mut *tx).await.map_err(storage)?;
         if changed.rows_affected()!=1{return Ok(None)}
         let refusals=self.active_refusals(&mut tx,profile_id,instance_id).await?;
-        let packet=OpportunityPacket{opportunity_id:uuid::Uuid::new_v4().to_string(),profile_id:profile_id.into(),instance_id:instance_id.into(),runtime_generation:generation,now,wake_reason,events:fresh_events,active_refusals:refusals,resume_packet:None};
+        let packet=OpportunityPacket{opportunity_id:uuid::Uuid::new_v4().to_string(),profile_id:profile_id.into(),instance_id:instance_id.into(),runtime_generation:generation,now,wake_reason,events:fresh_events,active_refusals:refusals,resume_packet:None,internal_state,internal_state_events,wake_candidates};
         tx.commit().await.map_err(storage)?; Ok(Some((packet,generation)))
     }
 
@@ -281,9 +289,25 @@ impl<C:Clock,D:DecisionProvider,A:ActionExecutor> ExperimentalRuntime<C,D,A>{
     async fn replace_wake(&self,tx:&mut sqlx::Transaction<'_,sqlx::Sqlite>,profile_id:&str,instance_id:&str,decision_id:&str,mode:&str,deadline:Option<DateTime<Utc>>,delay:Option<i64>,interrupts:&[String],now:DateTime<Utc>)->Result<String,String>{sqlx::query("UPDATE experimental_wake_plans SET revision=revision+1,body=json_set(body,'$.revision',revision+1,'$.status','superseded') WHERE profile_id=? AND instance_id=? AND json_extract(body,'$.status')='active'").bind(profile_id).bind(instance_id).execute(&mut **tx).await.map_err(storage)?;let id=uuid::Uuid::new_v4().to_string();let mut w=json!({"schemaVersion":1,"id":id,"instanceId":instance_id,"revision":1,"origin":"ai_decision","decisionId":decision_id,"status":"active","createdAt":ts(now),"mode":mode,"interruptEvents":interrupts});match mode{"deadline"=>w["nextWakeAt"]=json!(ts(deadline.ok_or("VALIDATION_ERROR")?)),"interval"=>w["requestedDelayMs"]=json!(delay.ok_or("VALIDATION_ERROR")?),"event_only"=>{},_=>return Err("VALIDATION_ERROR".into())};validate("WakePlan",&w)?;sqlx::query("INSERT INTO experimental_wake_plans(profile_id,instance_id,id,revision,body) VALUES(?,?,?,1,?)").bind(profile_id).bind(instance_id).bind(&id).bind(w.to_string()).execute(&mut **tx).await.map_err(storage)?;Ok(id)}
     async fn require_generation(&self,tx:&mut sqlx::Transaction<'_,sqlx::Sqlite>,profile_id:&str,instance_id:&str,generation:i64)->Result<(),String>{let row=sqlx::query("SELECT body FROM experimental_instances WHERE profile_id=? AND id=?").bind(profile_id).bind(instance_id).fetch_one(&mut **tx).await.map_err(storage)?;let v:Value=serde_json::from_str(row.get::<&str,_>("body")).map_err(|_|"STORAGE_ERROR".to_string())?;if v["status"].as_str()!=Some("running")||v["runtimeGeneration"].as_i64()!=Some(generation){return Err("STALE_EXECUTOR".into())}Ok(())}
     async fn update_cursor_received(&self,tx:&mut sqlx::Transaction<'_,sqlx::Sqlite>,profile_id:&str,instance_id:&str,seq:i64,now:DateTime<Utc>)->Result<(),String>{let row=sqlx::query("SELECT id,revision,body FROM experimental_event_cursors WHERE profile_id=? AND instance_id=?").bind(profile_id).bind(instance_id).fetch_one(&mut **tx).await.map_err(storage)?;let mut v:Value=serde_json::from_str(row.get::<&str,_>("body")).map_err(|_|"STORAGE_ERROR".to_string())?;if seq>v["receivedThrough"].as_i64().unwrap(){v["receivedThrough"]=json!(seq);v["revision"]=json!(row.get::<i64,_>("revision")+1);v["updatedAt"]=json!(ts(now));validate("ExperimentalEventCursor",&v)?;sqlx::query("UPDATE experimental_event_cursors SET revision=?,body=? WHERE profile_id=? AND id=?").bind(v["revision"].as_i64().unwrap()).bind(v.to_string()).bind(profile_id).bind(row.get::<&str,_>("id")).execute(&mut **tx).await.map_err(storage)?;}Ok(())}
-    async fn finish_cycle(&self,tx:&mut sqlx::Transaction<'_,sqlx::Sqlite>,profile_id:&str,instance_id:&str,generation:i64,packet:&OpportunityPacket,now:DateTime<Utc>)->Result<(),String>{self.require_generation(tx,profile_id,instance_id,generation).await?;let seq=packet.events.iter().map(|e|e.sequence).max().unwrap_or(0);if seq>0{let row=sqlx::query("SELECT id,revision,body FROM experimental_event_cursors WHERE profile_id=? AND instance_id=?").bind(profile_id).bind(instance_id).fetch_one(&mut **tx).await.map_err(storage)?;let mut c:Value=serde_json::from_str(row.get::<&str,_>("body")).map_err(|_|"STORAGE_ERROR".to_string())?;c["consideredThrough"]=json!(c["consideredThrough"].as_i64().unwrap().max(seq));c["committedThrough"]=json!(c["committedThrough"].as_i64().unwrap().max(seq));c["revision"]=json!(row.get::<i64,_>("revision")+1);c["updatedAt"]=json!(ts(now));validate("ExperimentalEventCursor",&c)?;sqlx::query("UPDATE experimental_event_cursors SET revision=?,body=? WHERE profile_id=? AND id=?").bind(c["revision"].as_i64().unwrap()).bind(c.to_string()).bind(profile_id).bind(row.get::<&str,_>("id")).execute(&mut **tx).await.map_err(storage)?;}
+    async fn finish_cycle(&self,tx:&mut sqlx::Transaction<'_,sqlx::Sqlite>,profile_id:&str,instance_id:&str,generation:i64,packet:&OpportunityPacket,now:DateTime<Utc>)->Result<(),String>{self.require_generation(tx,profile_id,instance_id,generation).await?;consume_candidates(tx,profile_id,instance_id,&packet.wake_candidates).await?;let seq=packet.events.iter().map(|e|e.sequence).max().unwrap_or(0);if seq>0{let row=sqlx::query("SELECT id,revision,body FROM experimental_event_cursors WHERE profile_id=? AND instance_id=?").bind(profile_id).bind(instance_id).fetch_one(&mut **tx).await.map_err(storage)?;let mut c:Value=serde_json::from_str(row.get::<&str,_>("body")).map_err(|_|"STORAGE_ERROR".to_string())?;c["consideredThrough"]=json!(c["consideredThrough"].as_i64().unwrap().max(seq));c["committedThrough"]=json!(c["committedThrough"].as_i64().unwrap().max(seq));c["revision"]=json!(row.get::<i64,_>("revision")+1);c["updatedAt"]=json!(ts(now));validate("ExperimentalEventCursor",&c)?;sqlx::query("UPDATE experimental_event_cursors SET revision=?,body=? WHERE profile_id=? AND id=?").bind(c["revision"].as_i64().unwrap()).bind(c.to_string()).bind(profile_id).bind(row.get::<&str,_>("id")).execute(&mut **tx).await.map_err(storage)?;}
         let row=sqlx::query("SELECT revision,body FROM experimental_instances WHERE profile_id=? AND id=?").bind(profile_id).bind(instance_id).fetch_one(&mut **tx).await.map_err(storage)?;let mut v:Value=serde_json::from_str(row.get::<&str,_>("body")).map_err(|_|"STORAGE_ERROR".to_string())?;v["revision"]=json!(row.get::<i64,_>("revision")+1);v["status"]=json!("ready");v["eventCursor"]=json!(v["eventCursor"].as_i64().unwrap().max(seq));if let Some(obj)=v.as_object_mut(){obj.remove("retryNotBefore");obj.remove("retryAttempt");obj.remove("lastTechnicalError");}v["updatedAt"]=json!(ts(now));validate("ExperimentalInstance",&v)?;sqlx::query("UPDATE experimental_instances SET revision=?,body=? WHERE profile_id=? AND id=?").bind(v["revision"].as_i64().unwrap()).bind(v.to_string()).bind(profile_id).bind(instance_id).execute(&mut **tx).await.map_err(storage)?;Ok(())}
     async fn update_episode_for_choice(&self,tx:&mut sqlx::Transaction<'_,sqlx::Sqlite>,profile_id:&str,instance_id:&str,choice:&DecisionChoice,now:DateTime<Utc>)->Result<(),String>{let (id,status)=match choice{DecisionChoice::Defer{episode_id}=>(episode_id,"deferred"),DecisionChoice::Abandon{episode_id}=>(episode_id,"abandoned"),DecisionChoice::Continue{episode_id}=>(episode_id,"active"),DecisionChoice::Revise{episode_id}=>(episode_id,"active"),_=>return Ok(())};let row=sqlx::query("SELECT revision,body FROM experimental_work_episodes WHERE profile_id=? AND instance_id=? AND id=?").bind(profile_id).bind(instance_id).bind(id).fetch_one(&mut **tx).await.map_err(storage)?;let mut v:Value=serde_json::from_str(row.get::<&str,_>("body")).map_err(|_|"STORAGE_ERROR".to_string())?;v["revision"]=json!(row.get::<i64,_>("revision")+1);v["status"]=json!(status);v["updatedAt"]=json!(ts(now));validate("WorkEpisode",&v)?;sqlx::query("UPDATE experimental_work_episodes SET revision=?,body=? WHERE profile_id=? AND id=?").bind(v["revision"].as_i64().unwrap()).bind(v.to_string()).bind(profile_id).bind(id).execute(&mut **tx).await.map_err(storage)?;Ok(())}
+}
+
+fn internal_wake_reason(wake:Option<&Value>,candidates:&[Value])->Option<String>{
+    let Some(w)=wake else{
+        return candidates.iter().find_map(|candidate|candidate.get("reasonCode").and_then(Value::as_str).map(|reason|format!("internal_state:{reason}")))
+    };
+    let origin=w.get("origin").and_then(Value::as_str).unwrap_or("");
+    if origin=="initial_configuration"{
+        return candidates.iter().find_map(|candidate|candidate.get("reasonCode").and_then(Value::as_str).map(|reason|format!("internal_state:{reason}")))
+    }
+    let interrupts=w.get("interruptEvents").and_then(Value::as_array)?;
+    candidates.iter().find_map(|candidate|{
+        let reason=candidate.get("reasonCode")?.as_str()?;
+        let exact=format!("internal_state:{reason}");
+        interrupts.iter().any(|value|value.as_str()==Some("internal_state")||value.as_str()==Some(exact.as_str())).then_some(exact)
+    })
 }
 
 fn due_reason(wake:Option<&Value>,now:DateTime<Utc>,events:&[OpportunityEvent])->Result<Option<String>,String>{let Some(w)=wake else{return Ok(None)};validate("WakePlan",w)?;let interrupts=w["interruptEvents"].as_array().unwrap();if !interrupts.is_empty()&&events.iter().any(|e|interrupts.iter().any(|x|x.as_str()==Some(&e.kind))){return Ok(Some("selected_event".into()))}match w["mode"].as_str().unwrap(){"interval"=>{let created=parse(w["createdAt"].as_str().unwrap())?;let delay=w["requestedDelayMs"].as_i64().unwrap();Ok((now>=created+Duration::milliseconds(delay)).then(||"scheduled_interval".into()))},"deadline"=>{let deadline=parse(w["nextWakeAt"].as_str().unwrap())?;Ok((now>=deadline).then(||"scheduled_deadline".into()))},"event_only"=>Ok(None),_=>Err("STORAGE_ERROR".into())}}

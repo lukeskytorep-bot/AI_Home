@@ -9,6 +9,7 @@ pub mod backup;
 pub mod diagnostics;
 pub mod experimental_runtime;
 pub mod experimental_continuity;
+pub mod experimental_internal_state;
 mod export;
 mod deletion;
 pub mod memory;
