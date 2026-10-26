@@ -1,3 +1,31 @@
+# Bieżący stan — treść 1.74 — 26 października 2026 — 4B-12 krok 1 AUDIT FIX 1
+
+Audyt główny kroku 1 wykrył F1: klient publicznego odczytu odrzucał locked, chociaż odebrane 4A nadal udostępnia treść zablokowanego wątku. Poprawiono obie gałęzie walidatora: listę obsługiwanych statusów i warunek dopuszczenia normalnego payloadu. locked pozostaje locked i nie nadaje prawa do pisania. hidden i nieznane statusy nadal są niepoprawną odpowiedzią; deleted wymaga tombstone, a tombstone nie może zawierać payloadu.
+
+Baza korekty: audytowany `AI_HOME_4B12_STEP_1_SOURCE.zip`, SHA-256 `b5d5e2c195438476a3f2aff420a5090661326d27df0350983edbd253f43d51ee`. Dodano cztery natywne regresje HTTP: locked detail, mieszana strona active+locked, odrzucenie hidden/unknown oraz deleted/tombstone. Te same regresje na poprzednim module rzeczywiście dały 2 FAIL (locked) / 2 PASS (ochrona hidden/tombstone); po korekcie przechodzą.
+
+Status: **CORRECTED / AWAITING CI AND RE-AUDIT**. Całe 4B-12 nadal OPEN. Raport: `docs/AI_HOME_4B12_STEP_1_AUDIT_FIX_1_PL.md`; dowody: `docs/evidence/4b12-step-1-audit-fix-1/`. SQLite pozostaje v15, frozen P2 i API forum bez zmian. Nie rozszerzono zakresu do identity, rejestracji, podpisanych zapisów ani feedu. Nowe CI i reaudyt są wymagane przed dalszym krokiem; wcześniejsze bramki desktop/live forum pozostają odrębne. Poniżej historia planu.
+
+---
+
+# Bieżący stan — treść 1.73 — 26 października 2026 — 4B-12 krok 1: Community public read
+
+Edward potwierdził zielony wynik całości 4B-11 AUDIT FIX 1 i upoważnił następną część. Bazą wykonania jest dokładny `AI_HOME_4B11_AUDIT_FIX_1_SOURCE.zip`, SHA-256 `8ff8cbfc9066ce2690a377c43813fc4b896db3935183f7413f055955ebafee0b`. Nie dopisujemy numeru nieznanego przebiegu GitHub.
+
+Rozpoczęto 4B-12 ograniczonym krokiem 1: natywny CommunityReader z rzeczywistym HTTP GET i walidacją informacji o API, listy wątków, pojedynczego wątku oraz odpowiedzi. Jest zgodny z odebraną bazą forum 4A-8C-4 V4 (SHA-256 `afe25c58590ec146f7be01ef83fc4854e717813bb99c86cd7d2c89251e4ebc8a`, community schema 9 / operator schema 1). Źródła i potwierdzenie production acceptance z 6.10.2026 zastępują wcześniejsze, nieaktualne założenie, że końcowy gate forum pozostaje otwarty. Nie zmieniono forum.
+
+Krok 1 nie dodaje konta forum, tokenu, podpisywania ani publikowania. Jest publicznym, jednorazowym odczytem wskazanego API: page/limit, jawny board_id, bounded response/timeout, bez redirect, retry i okresowego pollingu. Dane są untrusted external; server_evidence.signature_verified to twierdzenie serwera, nie lokalnie zweryfikowany podpis. Brak zmian frozen P2, SQLite v15, providerów, vault, UI/IPC i zależności.
+
+Dalszy podział 4B-12:
+1. Bieżący krok — odczyty publiczne i zgodność protokołu z rzeczywistym 4A.
+2. Tożsamość i klucze — zgodne z 4A dual-key registration, P-256, namespace vault oddzielony od kluczy dostawców; trwałe związanie agent/profile/community niezależne od modelu. community_origin/community_instance muszą pochodzić z właściwego kontraktu rejestracji/challenge, a nie z domysłu na podstawie API root.
+3. Podpisane zapisy — create/reply/edit, dokładne canonical bytes, immutable IDs i Idempotency-Key, receipt/reconciliation; integracja z decyzją Primary i ActionRecord, bez blind retry ani automatycznej publikacji refleksji. Trzeba zapewnić asynchroniczną ścieżkę wykonania HTTP przy obecnym synchronicznym ActionExecutor; nie blokować tokio ani nie udawać działania przez mock executor.
+4. Feed — token/forum.read, cf1 epoch/sequence, trwały cursor i reset/refresh, sterowanie okazjami zgodne z WakePlan/refusal/sleep; treści wejściowe nie stają się instrukcjami systemowymi.
+
+Status kroku 1: **IMPLEMENTED / AWAITING CI AND AUDIT**. Całe 4B-12 pozostaje otwarte. Raport: `docs/AI_HOME_4B12_STEP_1_PUBLIC_READ_PL.md`, aktualne dowody `docs/evidence/4b12-step-1/`. Testy loopback HTTP nie zastępują odbioru na działającym PHP/forum, desktopu/WebView ani live API. UI Experimental pozostaje planowane w 4B-14; A2A/Messenger w 4B-13. Stary dokument Farsight v1.0 jest historyczną propozycją, nie aktualnym kontraktem Community 4A.
+
+---
+
 # Bieżący stan — treść 1.72 — 26 października 2026 — 4B-11 AUDIT FIX 1
 
 Audyt główny 4B-11 z 26.10.2026 wskazał F1 (trwale nieprzeglądalne wpisy) i F2 (utracone pierwotne source refs). Wykonano korektę obu punktów na dokładnej audytowanej bazie SOURCE o SHA-256 `488a76fcbf1e36133be16b5da2b3adeac1f5508d8cecc12ad238d87189279aef`.

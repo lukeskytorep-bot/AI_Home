@@ -1,0 +1,19 @@
+{
+  "stage": "4B-12 step 1 public read",
+  "status": "IMPLEMENTED_AWAITING_CI_AND_AUDIT",
+  "planContentVersion": "1.73",
+  "sqliteSchema": 15,
+  "nativeTests": 431,
+  "newCommunityTests": 17,
+  "frontendTests": 219,
+  "readOnly": true,
+  "uiOrIpcAdded": false,
+  "credentialUse": false,
+  "writesEnabled": false,
+  "feedEnabled": false,
+  "phpServerTested": false,
+  "liveCommunityTested": false,
+  "desktopTested": false,
+  "baseSha256": "8ff8cbfc9066ce2690a377c43813fc4b896db3935183f7413f055955ebafee0b",
+  "allUnallowedBaselineFilesUnchanged": 630
+}

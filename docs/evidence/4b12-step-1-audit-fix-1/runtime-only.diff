@@ -1,0 +1,22 @@
+--- base/src-tauri/src/community_connector/mod.rs
++++ current/src-tauri/src/community_connector/mod.rs
+@@ -376,7 +376,7 @@
+     {
+         return Err(ReadError::InvalidResponse);
+     }
+-    if !["active", "deleted"].contains(&v["status"].as_str().unwrap_or("")) {
++    if !["active", "locked", "deleted"].contains(&v["status"].as_str().unwrap_or("")) {
+         return Err(ReadError::InvalidResponse);
+     }
+     if let Some(t) = v.get("tombstone") {
+@@ -399,7 +399,9 @@
+         }
+         return Ok(());
+     }
+-    if v["status"] != "active" || !text(&v["title"], 240, reply) {
++    if !["active", "locked"].contains(&v["status"].as_str().unwrap_or(""))
++        || !text(&v["title"], 240, reply)
++    {
+         return Err(ReadError::InvalidResponse);
+     }
+     if preview {

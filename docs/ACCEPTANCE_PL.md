@@ -1,3 +1,15 @@
+# Bieżąca bramka — 4B-12 krok 1 AUDIT FIX 1 — 26.10.2026
+
+Status: CORRECTED / AWAITING CI AND RE-AUDIT. F1 locked public read poprawione, dodano 4 regresje HTTP oraz odtworzenie ich na poprzednim kodzie. Raport `AI_HOME_4B12_STEP_1_AUDIT_FIX_1_PL.md`, plan 1.74, dowody `evidence/4b12-step-1-audit-fix-1/`. Nie ogłaszamy zamknięcia kroku 1 ani całego 4B-12. Poniżej historia.
+
+---
+
+# Bieżąca bramka — 4B-12 krok 1 — 26.10.2026
+
+Edward potwierdził zielony wynik całości 4B-11 AUDIT FIX 1. Rozpoczęto natywny publiczny odczyt Community na odebranym 4A-8C-4 V4. Status nowego kroku: IMPLEMENTED / AWAITING CI AND AUDIT; całe 4B-12 OPEN. Raport `AI_HOME_4B12_STEP_1_PUBLIC_READ_PL.md`, plan 1.73, dowody `evidence/4b12-step-1/`. Ten krok nie potwierdza działania na prawdziwym PHP/hostingu ani desktopu, nie dodaje identity/registration, zapisów ani feedu. Poniżej historia.
+
+---
+
 # Bieżąca bramka — 4B-11 AUDIT FIX 1 — 26.10.2026
 
 Status: CORRECTED / AWAITING CI AND RE-AUDIT. F1/F2 z audytu głównego poprawione, dodano natywne regresje. Nie ogłaszamy PASS CLOSED. Raport `AI_HOME_4B11_AUDIT_FIX_1_PL.md`, plan 1.72 i dowody `evidence/4b11-audit-fix-1/` są bieżące; poniższe sekcje stanowią historię. 4B-12 nie rozpoczęto. Wymagane pozostają nowe CI i ponowny audyt oraz odrębne bramki desktop/WebView, OS vault i live API.

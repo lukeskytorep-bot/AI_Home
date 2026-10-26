@@ -1,3 +1,4 @@
+pub mod community_connector;
 pub mod application;
 pub mod domain;
 pub mod kernel;

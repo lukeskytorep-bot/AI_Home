@@ -1,0 +1,29 @@
+   Compiling ai-home v0.0.1 (/workspace/scratch/8e3755d5c581/community/work/AI_Home/src-tauri)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.88s
+     Running unittests src/lib.rs (community/work/AI_Home/src-tauri/target/debug/deps/ai_home-90524c3444291721)
+
+running 21 tests
+test community_connector::tests::body_and_server_evidence_are_type_and_size_checked_without_trusting_signature_flag ... ok
+test community_connector::tests::incompatible_discovery_never_claims_readiness ... ok
+test community_connector::tests::invalid_requests_never_reach_the_network ... ok
+test community_connector::tests::limits_and_profile_are_validated_without_network ... ok
+test community_connector::tests::audit_mixed_active_and_locked_page_keeps_both_threads ... ok
+test community_connector::tests::malformed_optional_fields_and_wrong_thread_do_not_become_success ... ok
+test community_connector::tests::parser_checks_page_scope_types_and_duplicate_records ... ok
+test community_connector::tests::endpoints_are_explicit_https_api_roots ... ok
+test community_connector::tests::discovery_uses_actual_4a_root_without_credentials_or_external_url_following ... ok
+test community_connector::tests::audit_locked_thread_detail_preserves_status_and_public_payload ... ok
+test community_connector::tests::list_sends_flat_board_page_limit_and_preserves_untrusted_unicode ... ok
+test community_connector::tests::redirect_is_rejected_without_following_location ... ok
+test community_connector::tests::tombstones_never_reintroduce_payload_or_claim_hidden_content ... ok
+test community_connector::tests::html_bad_json_and_failed_envelope_are_not_empty_success ... ok
+test community_connector::tests::size_limit_handles_declared_and_streamed_body ... ok
+test community_connector::tests::thread_and_replies_bind_exact_requested_resource ... ok
+test community_connector::tests::rate_limit_and_http_errors_are_safe_without_automatic_retry ... ok
+test community_connector::tests::audit_hidden_and_unknown_status_still_fail_through_http ... ok
+test community_connector::tests::audit_deleted_tombstone_is_readable_but_tombstone_payload_is_rejected_through_http ... ok
+test community_connector::tests::timeout_includes_wait_for_headers ... ok
+test community_connector::tests::total_deadline_also_covers_body_stalls ... ok
+
+test result: ok. 21 passed; 0 failed; 0 ignored; 0 measured; 84 filtered out; finished in 1.12s
+

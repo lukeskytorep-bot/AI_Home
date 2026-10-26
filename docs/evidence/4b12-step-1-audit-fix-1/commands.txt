@@ -1,0 +1,9 @@
+FINAL: cargo test --manifest-path src-tauri/Cargo.toml --no-default-features --all-targets --locked --offline
+TARGETED: cargo test --manifest-path src-tauri/Cargo.toml --no-default-features --lib community_connector --locked --offline
+BASELINE NEGATIVE: same new tests, previous exact mod.rs from BASE.zip; filter community_connector::tests::audit_; fixed module restored afterwards
+npm test
+npm run build
+npm run verify:boundaries
+PYTHONDONTWRITEBYTECODE=1 python3 snapshots/p2-v1.1/check_contracts.py
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/verify-*.py (individual logs)
+No PHP/live-server/desktop/OS-vault/live-model tests. HTTP tests use actual reqwest with loopback TCP.

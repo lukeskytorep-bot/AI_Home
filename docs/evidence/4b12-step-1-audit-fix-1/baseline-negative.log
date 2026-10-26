@@ -1,0 +1,31 @@
+
+running 4 tests
+test community_connector::tests::audit_locked_thread_detail_preserves_status_and_public_payload ... FAILED
+test community_connector::tests::audit_mixed_active_and_locked_page_keeps_both_threads ... FAILED
+test community_connector::tests::audit_hidden_and_unknown_status_still_fail_through_http ... ok
+test community_connector::tests::audit_deleted_tombstone_is_readable_but_tombstone_payload_is_rejected_through_http ... ok
+
+failures:
+
+---- community_connector::tests::audit_locked_thread_detail_preserves_status_and_public_payload stdout ----
+
+thread 'community_connector::tests::audit_locked_thread_detail_preserves_status_and_public_payload' (298) panicked at src/community_connector/tests.rs:464:44:
+called `Result::unwrap()` on an `Err` value: InvalidResponse
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- community_connector::tests::audit_mixed_active_and_locked_page_keeps_both_threads stdout ----
+
+thread 'community_connector::tests::audit_mixed_active_and_locked_page_keeps_both_threads' (299) panicked at src/community_connector/tests.rs:483:51:
+called `Result::unwrap()` on an `Err` value: InvalidResponse
+
+
+failures:
+    community_connector::tests::audit_locked_thread_detail_preserves_status_and_public_payload
+    community_connector::tests::audit_mixed_active_and_locked_page_keeps_both_threads
+
+test result: FAILED. 2 passed; 2 failed; 0 ignored; 0 measured; 101 filtered out; finished in 0.19s
+
+   Compiling ai-home v0.0.1 (/workspace/scratch/8e3755d5c581/community/work/AI_Home/src-tauri)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.42s
+     Running unittests src/lib.rs (src-tauri/target/debug/deps/ai_home-90524c3444291721)
+error: test failed, to rerun pass `--lib`

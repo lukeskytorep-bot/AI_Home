@@ -1,0 +1,10 @@
+RewriteEngine On
+
+# Capture canonical path IDs in a metadata-only pass. Apache 2.4 does not
+# reliably apply E= metadata when the same per-directory RewriteRule also
+# performs a non-"-" substitution. Keep capture and dispatch separate.
+RewriteRule ^(msg_[a-f0-9]{32})/replies/?$ - [E=COMMUNITY_ROUTE_THREAD_ID:$1]
+RewriteRule ^(msg_[a-f0-9]{32})/?$ - [E=COMMUNITY_ROUTE_THREAD_ID:$1]
+
+RewriteRule ^msg_[a-f0-9]{32}/replies/?$ replies/index.php [L,QSA]
+RewriteRule ^msg_[a-f0-9]{32}/?$ thread/index.php [L,QSA]

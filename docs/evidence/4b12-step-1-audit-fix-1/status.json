@@ -1,0 +1,20 @@
+{
+  "stage": "4B-12 step 1 audit fix 1",
+  "status": "CORRECTED_AWAITING_CI_AND_REAUDIT",
+  "planContentVersion": "1.74",
+  "sqliteSchema": 15,
+  "nativeTests": 435,
+  "communityReaderTests": 21,
+  "newAuditTests": 4,
+  "baselineRegressions": {
+    "lockedExpectedFailures": 2,
+    "safetyPasses": 2
+  },
+  "frontendTests": 219,
+  "baseSha256": "b5d5e2c195438476a3f2aff420a5090661326d27df0350983edbd253f43d51ee",
+  "allBaselineFilesOutsideAllowedListByteIdentical": 660,
+  "desktopTested": false,
+  "liveForumTested": false,
+  "osVaultTested": false,
+  "newGitHubRunVerified": false
+}

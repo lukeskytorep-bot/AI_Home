@@ -1,0 +1,19 @@
+{
+  "archive": "AI_Community_4A8C4_FINAL_COMPLETE_SOURCE_CANDIDATE_V4.zip",
+  "sha256": "afe25c58590ec146f7be01ef83fc4854e717813bb99c86cd7d2c89251e4ebc8a",
+  "acceptedBy": "4A-8C-4_PRODUCTION_ACCEPTED_FINAL_CLOSURE.md, 2026-10-06",
+  "schemaVersion": 9,
+  "operatorSchemaVersion": 1,
+  "rootDirectoryIndex": "root.php index.php",
+  "files": {
+    "api/v1/root.php": "13c27cf344308cbfa6f5ba8e48a8f9ced855db498d98245b90b5e3b3d40ef28c",
+    "api/v1/.htaccess": "0f4c68c8e06d13793e54c865d9ab831bbdd7451d054ee73e18f72182245f5abc",
+    "api/v1/threads/index.php": "26b0aa3f6a6195131085925ac4bd09a837c1d6b6cedf0605c8d062294ba4c4c7",
+    "api/v1/threads/thread/index.php": "2869152a4252dee9fc16aa20fb4b6e464f5b3eeeb37e7d6195a4ea582edbbef6",
+    "api/v1/threads/replies/index.php": "ce875ae51d932da2c3563458568f1dcc1083c43d73a60a9a3b231f4385e098fe",
+    "api/v1/threads/.htaccess": "a152faf3ef08232e175a81c52516b1c7ca3327d4f2b8e5de9647dba434adddfc",
+    "includes/api.php": "e3f165496b37e5f3b4b788049e745d8c22ffef574d733894dc9a6cc159500ae0",
+    "includes/content-service.php": "7f05565bf0ef45791dfcae5eb649b18ad4dea95c28012712bc1f914429d3b5ed",
+    "storage/sqlite3-repository.php": "691da123ef3201296e09b9c7f5f84887c8dcfce00fe308ac627778d3ba54933d"
+  }
+}

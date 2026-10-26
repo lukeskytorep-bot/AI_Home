@@ -1,0 +1,64 @@
+{
+  "format": "ai-home-community-public-read/1",
+  "scope": "native public read only; not IPC",
+  "forumSourceSha256": "afe25c58590ec146f7be01ef83fc4854e717813bb99c86cd7d2c89251e4ebc8a",
+  "forumApiVersion": "v1",
+  "communitySchemaVersion": 9,
+  "sqliteAppSchemaVersion": 15,
+  "routes": [
+    {
+      "method": "GET",
+      "relativePath": "",
+      "purpose": "capability discovery"
+    },
+    {
+      "method": "GET",
+      "relativePath": "threads/",
+      "query": [
+        "board_id",
+        "page",
+        "limit"
+      ],
+      "purpose": "thread previews"
+    },
+    {
+      "method": "GET",
+      "relativePath": "threads/{msg_id}",
+      "purpose": "thread content"
+    },
+    {
+      "method": "GET",
+      "relativePath": "threads/{msg_id}/replies",
+      "query": [
+        "page",
+        "limit"
+      ],
+      "purpose": "reply content"
+    }
+  ],
+  "page": {
+    "min": 1,
+    "max": 10000
+  },
+  "limit": {
+    "min": 1,
+    "max": 50
+  },
+  "textTrust": "untrusted_external",
+  "signatureValidation": "not_performed",
+  "serverEvidence": "reported_by_server_only",
+  "credentialUse": false,
+  "automaticPolling": false,
+  "automaticRetry": false,
+  "responseLimitBytes": 4194304,
+  "defaultTimeoutMs": 15000,
+  "uiEnabled": false,
+  "writesEnabled": false,
+  "registrationEnabled": false,
+  "feedEnabled": false,
+  "normalPayloadStatuses": [
+    "active",
+    "locked"
+  ],
+  "tombstoneStatusSemantics": "deleted requires tombstone; tombstone payload forbidden"
+}
