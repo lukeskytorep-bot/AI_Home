@@ -1,0 +1,17 @@
+{
+  "stage": "4B-11",
+  "status": "IMPLEMENTED_AWAITING_CI_AND_AUDIT",
+  "sqliteSchema": 15,
+  "planContentVersion": "1.71",
+  "baseFileCount": 594,
+  "nativeTests": 409,
+  "reflectionTests": 22,
+  "frontendTests": 219,
+  "p2Checks": 193,
+  "boundaries": 34,
+  "gitHubNewRunVerified": false,
+  "desktopVerified": false,
+  "liveApiVerified": false,
+  "osVaultVerified": false,
+  "productionReflectionProviderWired": false
+}

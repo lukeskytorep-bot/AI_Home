@@ -1,0 +1,9 @@
+PASS: locale key parity
+PASS: diagnostics localized
+PASS: both themes have light/dark
+PASS: diagnostics contract has snapshot/export
+PASS: diagnostics excludes content by construction
+PASS: diagnostics navigation visible
+PASS: privacy default remains content-free
+PASS: stage label updated
+PASS: Standard release checks 8/8.

@@ -1,3 +1,27 @@
+# Bieżący stan — treść 1.72 — 26 października 2026 — 4B-11 AUDIT FIX 1
+
+Audyt główny 4B-11 z 26.10.2026 wskazał F1 (trwale nieprzeglądalne wpisy) i F2 (utracone pierwotne source refs). Wykonano korektę obu punktów na dokładnej audytowanej bazie SOURCE o SHA-256 `488a76fcbf1e36133be16b5da2b3adeac1f5508d8cecc12ad238d87189279aef`.
+
+F1: przed utrwaleniem każda propozycja i aktywna własna notatka muszą mieścić się samodzielnie w pełnym serializowanym pakiecie przeglądu Primary. Pomiar obejmuje treść po modify, JSON escaping, metadane, provenance i rezerwę na późniejsze tombstones/rewizje. Zapis 5000 bajtów przy unlimited jest odrzucany atomowo jako CONTEXT_BUDGET_EXCEEDED; kandydat nie zostaje zużyty. Duża nieprzeglądalna propozycja nie jest zapisywana jako pending. Unlimited znosi limit pojemności warstwy pamięci, lecz nie znosi limitu kontekstu potrzebnego do przeglądu.
+
+F2: nowe Reflection/Dream zachowują odnośniki pierwotne z technical i semantic checkpoints, aktywnych własnych notatek oraz oczekujących propozycji, obok bezpośrednich odnośników do tych rekordów. Deduplikacja uwzględnia rodzaj, ID, rewizję i hash źródła; permanently_deleted ma pierwszeństwo. Maksymalnie 32 odnośniki / 8192 bajty metadanych pochodzenia; przekroczenie jest odrzucane przed generacją, bez cichego obcinania. Rzeczywista ścieżka natywna potwierdza tombstonowanie pierwotnej rozmowy po jej permanent deletion, także w kolejnych pokoleniach refleksji.
+
+SQLite pozostaje v15. Frozen P2, zależności, provider adapters, workflow, vault i produkcyjne IPC bez zmian. Nie rozszerzono etapu do 4B-12. Status: **CORRECTED / AWAITING CI AND RE-AUDIT**. Raport: `docs/AI_HOME_4B11_AUDIT_FIX_1_PL.md`; aktualne dowody: `docs/evidence/4b11-audit-fix-1/`. Wcześniejsze sekcje i dowody poniżej są historią. Korekta chroni nowe zapisy; nie rekonstruuje automatycznie utraconego historycznego pochodzenia ani nie migruje starych, nadmiernie dużych wpisów. Przed odbiorem pozostają GitHub CI i ponowny audyt; desktop/WebView, OS vault i live API nadal są osobnymi bramkami.
+
+---
+
+# Bieżący stan — treść 1.71 — 26 października 2026 — 4B-11 Reflection/Dream
+
+Edward potwierdził zielone CI poprawki 4B-10 schema14 i upoważnił kolejny etap. Ten zapis przyjmuje tę bazę do pracy; nie dopisuje nieprzeprowadzonego audytu desktopu ani nowego numeru runu GitHub.
+
+Wdrożono natywną logikę 4B-11: opcjonalny, ograniczony cykl Reflection/Dream, jawny prywatny wynik, możliwość zakończenia bez wniosku oraz własne notatki/wartości instancji Experimental. Dream ma status syntetycznej hipotezy. Reflection nie publikuje, nie wywołuje konektorów i nie zatwierdza sama swoich propozycji. Wymagana jest osobna, późniejsza decyzja Primary: accept/modify/reject, z pomiarem faktycznego tekstu, pochodzeniem i kontrolą rewizji. Zmiana/wycofanie własnej notatki zachowuje historię.
+
+SQLite przechodzi 14 → 15: runs, private reflections, review receipts i self records. Restart oznacza przerwany cykl bez automatycznego ponowienia. Nowe dane uczestniczą w pełnym backup/restore i permanent deletion; zwykły portable export i diagnostics ich nie dołączają. Standard MemoryVersion oraz frozen P2 pozostają bez zmian. Limity prywatnych notatek korzystają konserwatywnie z liczby bajtów UTF-8; nie jest to dokładny tokenizer modelu. Nie wprowadzono automatycznego dwukrotnego retry zapisu prywatnych self records ani zmiany istniejącego mechanizmu pamięci Standard.
+
+4B-11 ma status **IMPLEMENTED / AWAITING CI AND AUDIT**, nie PASS CLOSED. Szczegóły i wyniki: `docs/AI_HOME_4B11_REFLECTION_DREAM_PL.md`, dowody: `docs/evidence/4b11/`. Production Experimental IPC, host schedulera, realny generator LLM, Community/Messenger/A2A i MCP nie zostały dodane. UI Experimental jest przewidziane w 4B-14. Kolejny etap po odbiorze 4B-11: 4B-12, zgodnie z poniższym planem, z ponownym odczytaniem jego zakresu przed implementacją.
+
+---
+
 # Aktualizacja 1.49 — 23.10.2026 — 4B-6 krok 3 Portable Export
 
 - Po zielonym GitHub Actions dla 4B-6 krok 2 AUDIT FIX 4 rozpoczęto ograniczony krok 3: portable export profilu.
@@ -621,3 +645,32 @@ Dodano `ResumePacket`, który po rollover/restart składa trwały Episode, techn
 Context preflight jest deterministyczny i jawnie estymowany (`caller_estimated_tokens`). Uwzględnia context window, reserved output, input reserve oraz osobną rezerwę na checkpoint. Wyniki to `Fits`, `CheckpointRequired` i `Impossible`; zmiana route/context window wymaga nowego preflight. Duże tool results są przechowywane poza aktywnym contextem i reprezentowane przez source refs/hash, nie jako raw shadow content.
 
 Checkpoint source refs uczestniczą w lifecycle permanent deletion: conversation/message refs są oznaczane `permanently_deleted`, bez kopiowania skasowanej treści. Dodano natywne regresje restart/rollover, stale semantic checkpoint, CAS technical checkpoint, unresolved external action, runtime Resume Packet, route re-preflight oraz deletion lifecycle. SQLite pozostaje v13, frozen P2 bez zmian. Nadal brak ConsciousCore, live Experimental IPC, background host schedulera, MCP i produkcyjnych konektorów. Po zielonym CI i audycie EXP-2 można zamknąć 4B-9 i przejść do 4B-10.
+
+## Aktualizacja 1.68 — 25 października 2026 — 4B-9 EXP-2 AUDIT FIX (monotonic checkpoint boundary + resumable episode selection)
+
+Główny audyt EXP-2 wykazał dwie luki P2 w `experimental_continuity`. F1: TechnicalWorkCheckpoint sprawdzał jedynie górną granicę `sourceEventSequence <= committedThrough`, przez co nowszy checkpoint mógł cofnąć zakres względem parent checkpointu i pośrednio ukryć wcześniej zatwierdzony SemanticWorkCheckpoint. Writer wymaga teraz monotonicznego `sourceEventSequence` względem aktualnego parenta w tej samej transakcji. Cofnięcie kończy się `REVISION_CONFLICT` bez dopisania rekordu. Dodano regresję T1/S1=10 → próba T2=0 oraz poprawne T2=10.
+
+F2: `latest_resume_packet()` wybierał najnowszy aktywny/waiting/interrupted WorkEpisode jeszcze przed sprawdzeniem, czy posiada TechnicalWorkCheckpoint. Pusty nowszy Episode mógł więc ukryć starszą trwałą pracę. Selekcja wymaga teraz `EXISTS` powiązanego technical checkpointu i dopiero spośród takich epizodów wybiera najnowszy. Dodano regresję restartową: E1+T1/S1 pozostaje resumable mimo utworzenia późniejszego pustego E2; completed/abandoned/deferred nie są wybierane jako aktywna praca.
+
+`verify:experimental-continuity` rozszerzono z 20/20 do 23/23. SQLite pozostaje v13, frozen P2 pozostaje 193/193. Brak zmian w EXP-1 runtime, live IPC, provider integration, ConsciousCore, MCP i produkcyjnych konektorach. 4B-9 można zamknąć dopiero po zielonym natywnym CI i ponownym audycie tej poprawki.
+
+## Aktualizacja 1.69 — 4B-10 InternalStateProvider / opcjonalny ConsciousCore
+
+Po zielonym CI 4B-9 EXP-2 AUDIT FIX rozpoczęto 4B-10. Dodano replaceable `InternalStateProvider`, domyślny `NullStateProvider` oraz opcjonalny `ConsciousCoreAdapter` oparty o neutralny kontrakt silnika. Provider może zwrócić wyłącznie wersjonowany stan, neutralne events i wake candidates; nie posiada executorów, DecisionChoice ani uprawnień do wykonywania akcji.
+
+Stan pluginu jest trwały w SQLite schema 14: blob stanu, snapshot `InternalState`, neutral events i wake candidates. Restart nie odgrywa pominiętych ticków; następne wywołanie providera otrzymuje jeden jawny `elapsed_ms` od ostatniego snapshotu. `OpportunityPacket` może zawierać snapshot, neutral events i kwalifikujące się wake candidates.
+
+Wake candidate nie ma prawa obejść AI-selected sleep/event-only. Przy planie pochodzącym z decyzji AI może stworzyć okazję tylko wtedy, gdy `interruptEvents` jawnie dopuszcza `internal_state` albo konkretny `internal_state:<reasonCode>`. Kandydat może natomiast utworzyć okazję przy początkowym planie konfiguracji. Zużyte candidates są oznaczane jako `consumed` dopiero przy trwałym zakończeniu decision cycle.
+
+NullState pozostaje działającą konfiguracją bez pluginu. Nie dodano live IPC, Python sidecara, forum, MCP, Reflection/Dream ani produkcyjnego background hosta. Nowa warstwa podlega backup/restore i permanent deletion; diagnostics pozostaje content-free. Pełne natywne Rust CI i audyt pozostają warunkiem zamknięcia 4B-10.
+
+
+## Aktualizacja 1.70 — 25 października 2026 — 4B-10 AUDIT FIX (Rust syntax + allowed internal wake selection)
+
+Główny audyt 4B-10 wykazał dwie blokujące usterki i obie poprawiono bez rozszerzania zakresu do 4B-11. F1: w `src-tauri/tests/experimental_internal_state.rs` dwie struktury z nazwanymi polami miały niepoprawne końcowe średniki. Średniki usunięto; testy pozostają aktywne i nie są wyłączane.
+
+F2: `internal_wake_reason()` sprawdzał wyłącznie pierwszy aktywny wake candidate. Jeżeli pierwszy kandydat nie był dozwolony przez AI-selected `interruptEvents`, mógł zasłonić kolejny dozwolony kandydat. Runtime skanuje teraz kandydatów w trwałej kolejności i wybiera pierwszy, który jest zgodny z decyzją Primary. Zachowano dotychczasowe zasady: initial configuration może zostać przerwane przez pierwszy kwalifikujący się internal candidate, `internal_state` dopuszcza dowolny reasonCode, a `internal_state:<reasonCode>` tylko odpowiadający kandydat.
+
+Dodano natywną regresję przechodzącą przez rzeczywiste `run_due()` dla deadline sleep i event_only: kolejność A/B, B/A, jawnie dozwolone tylko B oraz brak opportunity, gdy żaden candidate nie jest dozwolony. Test sprawdza także wake reason i liczbę wywołań DecisionProvider. `verify:experimental-internal-state` rozszerzono z 20/20 do 23/23 i blokuje powrót do `candidates.first()`.
+
+SQLite pozostaje v14, frozen P2 bez zmian. Brak nowych IPC, sidecara, Reflection/Dream, MCP i konektorów. 4B-10 można zamknąć dopiero po pełnym zielonym Cargo/CI i ponownym audycie tej poprawki.

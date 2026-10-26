@@ -1,0 +1,7 @@
+cargo test --manifest-path src-tauri/Cargo.toml --no-default-features --all-targets --locked --offline
+npm test
+npm run build
+npm run verify:boundaries
+python3 snapshots/p2-v1.1/check_contracts.py
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/verify-*.py (individual log files)
+No desktop features, live API or OS-vault test. Runtime/deletion test calls the real native storage handler, not Experimental IPC.

@@ -1,0 +1,6 @@
+Native: cargo test --manifest-path src-tauri/Cargo.toml --no-default-features --all-targets --locked --offline
+Focused: cargo test --manifest-path src-tauri/Cargo.toml --no-default-features --test experimental_reflection --locked --offline
+Frontend: npm ci --ignore-scripts; npm test; npm run build
+Static: npm run verify:boundaries; python3 scripts/verify-*.py (individual logs)
+P2: PYTHONDONTWRITEBYTECODE=1 python3 snapshots/p2-v1.1/check_contracts.py
+Rust 1.99.1, Node 24.22.1, Linux headless. No desktop features.

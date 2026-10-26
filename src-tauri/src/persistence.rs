@@ -14,7 +14,7 @@ impl Store {
         let pool=SqlitePoolOptions::new().max_connections(1).connect_with(options).await?;
         let mut tx=pool.begin().await?;
         let version:i64=sqlx::query_scalar("PRAGMA user_version").fetch_one(&mut *tx).await?;
-        if version>14{return Err(sqlx::Error::Protocol("unsupported storage version".into()))}
+        if version>15{return Err(sqlx::Error::Protocol("unsupported storage version".into()))}
         sqlx::query("CREATE TABLE IF NOT EXISTS preferences (id INTEGER PRIMARY KEY CHECK(id=1), revision INTEGER NOT NULL, body TEXT NOT NULL)").execute(&mut *tx).await?;
         sqlx::query("CREATE TABLE IF NOT EXISTS receipts (request_id TEXT PRIMARY KEY, fingerprint TEXT NOT NULL, response TEXT NOT NULL)").execute(&mut *tx).await?;
         sqlx::query("CREATE TABLE IF NOT EXISTS app_events (sequence INTEGER PRIMARY KEY AUTOINCREMENT, body TEXT NOT NULL)").execute(&mut *tx).await?;
@@ -115,10 +115,18 @@ impl Store {
         ] { sqlx::query(statement).execute(&mut *tx).await?; }
         // EXP-1 restart recovery: a process cannot remain the owner of an in-flight decision or external send.
         // Preserve the AI-selected wake plan; only technical execution state is recovered.
+        // 4B-11: generated private notes are separate from technical ledgers and public output.
+        for statement in [
+            "CREATE TABLE IF NOT EXISTS experimental_reflection_runs (profile_id TEXT NOT NULL, instance_id TEXT NOT NULL, id TEXT NOT NULL, revision INTEGER NOT NULL, body TEXT NOT NULL, PRIMARY KEY(profile_id,id), FOREIGN KEY(profile_id,instance_id) REFERENCES experimental_instances(profile_id,id))",
+            "CREATE TABLE IF NOT EXISTS experimental_private_reflections (profile_id TEXT NOT NULL, instance_id TEXT NOT NULL, run_id TEXT NOT NULL, id TEXT NOT NULL, revision INTEGER NOT NULL, body TEXT NOT NULL, PRIMARY KEY(profile_id,id), FOREIGN KEY(profile_id,instance_id) REFERENCES experimental_instances(profile_id,id), FOREIGN KEY(profile_id,run_id) REFERENCES experimental_reflection_runs(profile_id,id))",
+            "CREATE TABLE IF NOT EXISTS experimental_self_reviews (profile_id TEXT NOT NULL, instance_id TEXT NOT NULL, reflection_id TEXT NOT NULL, candidate_index INTEGER NOT NULL, id TEXT NOT NULL, revision INTEGER NOT NULL, body TEXT NOT NULL, PRIMARY KEY(profile_id,id), UNIQUE(profile_id,instance_id,reflection_id,candidate_index), FOREIGN KEY(profile_id,instance_id) REFERENCES experimental_instances(profile_id,id), FOREIGN KEY(profile_id,reflection_id) REFERENCES experimental_private_reflections(profile_id,id))",
+            "CREATE TABLE IF NOT EXISTS experimental_self_records (profile_id TEXT NOT NULL, instance_id TEXT NOT NULL, id TEXT NOT NULL, review_id TEXT NOT NULL, revision INTEGER NOT NULL, body TEXT NOT NULL, PRIMARY KEY(profile_id,id), FOREIGN KEY(profile_id,instance_id) REFERENCES experimental_instances(profile_id,id), FOREIGN KEY(profile_id,review_id) REFERENCES experimental_self_reviews(profile_id,id))",
+        ] {sqlx::query(statement).execute(&mut *tx).await?;}
+        sqlx::query("UPDATE experimental_reflection_runs SET revision=revision+1,body=json_set(body,'$.revision',revision+1,'$.status','interrupted','$.errorCode','OPERATION_INTERRUPTED','$.finishedAt',?) WHERE json_extract(body,'$.status')='running'").bind(chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis,true)).execute(&mut *tx).await?;
         let recovery_now=chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis,true);
         sqlx::query("UPDATE experimental_instances SET revision=revision+1, body=json_set(body,'$.revision',revision+1,'$.runtimeGeneration',json_extract(body,'$.runtimeGeneration')+1,'$.status','interrupted','$.updatedAt',?) WHERE json_extract(body,'$.status')='running'").bind(&recovery_now).execute(&mut *tx).await?;
         sqlx::query("UPDATE experimental_actions SET revision=revision+1, body=json_set(body,'$.revision',revision+1,'$.state','uncertain','$.updatedAt',?) WHERE json_extract(body,'$.state')='sent'").bind(&recovery_now).execute(&mut *tx).await?;
-        sqlx::query("PRAGMA user_version=14").execute(&mut *tx).await?;tx.commit().await?;
+        sqlx::query("PRAGMA user_version=15").execute(&mut *tx).await?;tx.commit().await?;
         let store=Self{pool,path};store.preferences().await?;Ok(store)
     }
 

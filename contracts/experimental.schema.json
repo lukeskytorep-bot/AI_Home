@@ -623,6 +623,264 @@
             "outcome"
           ],
           "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "schemaVersion": {
+              "const": 1
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "instanceId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "revision": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "opportunityId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "episodeId": {
+              "type": "string",
+              "minLength": 0,
+              "maxLength": 256
+            },
+            "contextRevision": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "outcome": {
+              "const": "reflection"
+            },
+            "reflectionRunId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          },
+          "required": [
+            "schemaVersion",
+            "id",
+            "instanceId",
+            "revision",
+            "opportunityId",
+            "episodeId",
+            "contextRevision",
+            "createdAt",
+            "outcome",
+            "reflectionRunId"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "schemaVersion": {
+              "const": 1
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "instanceId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "revision": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "opportunityId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "episodeId": {
+              "type": "string",
+              "minLength": 0,
+              "maxLength": 256
+            },
+            "contextRevision": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "outcome": {
+              "const": "dream"
+            },
+            "reflectionRunId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          },
+          "required": [
+            "schemaVersion",
+            "id",
+            "instanceId",
+            "revision",
+            "opportunityId",
+            "episodeId",
+            "contextRevision",
+            "createdAt",
+            "outcome",
+            "reflectionRunId"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "schemaVersion": {
+              "const": 1
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "instanceId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "revision": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "opportunityId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "episodeId": {
+              "type": "string",
+              "minLength": 0,
+              "maxLength": 256
+            },
+            "contextRevision": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "outcome": {
+              "const": "self_review"
+            },
+            "reviewId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          },
+          "required": [
+            "schemaVersion",
+            "id",
+            "instanceId",
+            "revision",
+            "opportunityId",
+            "episodeId",
+            "contextRevision",
+            "createdAt",
+            "outcome",
+            "reviewId"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "schemaVersion": {
+              "const": 1
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "instanceId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "revision": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "opportunityId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "episodeId": {
+              "type": "string",
+              "minLength": 0,
+              "maxLength": 256
+            },
+            "contextRevision": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "outcome": {
+              "const": "self_withdrawal"
+            },
+            "selfRecordId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1024
+            }
+          },
+          "required": [
+            "schemaVersion",
+            "id",
+            "instanceId",
+            "revision",
+            "opportunityId",
+            "episodeId",
+            "contextRevision",
+            "createdAt",
+            "outcome",
+            "selfRecordId",
+            "reason"
+          ],
+          "additionalProperties": false
         }
       ]
     },
@@ -1504,6 +1762,535 @@
         "notBefore",
         "status",
         "createdAt"
+      ],
+      "additionalProperties": false
+    },
+    "ReflectionOutput": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "conclusion": {
+              "const": "none"
+            }
+          },
+          "required": [
+            "conclusion"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "conclusion": {
+              "const": "draft"
+            },
+            "summary": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 8192
+            },
+            "candidates": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "enum": [
+                      "own_note",
+                      "value"
+                    ]
+                  },
+                  "content": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 8192
+                  },
+                  "supersedesId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                },
+                "required": [
+                  "kind",
+                  "content"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "conclusion",
+            "summary",
+            "candidates"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "PrivateReflection": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "instanceId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "runId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "mode": {
+          "enum": [
+            "reflection",
+            "dream"
+          ]
+        },
+        "language": {
+          "type": "string",
+          "pattern": "^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$"
+        },
+        "epistemicStatus": {
+          "const": "synthetic_hypothesis"
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 8192
+        },
+        "candidates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "index": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 7
+              },
+              "kind": {
+                "enum": [
+                  "own_note",
+                  "value"
+                ]
+              },
+              "content": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 8192
+              },
+              "supersedesId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "supersedesRevision": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "required": [
+              "index",
+              "kind",
+              "content"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "contentSha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "sourceRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ExperimentalSourceRef"
+          }
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "id",
+        "instanceId",
+        "revision",
+        "createdAt",
+        "runId",
+        "mode",
+        "language",
+        "epistemicStatus",
+        "summary",
+        "candidates",
+        "contentSha256",
+        "sourceRefs"
+      ],
+      "additionalProperties": false
+    },
+    "ReflectionRun": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "instanceId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "decisionId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "runtimeGeneration": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "mode": {
+          "enum": [
+            "reflection",
+            "dream"
+          ]
+        },
+        "language": {
+          "type": "string",
+          "pattern": "^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$"
+        },
+        "limits": {
+          "type": "object",
+          "properties": {
+            "contextBytes": {
+              "type": "integer",
+              "minimum": 1024,
+              "maximum": 65536
+            },
+            "outputBytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 8192
+            },
+            "maxElapsedMs": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 30000
+            }
+          },
+          "required": [
+            "contextBytes",
+            "outputBytes",
+            "maxElapsedMs"
+          ],
+          "additionalProperties": false
+        },
+        "inputSha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "inputBytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "generationCallCount": {
+          "enum": [
+            1
+          ]
+        },
+        "status": {
+          "enum": [
+            "running",
+            "succeeded",
+            "failed",
+            "interrupted"
+          ]
+        },
+        "result": {
+          "enum": [
+            "private_record",
+            "no_conclusion"
+          ]
+        },
+        "privateRecordId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "errorCode": {
+          "enum": [
+            "RESOURCE_UNAVAILABLE",
+            "PROVIDER_TIMEOUT",
+            "CONTEXT_BUDGET_EXCEEDED",
+            "VALIDATION_ERROR",
+            "REVISION_CONFLICT",
+            "STALE_EXECUTOR",
+            "STORAGE_ERROR",
+            "OPERATION_INTERRUPTED"
+          ]
+        },
+        "finishedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "id",
+        "instanceId",
+        "revision",
+        "createdAt",
+        "decisionId",
+        "runtimeGeneration",
+        "mode",
+        "language",
+        "limits",
+        "inputSha256",
+        "inputBytes",
+        "generationCallCount",
+        "status"
+      ],
+      "additionalProperties": false
+    },
+    "PrivateSelfRecord": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "instanceId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "kind": {
+          "enum": [
+            "own_note",
+            "value"
+          ]
+        },
+        "status": {
+          "enum": [
+            "active",
+            "superseded",
+            "withdrawn"
+          ]
+        },
+        "language": {
+          "type": "string",
+          "pattern": "^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$"
+        },
+        "content": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 8192
+        },
+        "contentSha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "epistemicStatus": {
+          "const": "self_authored_not_verified_fact"
+        },
+        "originMode": {
+          "enum": [
+            "reflection",
+            "dream"
+          ]
+        },
+        "sourceReflectionId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "sourceCandidateIndex": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 7
+        },
+        "primaryDecisionId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "reviewId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "previousRecordId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "withdrawalDecisionId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "sourceRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ExperimentalSourceRef"
+          }
+        },
+        "measurement": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "method": {
+              "const": "estimated"
+            },
+            "estimatorId": {
+              "const": "utf8_bytes_v1"
+            }
+          },
+          "required": [
+            "value",
+            "method",
+            "estimatorId"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "id",
+        "instanceId",
+        "revision",
+        "createdAt",
+        "kind",
+        "status",
+        "language",
+        "content",
+        "contentSha256",
+        "epistemicStatus",
+        "originMode",
+        "sourceReflectionId",
+        "sourceCandidateIndex",
+        "primaryDecisionId",
+        "reviewId",
+        "updatedAt",
+        "sourceRefs",
+        "measurement"
+      ],
+      "additionalProperties": false
+    },
+    "PrivateSelfReview": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "instanceId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "reflectionId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "candidateIndex": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 7
+        },
+        "primaryDecisionId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "disposition": {
+          "enum": [
+            "accept",
+            "modify",
+            "reject"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "selfRecordId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "id",
+        "instanceId",
+        "revision",
+        "createdAt",
+        "reflectionId",
+        "candidateIndex",
+        "primaryDecisionId",
+        "disposition",
+        "reason"
       ],
       "additionalProperties": false
     }

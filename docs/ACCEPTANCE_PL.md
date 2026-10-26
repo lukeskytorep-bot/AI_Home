@@ -1,3 +1,15 @@
+# Bieżąca bramka — 4B-11 AUDIT FIX 1 — 26.10.2026
+
+Status: CORRECTED / AWAITING CI AND RE-AUDIT. F1/F2 z audytu głównego poprawione, dodano natywne regresje. Nie ogłaszamy PASS CLOSED. Raport `AI_HOME_4B11_AUDIT_FIX_1_PL.md`, plan 1.72 i dowody `evidence/4b11-audit-fix-1/` są bieżące; poniższe sekcje stanowią historię. 4B-12 nie rozpoczęto. Wymagane pozostają nowe CI i ponowny audyt oraz odrębne bramki desktop/WebView, OS vault i live API.
+
+---
+
+# Bieżąca bramka — 4B-11 — 26.10.2026
+
+Status: IMPLEMENTED / AWAITING CI AND AUDIT. Zielone CI 4B-10 potwierdził Edward. Nowy etap nie ma jeszcze potwierdzenia GitHub ani niezależnego audytu. Native Reflection/Dream, osobny Primary review i prywatny lifecycle są przekazane do odbioru. Raport i wyniki: `AI_HOME_4B11_REFLECTION_DREAM_PL.md`; plan treść 1.71. Nie zamyka to wcześniejszych bramek desktop/WebView, OS vault i live API.
+
+---
+
 # 4B-7 — Domknięcie Standard, 23.10.2026
 
 Baza 4B-6 krok 4 AUDIT FIX 4 ma potwierdzony zielony GitHub Actions Edwarda. 4B-7 wykonano lokalnie; wymaga nowego CI/audytu.

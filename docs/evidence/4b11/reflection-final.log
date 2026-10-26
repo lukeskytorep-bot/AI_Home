@@ -1,0 +1,30 @@
+   Compiling ai-home v0.0.1 (/workspace/scratch/8e3755d5c581/reflection/work/AI_Home/src-tauri)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 4.13s
+     Running tests/experimental_reflection.rs (src-tauri/target/debug/deps/experimental_reflection-03ae273703606b0e)
+
+running 22 tests
+test dream_is_speculation_and_never_self_approves_a_value ... ok
+test ai_sleep_and_refusal_remain_decisions_not_reflection_triggers ... ok
+test changed_private_context_during_generation_rejects_late_output ... ok
+test duplicate_review_is_rejected_and_never_creates_a_second_version ... ok
+test approved_note_and_value_can_be_revised_and_withdrawn_without_losing_history ... ok
+test generator_timeout_is_bounded_without_implicit_retry_or_fake_refusal ... ok
+test impossible_request_is_rejected_before_generator_or_run_reservation ... ok
+test actual_v14_migration_preserves_preferences_and_existing_instance_without_generation ... ok
+test no_conclusion_is_a_success_without_fabricated_note_or_publication ... ok
+test oversized_modified_value_fails_without_activating_or_consuming_candidate ... ok
+test modify_measures_actual_text_and_reject_preserves_existing_records ... ok
+test own_note_requires_a_separate_primary_cycle_and_keeps_provenance ... ok
+test malformed_or_over_budget_output_has_no_partial_private_records ... ok
+test private_corruption_is_detected_before_the_next_primary_decision ... ok
+test permanent_profile_deletion_removes_real_reflections_reviews_and_self_records_only_for_target ... ok
+test profile_and_instance_scope_do_not_allow_foreign_private_reads_or_reviews ... ok
+test stale_generation_during_generation_rejects_late_output ... ok
+test storage_failure_rolls_back_output_pointer_and_keeps_old_note ... ok
+test restart_interrupts_reserved_run_and_does_not_regenerate_or_lose_approved_note ... ok
+test full_backup_restore_keeps_private_records_but_portable_export_and_diagnostics_exclude_them ... ok
+test more_than_one_hundred_pending_candidates_do_not_disable_the_runtime ... ok
+test context_is_bounded_whole_entries_and_never_promotes_unreviewed_summaries ... ok
+
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.86s
+

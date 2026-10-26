@@ -6,6 +6,7 @@ use std::sync::Arc;
 use crate::domain::schema;
 use crate::experimental_continuity::{ResumePacket,WorkContinuityService};
 use crate::experimental_internal_state::{claim_context,consume_candidates};
+use crate::experimental_reflection::{self as reflection,ReflectionProvider,DisabledReflectionProvider,ReflectionRequest,SelfReview,SelfWithdrawal};
 
 #[derive(Clone,Debug,PartialEq,Eq)]
 pub struct OpportunityEvent { pub sequence:i64, pub kind:String }
@@ -24,6 +25,7 @@ pub struct OpportunityPacket {
     pub internal_state:Option<Value>,
     pub internal_state_events:Vec<Value>,
     pub wake_candidates:Vec<Value>,
+    pub private_context:Value,
 }
 
 #[derive(Clone,Debug)]
@@ -41,6 +43,10 @@ pub struct ActionIntent {
 
 #[derive(Clone,Debug)]
 pub enum DecisionChoice {
+    Reflect(ReflectionRequest),
+    Dream(ReflectionRequest),
+    ReviewSelf(SelfReview),
+    WithdrawSelf(SelfWithdrawal),
     Action(ActionIntent),
     NoAction,
     Rest,
@@ -71,9 +77,10 @@ impl ActionExecutor for DisabledActionExecutor { fn execute(&self,_:&ActionInten
 #[derive(Clone,Debug,PartialEq,Eq)]
 pub enum RunResult { NotDue, Busy, Inactive, ResourceUnavailable, ReconciliationRequired, Completed{outcome:String,decision_id:String} }
 
-pub struct ExperimentalRuntime<C:Clock,D:DecisionProvider,A:ActionExecutor>{pool:SqlitePool,clock:Arc<C>,decision:Arc<D>,actions:Arc<A>}
+pub struct ExperimentalRuntime<C:Clock,D:DecisionProvider,A:ActionExecutor>{pool:SqlitePool,clock:Arc<C>,decision:Arc<D>,actions:Arc<A>,reflection:Arc<dyn ReflectionProvider>}
 impl<C:Clock,D:DecisionProvider,A:ActionExecutor> ExperimentalRuntime<C,D,A>{
-    pub fn new(pool:SqlitePool,clock:Arc<C>,decision:Arc<D>,actions:Arc<A>)->Self{Self{pool,clock,decision,actions}}
+    pub fn new(pool:SqlitePool,clock:Arc<C>,decision:Arc<D>,actions:Arc<A>)->Self{Self{pool,clock,decision,actions,reflection:Arc::new(DisabledReflectionProvider)}}
+    pub fn with_reflection_provider(mut self,provider:Arc<dyn ReflectionProvider>)->Self{self.reflection=provider;self}
 
     pub async fn create_instance(&self,profile_id:&str,instance_id:&str,initial_interval_ms:i64)->Result<(),String>{
         if initial_interval_ms<=0{return Err("VALIDATION_ERROR".into())}
@@ -169,17 +176,24 @@ impl<C:Clock,D:DecisionProvider,A:ActionExecutor> ExperimentalRuntime<C,D,A>{
         let changed=sqlx::query("UPDATE experimental_instances SET revision=?,body=? WHERE profile_id=? AND id=? AND revision=?").bind(revision).bind(instance.to_string()).bind(profile_id).bind(instance_id).bind(row.get::<i64,_>("revision")).execute(&mut *tx).await.map_err(storage)?;
         if changed.rows_affected()!=1{return Ok(None)}
         let refusals=self.active_refusals(&mut tx,profile_id,instance_id).await?;
-        let packet=OpportunityPacket{opportunity_id:uuid::Uuid::new_v4().to_string(),profile_id:profile_id.into(),instance_id:instance_id.into(),runtime_generation:generation,now,wake_reason,events:fresh_events,active_refusals:refusals,resume_packet:None,internal_state,internal_state_events,wake_candidates};
+        let private_context=reflection::context(&mut tx,profile_id,instance_id).await?;
+        let packet=OpportunityPacket{opportunity_id:uuid::Uuid::new_v4().to_string(),profile_id:profile_id.into(),instance_id:instance_id.into(),runtime_generation:generation,now,wake_reason,events:fresh_events,active_refusals:refusals,resume_packet:None,internal_state,internal_state_events,wake_candidates,private_context};
         tx.commit().await.map_err(storage)?; Ok(Some((packet,generation)))
     }
 
     async fn persist_decision(&self,profile_id:&str,instance_id:&str,generation:i64,packet:&OpportunityPacket,choice:DecisionChoice)->Result<RunResult,String>{
         let decision_id=uuid::Uuid::new_v4().to_string(); let now=packet.now; let created=ts(now);
         match choice {
+            DecisionChoice::Reflect(request)=>self.reflect(packet,&decision_id,"reflection",request).await,
+            DecisionChoice::Dream(request)=>self.reflect(packet,&decision_id,"dream",request).await,
             DecisionChoice::Action(intent)=>self.persist_action(profile_id,instance_id,generation,packet,&decision_id,intent).await,
             other=>{
                 let mut tx=self.pool.begin().await.map_err(storage)?; self.require_generation(&mut tx,profile_id,instance_id,generation).await?;
+                reflection::context_current(&mut tx,profile_id,instance_id,&packet.private_context).await?;
                 let (outcome,episode_id)=match &other{
+                    DecisionChoice::ReviewSelf(_)=>("self_review","".to_string()),
+                    DecisionChoice::WithdrawSelf(_)=>("self_withdrawal","".to_string()),
+                    DecisionChoice::Reflect(_)|DecisionChoice::Dream(_)=>unreachable!(),
                     DecisionChoice::NoAction=>("no_action","".to_string()),
                     DecisionChoice::Rest=>("rest","".to_string()),
                     DecisionChoice::Sleep{..}=>("sleep","".to_string()),
@@ -192,8 +206,11 @@ impl<C:Clock,D:DecisionProvider,A:ActionExecutor> ExperimentalRuntime<C,D,A>{
                     DecisionChoice::Action(_)=>unreachable!(),
                 };
                 let default_delay=self.default_interval(&mut tx,profile_id,instance_id).await?;
-                let mut wake_id=None; let mut refusal_id=None;
+                let mut wake_id=None; let mut refusal_id=None;let mut review_id=None;let mut self_record_id=None;
                 match &other{
+                    DecisionChoice::ReviewSelf(r)=>{review_id=Some(reflection::review(&mut tx,packet,&decision_id,r,now).await?);self.replace_wake(&mut tx,profile_id,instance_id,&decision_id,"interval",None,Some(default_delay),&[],now).await?;},
+                    DecisionChoice::WithdrawSelf(w)=>{reflection::withdraw(&mut tx,packet,&decision_id,w,now).await?;self_record_id=Some(w.record_id.clone());self.replace_wake(&mut tx,profile_id,instance_id,&decision_id,"interval",None,Some(default_delay),&[],now).await?;},
+                    DecisionChoice::Reflect(_)|DecisionChoice::Dream(_)=>unreachable!(),
                     DecisionChoice::Sleep{delay_ms,interrupt_events}=>{if *delay_ms<=0{return Err("VALIDATION_ERROR".into())} let id=self.replace_wake(&mut tx,profile_id,instance_id,&decision_id,"deadline",Some(now+Duration::milliseconds(*delay_ms)),None,interrupt_events,now).await?;wake_id=Some(id);}
                     DecisionChoice::WaitEvent{interrupt_events}=>{if interrupt_events.is_empty(){return Err("VALIDATION_ERROR".into())} let id=self.replace_wake(&mut tx,profile_id,instance_id,&decision_id,"event_only",None,None,interrupt_events,now).await?;wake_id=Some(id);}
                     DecisionChoice::Refusal{scope,reconsideration_conditions}=>{let id=uuid::Uuid::new_v4().to_string();let fp=format!("{:x}",Sha256::digest(scope.as_bytes()));let r=json!({"schemaVersion":1,"id":id,"instanceId":instance_id,"revision":1,"decisionId":decision_id,"scopeFingerprint":fp,"status":"active","reconsiderationConditions":reconsideration_conditions,"sourceRefs":[],"createdAt":created});validate("RefusalRecord",&r)?;sqlx::query("INSERT INTO experimental_refusals(profile_id,instance_id,id,revision,body) VALUES(?,?,?,1,?)").bind(profile_id).bind(instance_id).bind(&id).bind(r.to_string()).execute(&mut *tx).await.map_err(storage)?;refusal_id=Some(id);self.replace_wake(&mut tx,profile_id,instance_id,&decision_id,"interval",None,Some(default_delay),&[],now).await?;}
@@ -202,6 +219,7 @@ impl<C:Clock,D:DecisionProvider,A:ActionExecutor> ExperimentalRuntime<C,D,A>{
                 }
                 self.update_episode_for_choice(&mut tx,profile_id,instance_id,&other,now).await?;
                 let mut d=json!({"schemaVersion":1,"id":decision_id,"instanceId":instance_id,"revision":1,"opportunityId":packet.opportunity_id.clone(),"episodeId":episode_id,"contextRevision":0,"createdAt":created,"outcome":outcome});
+                if let Some(id)=review_id{d["reviewId"]=json!(id)}if let Some(id)=self_record_id{d["selfRecordId"]=json!(id);if let DecisionChoice::WithdrawSelf(w)=&other{d["reason"]=json!(w.reason);}}
                 if let Some(id)=wake_id{d["wakePlanId"]=json!(id)} if let Some(id)=refusal_id{d["refusalId"]=json!(id)}
                 validate("DecisionRecord",&d)?; sqlx::query("INSERT INTO experimental_decisions(profile_id,instance_id,id,revision,body) VALUES(?,?,?,1,?)").bind(profile_id).bind(instance_id).bind(&decision_id).bind(d.to_string()).execute(&mut *tx).await.map_err(storage)?;
                 self.finish_cycle(&mut tx,profile_id,instance_id,generation,packet,now).await?;tx.commit().await.map_err(storage)?;
@@ -210,10 +228,32 @@ impl<C:Clock,D:DecisionProvider,A:ActionExecutor> ExperimentalRuntime<C,D,A>{
         }
     }
 
+    async fn reflect(&self,packet:&OpportunityPacket,decision_id:&str,mode:&str,request:ReflectionRequest)->Result<RunResult,String>{
+        // Check the complete logical request before reserving a generation or calling the provider.
+        let input=reflection::input(packet,mode,&request)?;
+        let run_id=uuid::Uuid::new_v4().to_string();let p=&packet.profile_id;let i=&packet.instance_id;
+        let mut tx=self.pool.begin().await.map_err(storage)?;
+        reflection::generation(&mut tx,p,i,packet.runtime_generation).await?;
+        let d=json!({"schemaVersion":1,"id":decision_id,"instanceId":i,"revision":1,"opportunityId":packet.opportunity_id,"episodeId":"","contextRevision":0,"createdAt":ts(packet.now),"outcome":mode,"reflectionRunId":run_id});validate("DecisionRecord",&d)?;
+        sqlx::query("INSERT INTO experimental_decisions(profile_id,instance_id,id,revision,body) VALUES(?,?,?,1,?)").bind(p).bind(i).bind(decision_id).bind(d.to_string()).execute(&mut *tx).await.map_err(storage)?;
+        reflection::begin(&mut tx,packet,decision_id,&run_id,mode,&request,&input).await?;tx.commit().await.map_err(storage)?;
+        let result:Result<RunResult,String>=async {
+            let output=tokio::time::timeout(std::time::Duration::from_millis(request.max_elapsed_ms),self.reflection.generate(input)).await.map_err(|_|"PROVIDER_TIMEOUT".to_string())?.map_err(|_|"RESOURCE_UNAVAILABLE".to_string())?;
+            let now=self.clock.now();if (now-packet.now).num_milliseconds()>request.max_elapsed_ms as i64{return Err("PROVIDER_TIMEOUT".into());}
+            let mut tx=self.pool.begin().await.map_err(storage)?;
+            reflection::complete(&mut tx,packet,&run_id,output,now).await?;
+            let delay=self.default_interval(&mut tx,p,i).await?;self.replace_wake(&mut tx,p,i,decision_id,"interval",None,Some(delay),&[],now).await?;
+            self.finish_cycle(&mut tx,p,i,packet.runtime_generation,packet,now).await?;
+            tx.commit().await.map_err(storage)?;Ok(RunResult::Completed{outcome:mode.into(),decision_id:decision_id.into()})
+        }.await;
+        if let Err(code)=&result {let _=reflection::fail(&self.pool,packet,&run_id,code,self.clock.now()).await;}
+        result
+    }
+
     async fn persist_action(&self,profile_id:&str,instance_id:&str,generation:i64,packet:&OpportunityPacket,decision_id:&str,intent:ActionIntent)->Result<RunResult,String>{
         if !["public","private","scoped","internal"].contains(&intent.visibility.as_str()){return Err("VALIDATION_ERROR".into())}
         let now=packet.now;let action_id=uuid::Uuid::new_v4().to_string();let hash=format!("{:x}",Sha256::digest(&intent.payload_bytes));
-        let mut tx=self.pool.begin().await.map_err(storage)?;self.require_generation(&mut tx,profile_id,instance_id,generation).await?;
+        let mut tx=self.pool.begin().await.map_err(storage)?;self.require_generation(&mut tx,profile_id,instance_id,generation).await?;reflection::context_current(&mut tx,profile_id,instance_id,&packet.private_context).await?;
         let d=json!({"schemaVersion":1,"id":decision_id,"instanceId":instance_id,"revision":1,"opportunityId":packet.opportunity_id.clone(),"episodeId":intent.episode_id.clone(),"contextRevision":0,"createdAt":ts(now),"outcome":"action","actionId":action_id.clone()});validate("DecisionRecord",&d)?;
         sqlx::query("INSERT INTO experimental_decisions(profile_id,instance_id,id,revision,body) VALUES(?,?,?,1,?)").bind(profile_id).bind(instance_id).bind(decision_id).bind(d.to_string()).execute(&mut *tx).await.map_err(storage)?;
         let action=json!({"schemaVersion":1,"id":action_id.clone(),"instanceId":instance_id,"revision":1,"decisionId":decision_id,"episodeId":intent.episode_id.clone(),"connector":intent.connector.clone(),"actionKind":intent.action_kind.clone(),"senderIdentity":intent.sender_identity.clone(),"destination":intent.destination.clone(),"visibility":intent.visibility.clone(),"payloadHash":hash,"payloadRef":intent.payload_ref.clone(),"idempotencyKey":intent.idempotency_key.clone(),"state":"sent","receiptRef":"","createdAt":ts(now),"updatedAt":ts(now)});validate("ActionRecord",&action)?;

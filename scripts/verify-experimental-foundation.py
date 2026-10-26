@@ -26,8 +26,8 @@ ok(defs['ExperimentalInstance']['properties']['direction'].get('const')=='experi
 ok('permanently_deleted' in defs['ExperimentalSourceRef']['properties']['availability'].get('enum',[]),'source refs must represent permanent deletion without hidden copies')
 # Storage remains backward compatible; 4B-10 raises the current version to 14 for internal-state persistence.
 p=(root/'src-tauri/src/persistence.rs').read_text()
-ok('if version>14' in p and 'PRAGMA user_version=14' in p,'storage target must be v14')
-for file_name,needle in [('src-tauri/src/backup.rs','CURRENT_SCHEMA:i64=14'),('src-tauri/src/export.rs','\"schemaVersion\":14'),('src-tauri/src/diagnostics.rs','\"storageSchemaVersion\":14')]:
+ok('if version>15' in p and 'PRAGMA user_version=15' in p,'storage target must be v15')
+for file_name,needle in [('src-tauri/src/backup.rs','CURRENT_SCHEMA:i64=15'),('src-tauri/src/export.rs','\"schemaVersion\":15'),('src-tauri/src/diagnostics.rs','\"storageSchemaVersion\":15')]:
     ok(needle in (root/file_name).read_text(),f'stale storage schema constant in {file_name}')
 for table in ['experimental_instances','experimental_wake_plans','experimental_decisions','experimental_refusals','experimental_work_episodes','experimental_technical_checkpoints','experimental_semantic_checkpoints','experimental_actions','experimental_event_cursors','experimental_internal_state_blobs','experimental_internal_state_snapshots','experimental_internal_state_events','experimental_wake_candidates']:
     ok(f'CREATE TABLE IF NOT EXISTS {table}' in p,f'missing storage table {table}')

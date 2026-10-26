@@ -1,0 +1,156 @@
+--- base/src-tauri/tests/chat.rs
++++ current/src-tauri/tests/chat.rs
+@@ -608,7 +608,7 @@
+             .fetch_one(&pool)
+             .await
+             .unwrap(),
+-        14
++        15
+     );
+     assert!(sqlx::query("PRAGMA foreign_key_check")
+         .fetch_all(&pool)
+@@ -762,7 +762,7 @@
+     sqlx::query("DROP TABLE chat_vision_policies").execute(&pool).await.unwrap();sqlx::query("DROP TABLE message_documents").execute(&pool).await.unwrap();sqlx::query("PRAGMA user_version=6").execute(&pool).await.unwrap();
+     drop(app);pool.close().await;
+     let store=Store::open(&path).await.unwrap();let pool=store.pool.clone();let app=Application::with_vault(store,Vault::with_backend(vault.clone()));
+-    assert_eq!(sqlx::query_scalar::<_,i64>("PRAGMA user_version").fetch_one(&pool).await.unwrap(),14);
++    assert_eq!(sqlx::query_scalar::<_,i64>("PRAGMA user_version").fetch_one(&pool).await.unwrap(),15);
+     assert!(s.wires.lock().unwrap().is_empty());
+     let r=with_document(&p,&c,&item,"First");let a=app.dispatch(r.clone()).await.response;assert_eq!(a["ok"],true,"{a}");let op=finished(&app,&p,&a["result"]["operation"]["id"]).await;assert_eq!(op["status"],"succeeded");
+     let first=last_wire(&s)["messages"][1]["content"].clone();drop(app);pool.close().await;
+@@ -852,7 +852,7 @@
+     let(app,pool,vault,s,p,c,_)=configure(app,pool,vault).await;let prefs=ok(&app,"app.preferences.get",json!({}),None,None).await;
+     sqlx::query("DROP TABLE chat_vision_policies").execute(&pool).await.unwrap();sqlx::query("PRAGMA user_version=7").execute(&pool).await.unwrap();drop(app);pool.close().await;
+     let store=Store::open(&path).await.unwrap();let pool=store.pool.clone();let app=Application::with_vault(store,Vault::with_backend(vault.clone()));
+-    assert_eq!(sqlx::query_scalar::<_,i64>("PRAGMA user_version").fetch_one(&pool).await.unwrap(),14);assert_eq!(ok(&app,"app.preferences.get",json!({}),None,None).await,prefs);
++    assert_eq!(sqlx::query_scalar::<_,i64>("PRAGMA user_version").fetch_one(&pool).await.unwrap(),15);assert_eq!(ok(&app,"app.preferences.get",json!({}),None,None).await,prefs);
+     assert_eq!(ok(&app,"chat.vision.get",json!({}),Some(&p),None).await["support"],"unknown");
+     let(app,item,_)=imported_image(app,&pool,vault.clone(),&p,&c).await;let policy=declare_vision(&app,&p,"supported").await;
+     let r=with_document(&p,&c,&item,"Describe");let a=app.dispatch(r.clone()).await.response;assert_eq!(a["ok"],true,"{a}");assert_eq!(finished(&app,&p,&a["result"]["operation"]["id"]).await["status"],"succeeded");let first=last_wire(&s)["messages"][1]["content"].clone();drop(app);pool.close().await;
+
+--- base/src-tauri/tests/connections.rs
++++ current/src-tauri/tests/connections.rs
+@@ -657,7 +657,7 @@
+             .fetch_one(&store.pool)
+             .await
+             .unwrap(),
+-        14
++        15
+     );
+     assert!(sqlx::query("PRAGMA foreign_key_check")
+         .fetch_all(&store.pool)
+@@ -945,7 +945,7 @@
+             .fetch_one(&pool)
+             .await
+             .unwrap(),
+-        14
++        15
+     );
+     assert_eq!(app.dispatch(r.clone()).await.response, original);
+     let mut changed = r.clone();
+
+--- base/src-tauri/tests/conversations.rs
++++ current/src-tauri/tests/conversations.rs
+@@ -320,7 +320,7 @@
+             .fetch_one(&pool)
+             .await
+             .unwrap(),
+-        14
++        15
+     );
+     assert!(sqlx::query("PRAGMA foreign_key_check")
+         .fetch_all(&pool)
+@@ -370,7 +370,7 @@
+             .fetch_one(&pool)
+             .await
+             .unwrap(),
+-        14
++        15
+     );
+     let c = create(&app, &p, "After migration").await;
+     assert_eq!(c["draftText"], "");
+
+--- base/src-tauri/tests/experimental_contracts.rs
++++ current/src-tauri/tests/experimental_contracts.rs
+@@ -56,7 +56,7 @@
+ async fn schema_14_persists_experimental_and_internal_state_foundation_with_foreign_keys(){
+     let store=Store::memory().await.unwrap();
+     let pool=&store.pool;
+-    assert_eq!(sqlx::query_scalar::<_,i64>("PRAGMA user_version").fetch_one(pool).await.unwrap(),14);
++    assert_eq!(sqlx::query_scalar::<_,i64>("PRAGMA user_version").fetch_one(pool).await.unwrap(),15);
+     let profile=json!({"schemaVersion":1,"id":"profile-a","revision":1,"displayName":"Experimental","createdAt":"2026-10-24T12:00:00Z","updatedAt":"2026-10-24T12:00:00Z"});
+     sqlx::query("INSERT INTO profiles(id,revision,body) VALUES(?,1,?)").bind("profile-a").bind(profile.to_string()).execute(pool).await.unwrap();
+     let inst=instance("profile-a");
+@@ -67,7 +67,7 @@
+     sqlx::query("INSERT INTO experimental_technical_checkpoints(profile_id,instance_id,episode_id,id,revision,body) VALUES(?,?,?,?,1,?)").bind("profile-a").bind("exp-a").bind("episode-a").bind("tech-a").bind(technical.to_string()).execute(pool).await.unwrap();
+     assert!(sqlx::query("PRAGMA foreign_key_check").fetch_all(pool).await.unwrap().is_empty());
+     let tables:i64=sqlx::query_scalar("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name LIKE 'experimental_%'").fetch_one(pool).await.unwrap();
+-    assert_eq!(tables,13);
++    assert_eq!(tables,17);
+ }
+ 
+ #[tokio::test]
+@@ -83,7 +83,7 @@
+     for table in ["experimental_wake_candidates","experimental_internal_state_events","experimental_internal_state_snapshots","experimental_internal_state_blobs"] {sqlx::query(&format!("DROP TABLE {table}")).execute(&pool).await.unwrap();}
+     sqlx::query("PRAGMA user_version=13").execute(&pool).await.unwrap();drop(store);pool.close().await;
+     let store=Store::open(&path).await.unwrap();let pool=store.pool.clone();
+-    assert_eq!(sqlx::query_scalar::<_,i64>("PRAGMA user_version").fetch_one(&pool).await.unwrap(),14);
++    assert_eq!(sqlx::query_scalar::<_,i64>("PRAGMA user_version").fetch_one(&pool).await.unwrap(),15);
+     let body:String=sqlx::query("SELECT body FROM profiles WHERE id='standard-a'").fetch_one(&pool).await.unwrap().get(0);assert_eq!(body,profile_body);
+     let exp_body:String=sqlx::query("SELECT body FROM profiles WHERE id='experimental-a'").fetch_one(&pool).await.unwrap().get(0);assert_eq!(exp_body,exp_profile);
+     let instance_count:i64=sqlx::query_scalar("SELECT COUNT(*) FROM experimental_instances WHERE profile_id='experimental-a'").fetch_one(&pool).await.unwrap();assert_eq!(instance_count,1);
+
+--- base/src-tauri/tests/imports.rs
++++ current/src-tauri/tests/imports.rs
+@@ -628,7 +628,7 @@
+             .fetch_one(&pool)
+             .await
+             .unwrap(),
+-        14
++        15
+     );
+     assert_eq!(
+         sqlx::query_scalar::<_, String>("PRAGMA integrity_check")
+
+--- base/src-tauri/tests/memory_layers.rs
++++ current/src-tauri/tests/memory_layers.rs
+@@ -227,7 +227,7 @@
+  let path=std::env::temp_dir().join(format!("ai-home-layers-{}.sqlite3",uuid::Uuid::new_v4()));let vault=Arc::new(MemoryVault::default());let store=Store::open(&path).await.unwrap();let pool=store.pool.clone();let app=Application::with_vault(store,Vault::with_backend(vault.clone()));let(app,pool,vault,s,p,c,_)=configure(app,pool,vault).await;
+  let a=app.dispatch(send_request(&p,&c,"AI Home")).await.response;finished(&app,&p,&a["result"]["operation"]["id"]).await;memory_settings(&app,&p,json!({"kind":"bounded","tokens":300}),"disabled").await;let v=save_memory(&app,&s,&p,&c,"Previous L2").await;let prefs=ok(&app,"app.preferences.get",json!({}),None,None).await;
+  sqlx::query("DROP TABLE memory_version_metadata").execute(&pool).await.unwrap();sqlx::query("DROP TABLE memory_metadata").execute(&pool).await.unwrap();sqlx::query("PRAGMA user_version=9").execute(&pool).await.unwrap();drop(app);pool.close().await;
+- let store=Store::open(&path).await.unwrap();let pool=store.pool.clone();let app=Application::with_vault(store,Vault::with_backend(vault));assert_eq!(sqlx::query_scalar::<_,i64>("PRAGMA user_version").fetch_one(&pool).await.unwrap(),14);assert_eq!(memory_view(&app,&p).await["version"],v);assert_eq!(ok(&app,"app.preferences.get",json!({}),None,None).await,prefs);assert!(sqlx::query("PRAGMA foreign_key_check").fetch_all(&pool).await.unwrap().is_empty());
++ let store=Store::open(&path).await.unwrap();let pool=store.pool.clone();let app=Application::with_vault(store,Vault::with_backend(vault));assert_eq!(sqlx::query_scalar::<_,i64>("PRAGMA user_version").fetch_one(&pool).await.unwrap(),15);assert_eq!(memory_view(&app,&p).await["version"],v);assert_eq!(ok(&app,"app.preferences.get",json!({}),None,None).await,prefs);assert!(sqlx::query("PRAGMA foreign_key_check").fetch_all(&pool).await.unwrap().is_empty());
+ }
+ #[tokio::test]async fn zero_retrieval_budget_is_contract_error_without_changing_profile(){
+  let(app,_,_,_,p,_,_)=memory_fixture().await;let before=layer_settings(&app,&p).await;let mut policies=before["memorySettings"].clone();policies.as_object_mut().unwrap().remove("working");let r=app.dispatch(request("memory.layers.settings.set",json!({"policies":policies,"retrievalTargetTokens":0}),Some(&p),before["profileRevision"].as_i64())).await.response;assert_eq!(r["error"]["code"],"VALIDATION_ERROR");assert_eq!(layer_settings(&app,&p).await,before);
+
+--- base/src-tauri/tests/memory_runtime.rs
++++ current/src-tauri/tests/memory_runtime.rs
+@@ -99,7 +99,7 @@
+             .fetch_one(&pool)
+             .await
+             .unwrap(),
+-        14
++        15
+     );
+     assert!(sqlx::query("PRAGMA foreign_key_check")
+         .fetch_all(&pool)
+@@ -671,7 +671,7 @@
+             .fetch_one(&pool)
+             .await
+             .unwrap(),
+-        14
++        15
+     );
+     assert!(sqlx::query("PRAGMA foreign_key_check")
+         .fetch_all(&pool)
+
+--- base/tests/backup-ui.test.tsx
++++ current/tests/backup-ui.test.tsx
+@@ -1,4 +1,4 @@
+ import {it,expect} from 'vitest';import {act} from 'react';import {createRoot} from 'react-dom/client';import {BackupPanel} from '../src/ui/BackupPanel';import {Client} from '../src/ipc/client';import type {Request,Response,Transport} from '../src/domain/types';
+-it('creates backup, preflights restore and requires restart after safety-copy request',async()=>{const calls:Request[]=[];const backup={manifestVersion:1,id:'manual-a',kind:'manual',requestId:'r',createdAt:'2026-10-22T00:00:00Z',schemaVersion:12,sizeBytes:10,sha256:'a'.repeat(64),integrity:'ok',foreignKeyViolations:0};const transport:Transport={mode:'desktop',subscribe:async()=>()=>{},dispatch:async<T,>(r:Request):Promise<Response<T>>=>{calls.push(r);let result:any;if(r.command==='backup.list')result={items:[backup]};else if(r.command==='backup.restore.status')result={pending:null,last:null};else if(r.command==='backup.create')result=backup;else if(r.command==='backup.restore.preflight')result={backup,source:{schemaVersion:12,integrity:'ok',foreignKeyViolations:0,profileCount:1,conversationCount:2},currentSchemaVersion:14,safetyCopyRequired:true,restartRequired:true};else if(r.command==='backup.restore.request')result={accepted:true,backupId:'manual-a',safetyBackupId:'safety-a',restartRequired:true};else throw Error(r.command);return {contractVersion:1,requestId:r.requestId,ok:true,result};}};const host=document.createElement('div');document.body.append(host);const root=createRoot(host);await act(async()=>root.render(<BackupPanel client={new Client(transport)} locale="en" desktop={true}/>));const select=host.querySelector('select')!;Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value')!.set!.call(select,'manual-a');await act(async()=>select.dispatchEvent(new Event('change',{bubbles:true})));const click=async(label:string)=>{const b=[...host.querySelectorAll('button')].find(x=>x.textContent===label)!;await act(async()=>b.click());};await click('Check restore');expect(host.textContent).toContain('Restore preflight passed');await click('Prepare restore');expect(calls.some(c=>c.command==='backup.restore.request')).toBe(true);await act(async()=>root.unmount());host.remove();});
++it('creates backup, preflights restore and requires restart after safety-copy request',async()=>{const calls:Request[]=[];const backup={manifestVersion:1,id:'manual-a',kind:'manual',requestId:'r',createdAt:'2026-10-22T00:00:00Z',schemaVersion:12,sizeBytes:10,sha256:'a'.repeat(64),integrity:'ok',foreignKeyViolations:0};const transport:Transport={mode:'desktop',subscribe:async()=>()=>{},dispatch:async<T,>(r:Request):Promise<Response<T>>=>{calls.push(r);let result:any;if(r.command==='backup.list')result={items:[backup]};else if(r.command==='backup.restore.status')result={pending:null,last:null};else if(r.command==='backup.create')result=backup;else if(r.command==='backup.restore.preflight')result={backup,source:{schemaVersion:12,integrity:'ok',foreignKeyViolations:0,profileCount:1,conversationCount:2},currentSchemaVersion:15,safetyCopyRequired:true,restartRequired:true};else if(r.command==='backup.restore.request')result={accepted:true,backupId:'manual-a',safetyBackupId:'safety-a',restartRequired:true};else throw Error(r.command);return {contractVersion:1,requestId:r.requestId,ok:true,result};}};const host=document.createElement('div');document.body.append(host);const root=createRoot(host);await act(async()=>root.render(<BackupPanel client={new Client(transport)} locale="en" desktop={true}/>));const select=host.querySelector('select')!;Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value')!.set!.call(select,'manual-a');await act(async()=>select.dispatchEvent(new Event('change',{bubbles:true})));const click=async(label:string)=>{const b=[...host.querySelectorAll('button')].find(x=>x.textContent===label)!;await act(async()=>b.click());};await click('Check restore');expect(host.textContent).toContain('Restore preflight passed');await click('Prepare restore');expect(calls.some(c=>c.command==='backup.restore.request')).toBe(true);await act(async()=>root.unmount());host.remove();});
+ 
+-it('keeps restore request identity across panel remount after ambiguous transport',async()=>{const calls:Request[]=[];const ids:string[]=[];let ambiguous=true;const backup={manifestVersion:1,id:'manual-remount',kind:'manual',requestId:'b',createdAt:'2026-10-22T00:00:00Z',schemaVersion:12,sizeBytes:10,sha256:'b'.repeat(64),integrity:'ok',foreignKeyViolations:0};const transport:Transport={mode:'desktop',subscribe:async()=>()=>{},dispatch:async<T,>(r:Request):Promise<Response<T>>=>{calls.push(r);let result:any;if(r.command==='backup.list')result={items:[backup]};else if(r.command==='backup.restore.status')result={pending:null,last:null};else if(r.command==='backup.restore.preflight')result={backup,source:{schemaVersion:12,integrity:'ok',foreignKeyViolations:0,profileCount:1,conversationCount:1},currentSchemaVersion:14,safetyCopyRequired:true,restartRequired:true};else if(r.command==='backup.restore.request'){ids.push(r.requestId);if(ambiguous){ambiguous=false;throw Error('AMBIGUOUS')}result={accepted:true,backupId:backup.id,safetyBackupId:'safety-remount',restartRequired:true};}else throw Error(r.command);return {contractVersion:1,requestId:r.requestId,ok:true,result};}};const client=new Client(transport);const host=document.createElement('div');document.body.append(host);let root=createRoot(host);const mount=async()=>{await act(async()=>root.render(<BackupPanel client={client} locale="en" desktop={true}/>));const select=host.querySelector('select')!;Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value')!.set!.call(select,backup.id);await act(async()=>select.dispatchEvent(new Event('change',{bubbles:true})));const b=[...host.querySelectorAll('button')].find(x=>x.textContent==='Check restore')!;await act(async()=>b.click());};await mount();let restore=[...host.querySelectorAll('button')].find(x=>x.textContent==='Prepare restore')!;await act(async()=>restore.click());await act(async()=>root.unmount());root=createRoot(host);await mount();restore=[...host.querySelectorAll('button')].find(x=>x.textContent==='Prepare restore')!;await act(async()=>restore.click());expect(ids).toHaveLength(2);expect(ids[0]).toBe(ids[1]);await act(async()=>root.unmount());host.remove();});
++it('keeps restore request identity across panel remount after ambiguous transport',async()=>{const calls:Request[]=[];const ids:string[]=[];let ambiguous=true;const backup={manifestVersion:1,id:'manual-remount',kind:'manual',requestId:'b',createdAt:'2026-10-22T00:00:00Z',schemaVersion:12,sizeBytes:10,sha256:'b'.repeat(64),integrity:'ok',foreignKeyViolations:0};const transport:Transport={mode:'desktop',subscribe:async()=>()=>{},dispatch:async<T,>(r:Request):Promise<Response<T>>=>{calls.push(r);let result:any;if(r.command==='backup.list')result={items:[backup]};else if(r.command==='backup.restore.status')result={pending:null,last:null};else if(r.command==='backup.restore.preflight')result={backup,source:{schemaVersion:12,integrity:'ok',foreignKeyViolations:0,profileCount:1,conversationCount:1},currentSchemaVersion:15,safetyCopyRequired:true,restartRequired:true};else if(r.command==='backup.restore.request'){ids.push(r.requestId);if(ambiguous){ambiguous=false;throw Error('AMBIGUOUS')}result={accepted:true,backupId:backup.id,safetyBackupId:'safety-remount',restartRequired:true};}else throw Error(r.command);return {contractVersion:1,requestId:r.requestId,ok:true,result};}};const client=new Client(transport);const host=document.createElement('div');document.body.append(host);let root=createRoot(host);const mount=async()=>{await act(async()=>root.render(<BackupPanel client={client} locale="en" desktop={true}/>));const select=host.querySelector('select')!;Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value')!.set!.call(select,backup.id);await act(async()=>select.dispatchEvent(new Event('change',{bubbles:true})));const b=[...host.querySelectorAll('button')].find(x=>x.textContent==='Check restore')!;await act(async()=>b.click());};await mount();let restore=[...host.querySelectorAll('button')].find(x=>x.textContent==='Prepare restore')!;await act(async()=>restore.click());await act(async()=>root.unmount());root=createRoot(host);await mount();restore=[...host.querySelectorAll('button')].find(x=>x.textContent==='Prepare restore')!;await act(async()=>restore.click());expect(ids).toHaveLength(2);expect(ids[0]).toBe(ids[1]);await act(async()=>root.unmount());host.remove();});

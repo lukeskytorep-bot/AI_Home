@@ -19,7 +19,7 @@ pub async fn snapshot(store:&Store)->Result<Value,sqlx::Error>{
         "schemaVersion":1,
         "generatedAt":chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis,true),
         "appVersion":env!("CARGO_PKG_VERSION"),
-        "storageSchemaVersion":14,
+        "storageSchemaVersion":15,
         "mode":"standard",
         "stateProvider":"null",
         "preferences":{"locale":prefs["locale"],"themeId":prefs["themeId"],"themeVariant":prefs["themeVariant"]},

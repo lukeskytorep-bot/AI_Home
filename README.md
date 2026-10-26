@@ -1,7 +1,7 @@
-# Bieżące przekazanie: 4B-9 / EXP-2 Work Continuity / Context Rollover
+# AI Home — 4B-11 AUDIT FIX 1
 
-Na bazie zielonego `AI_HOME_4B9_EXP1_AUDIT_FIX_3_SOURCE.zip` wdrożono trwałą ciągłość pracy Experimental bez dodawania ConsciousCore ani produkcyjnych konektorów. Work Episode, technical/semantic checkpoints i Resume Packet pozwalają odtworzyć ostatni zatwierdzony stan pracy po context rollover lub restarcie.
+Korekta audytu Reflection/Dream: F1 — pełny zapis musi dać się później przejrzeć przez Primary; F2 — pierwotne source refs są dziedziczone i zachowują tombstones po usunięciu źródła. Własne notatki nadal wymagają osobnej decyzji Primary i nie powodują automatycznej publikacji.
 
-Context preflight jawnie używa estymowanych tokenów i rezerwuje miejsce na output, input reserve oraz checkpoint. Duże tool results pozostają źródłami referencyjnymi zamiast surowej treści w context/ledgerze. Realny OpportunityPacket dostaje Resume Packet aktywnej pracy. Permanent deletion oznacza checkpoint refs jako `permanently_deleted`.
+Status: **CORRECTED / AWAITING CI AND RE-AUDIT**. Raport: `docs/AI_HOME_4B11_AUDIT_FIX_1_PL.md`. Plan kanoniczny: `docs/AI_HOME_4B_ETAPY_PRACY_v1.0_PL.md` (treść 1.72). Dowody: `docs/evidence/4b11-audit-fix-1/`.
 
-SQLite pozostaje v13, P2 193/193 bez zmian. Brak live Experimental IPC, background schedulera, ConsciousCore, MCP, Community, Messenger i A2A. Raport: `docs/AI_HOME_4B9_EXP2_RAPORT_PL.md`; plan treść 1.67. EXP-2 wymaga pełnego CI i audytu przed 4B-10.
+SQLite v15, frozen P2, provider adapters, vault, zależności i workflow bez zmian. Native service z generatorem domyślnie wyłączonym; bez nowego UI/IPC Experimental. Desktop/WebView, OS vault i live API pozostają do odbioru. To nakładka źródeł, bez release i instalatorów.

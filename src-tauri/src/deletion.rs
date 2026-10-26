@@ -110,7 +110,7 @@ pub(crate) async fn redact_conversation_memory_runs(tx:&mut Tx<'_>,profile:&str,
 }
 
 pub(crate) async fn redact_experimental_source_refs(tx:&mut Tx<'_>,profile:&str,source_kind:&str,source_id:&str)->Result<(),Failure>{
-    for table in ["experimental_technical_checkpoints","experimental_semantic_checkpoints"] {
+    for table in ["experimental_technical_checkpoints","experimental_semantic_checkpoints","experimental_private_reflections","experimental_self_records"] {
         let q=format!("SELECT id,body FROM {table} WHERE profile_id=? ORDER BY rowid");
         let rows=sqlx::query(&q).bind(profile).fetch_all(&mut **tx).await.map_err(|_|"STORAGE_ERROR")?;
         for row in rows {
@@ -151,8 +151,13 @@ mod tests{
         sqlx::query("INSERT INTO experimental_technical_checkpoints(profile_id,instance_id,episode_id,id,revision,body) VALUES('p','exp','ep','t1',1,?)").bind(tech.to_string()).execute(&store.pool).await.unwrap();
         let sem=json!({"schemaVersion":1,"id":"s1","instanceId":"exp","episodeId":"ep","revision":1,"parentCheckpointId":"","technicalCheckpointId":"t1","proposer":"primary","primaryDisposition":"accepted","sourceEventSequence":0,"sourceRefs":[source],"content":{"focus":"","currentIntention":"","findings":[],"openQuestions":[],"nextSuggestedStep":""},"createdAt":"2026-10-25T12:00:00Z"});
         sqlx::query("INSERT INTO experimental_semantic_checkpoints(profile_id,instance_id,episode_id,technical_checkpoint_id,id,revision,body) VALUES('p','exp','ep','t1','s1',1,?)").bind(sem.to_string()).execute(&store.pool).await.unwrap();
+        sqlx::query("INSERT INTO experimental_reflection_runs(profile_id,instance_id,id,revision,body) VALUES('p','exp','run',1,'{}')").execute(&store.pool).await.unwrap();
+        let private=json!({"revision":1,"sourceRefs":[sem["sourceRefs"][0].clone()],"contentSha256":"unchanged","summary":"explicit private output"});
+        sqlx::query("INSERT INTO experimental_private_reflections(profile_id,instance_id,run_id,id,revision,body) VALUES('p','exp','run','reflection',1,?)").bind(private.to_string()).execute(&store.pool).await.unwrap();
+        sqlx::query("INSERT INTO experimental_self_reviews(profile_id,instance_id,reflection_id,candidate_index,id,revision,body) VALUES('p','exp','reflection',0,'review',1,'{}')").execute(&store.pool).await.unwrap();
+        sqlx::query("INSERT INTO experimental_self_records(profile_id,instance_id,id,review_id,revision,body) VALUES('p','exp','record','review',1,?)").bind(private.to_string()).execute(&store.pool).await.unwrap();
         let mut tx=store.pool.begin().await.unwrap();redact_experimental_source_refs(&mut tx,"p","conversation","c1").await.unwrap();tx.commit().await.unwrap();
-        for table in ["experimental_technical_checkpoints","experimental_semantic_checkpoints"]{
+        for table in ["experimental_technical_checkpoints","experimental_semantic_checkpoints","experimental_private_reflections","experimental_self_records"]{
             let availability:String=sqlx::query_scalar(&format!("SELECT json_extract(body,'$.sourceRefs[0].availability') FROM {table} WHERE profile_id='p'")).fetch_one(&store.pool).await.unwrap();
             assert_eq!(availability,"permanently_deleted");
         }

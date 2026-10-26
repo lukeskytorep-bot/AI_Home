@@ -1,0 +1,16 @@
+{
+  "stage": "4B-11 AUDIT FIX 1",
+  "status": "CORRECTED_AWAITING_CI_AND_REAUDIT",
+  "sqliteSchema": 15,
+  "planContentVersion": "1.72",
+  "nativeTests": 414,
+  "reflectionIntegrationTests": 26,
+  "newAuditTests": 5,
+  "frontendTests": 219,
+  "newGitHubRunVerified": false,
+  "liveApiVerified": false,
+  "desktopVerified": false,
+  "osVaultVerified": false,
+  "allOtherBaselineFilesByteIdentical": 608,
+  "baseSha256": "488a76fcbf1e36133be16b5da2b3adeac1f5508d8cecc12ad238d87189279aef"
+}

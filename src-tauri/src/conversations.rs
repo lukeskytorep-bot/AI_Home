@@ -184,3 +184,7 @@ pub(super) async fn execute(
         _ => Err("UNKNOWN_COMMAND"),
     }
 }
+
+#[cfg(test)]
+#[path = "experimental_reflection_audit_tests.rs"]
+mod reflection_audit_tests;

@@ -99,7 +99,7 @@ async fn working_record_seeded_defaults_and_profile_isolation() {
             .fetch_one(&pool)
             .await
             .unwrap(),
-        14
+        15
     );
     assert!(sqlx::query("PRAGMA foreign_key_check")
         .fetch_all(&pool)
@@ -671,7 +671,7 @@ async fn version_eight_migration_seeds_without_changing_profiles_messages_or_pre
             .fetch_one(&pool)
             .await
             .unwrap(),
-        14
+        15
     );
     assert!(sqlx::query("PRAGMA foreign_key_check")
         .fetch_all(&pool)
