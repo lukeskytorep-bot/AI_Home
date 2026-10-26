@@ -1,0 +1,23 @@
+file:///workspace/scratch/8e3755d5c581/schema14fix/AI_Home-main/scripts/verify-boundaries.mjs:2
+let checks=0;const check=(v,message)=>{checks++;if(!v)throw Error(message);};
+                                                            ^
+
+Error: stale SQLite target expectations:
+src-tauri/tests/chat.rs:606: expects 13, storage target 14
+src-tauri/tests/chat.rs:765: expects 13, storage target 14
+src-tauri/tests/chat.rs:855: expects 13, storage target 14
+src-tauri/tests/connections.rs:655: expects 13, storage target 14
+src-tauri/tests/connections.rs:943: expects 13, storage target 14
+src-tauri/tests/conversations.rs:318: expects 13, storage target 14
+src-tauri/tests/conversations.rs:368: expects 13, storage target 14
+src-tauri/tests/imports.rs:626: expects 13, storage target 14
+src-tauri/tests/memory_layers.rs:230: expects 13, storage target 14
+src-tauri/tests/memory_runtime.rs:97: expects 13, storage target 14
+src-tauri/tests/memory_runtime.rs:669: expects 13, storage target 14
+    at check (file:///workspace/scratch/8e3755d5c581/schema14fix/AI_Home-main/scripts/verify-boundaries.mjs:2:61)
+    at file:///workspace/scratch/8e3755d5c581/schema14fix/AI_Home-main/scripts/verify-boundaries.mjs:36:1
+    at ModuleJob.run (node:internal/modules/esm/module_job:561:25)
+    at async node:internal/modules/esm/loader:647:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+Node.js v24.22.1

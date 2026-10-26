@@ -1,0 +1,8 @@
+{
+  "src-tauri/tests/memory_layers.rs": 1,
+  "src-tauri/tests/imports.rs": 1,
+  "src-tauri/tests/conversations.rs": 2,
+  "src-tauri/tests/memory_runtime.rs": 2,
+  "src-tauri/tests/connections.rs": 2,
+  "src-tauri/tests/chat.rs": 3
+}

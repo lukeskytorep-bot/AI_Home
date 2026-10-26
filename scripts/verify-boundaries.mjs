@@ -16,4 +16,24 @@ check(!/\b(?:sqlx|reqwest|tauri|tokio)\b/.test(memoryProtocol),"memory protocol 
 
 const retrievalProtocol=fs.readFileSync("src-tauri/src/retrieval.rs","utf8");
 check(!/\b(?:sqlx|reqwest|tauri|tokio)\b/.test(retrievalProtocol),"retriever contains runtime infrastructure");
+
+// Migration fixtures keep their historical PRAGMA assignments. Assertions after
+// Store::open must check today's target, including both common Rust layouts.
+const storageSource=fs.readFileSync('src-tauri/src/persistence.rs','utf8');
+const storageTarget=storageSource.match(/PRAGMA user_version=(\d+)/);
+check(Boolean(storageTarget),'missing current SQLite storage target');
+function storageAssertions(source){return [...source.matchAll(/assert_eq!\s*\(\s*sqlx::query_scalar(?:::\s*<[^>]+>)?\s*\(\s*"PRAGMA user_version"\s*\)\s*\.fetch_one\([^)]*\)\s*\.await\s*\.unwrap\(\)\s*,\s*(\d+)\s*,?\s*\)/g)];}
+const storageSamples='sqlx::query("PRAGMA user_version=13");\nassert_eq!(sqlx::query_scalar::<_,i64>("PRAGMA user_version").fetch_one(&pool).await.unwrap(),13);\nassert_eq!(\n sqlx::query_scalar::<_, i64>("PRAGMA user_version")\n .fetch_one(&pool).await.unwrap(),\n 14\n);';
+check(JSON.stringify(storageAssertions(storageSamples).map(m=>m[1]))==='["13","14"]','schema assertion scanner must handle both layouts and ignore fixtures');
+const staleStorage=[];let storageAssertionCount=0;
+for(const file of walk('src-tauri/tests').filter(f=>f.endsWith('.rs'))){
+ const source=fs.readFileSync(file,'utf8');
+ for(const match of storageAssertions(source)){
+  storageAssertionCount++;
+  if(match[1]!==storageTarget[1])staleStorage.push(`${file}:${source.slice(0,match.index).split('\n').length}: expects ${match[1]}, storage target ${storageTarget[1]}`);
+ }
+}
+check(storageAssertionCount>0&&staleStorage.length===0,'stale SQLite target expectations:\n'+staleStorage.join('\n'));
+console.log(`SQLite target v${storageTarget[1]}: ${storageAssertionCount} migration assertions checked`);
+
 console.log(`${checks} boundary checks PASS`);

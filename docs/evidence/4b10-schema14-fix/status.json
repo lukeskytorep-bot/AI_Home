@@ -1,0 +1,41 @@
+{
+  "stage": "4B-10 schema14 CI fix",
+  "date": "2026-10-26",
+  "baseZipSha256": "8c594ed2d7c0b95e68f611d5e389fb3e3082b259ab57ac8bf5baf643e7790c88",
+  "githubArchiveCommit": "cf108496fb48db9e648b151232807602ae6981b7",
+  "changedAssertions": 11,
+  "changedRustTestFiles": 6,
+  "rust": {
+    "passed": 156,
+    "failed": 0,
+    "suites": {
+      "chat": 36,
+      "connections": 24,
+      "conversations": 10,
+      "experimental_contracts": 3,
+      "experimental_internal_state": 5,
+      "imports": 23,
+      "memory_layers": 25,
+      "memory_runtime": 30
+    },
+    "command": "cargo test --manifest-path src-tauri/Cargo.toml --no-default-features --test chat --test connections --test conversations --test imports --test memory_runtime --test memory_layers --test experimental_contracts --test experimental_internal_state --locked",
+    "platform": "Linux headless",
+    "rustc": "1.99.1"
+  },
+  "boundaries": 34,
+  "migrationAssertionsChecked": 13,
+  "p2ReferenceChecks": 193,
+  "internalStateStaticChecks": 23,
+  "runtimeChanged": false,
+  "migrationsChanged": false,
+  "dependenciesOrLocksChanged": false,
+  "workflowChanged": false,
+  "notRun": [
+    "full all-targets suite",
+    "desktop feature / Tauri / WebView",
+    "Windows",
+    "frontend Vitest/typecheck/build (UI unchanged)",
+    "live API / real OS vault"
+  ],
+  "status": "TARGETED_LOCAL_PASS_REQUIRES_GITHUB_CI"
+}
