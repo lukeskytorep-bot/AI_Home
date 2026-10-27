@@ -41,8 +41,10 @@ impl CommunitySecretStore for OsCommunitySecretStore {
 #[derive(Clone)]
 pub struct CommunityKeyStore {
     backend: Arc<dyn CommunitySecretStore>,
+    pub(crate) lease: Option<registry::gate::Lease>,
 }
 impl CommunityKeyStore {
+    pub(crate) fn scoped(&self,lease:registry::gate::Lease)->Self { Self { backend:self.backend.clone(),lease:Some(lease) } }
     pub(super) async fn proof_signature(
         &self, scope: &CommunityScope, expected: &PublicIdentity, proof: &proof::Proof,
     ) -> Result<String, IdentityError> {
@@ -53,7 +55,9 @@ impl CommunityKeyStore {
         let expected = expected.clone();
         let bytes = proof.bytes().to_vec();
         let expires = proof.expires;
+        let lease = self.lease.clone();
         tokio::task::spawn_blocking(move || {
+            let _lease = lease.clone();
             let (_, operational, public) = load(backend.as_ref(), &scope, &expected.key_ref)?;
             if public != expected { return Err(IdentityError::ScopeMismatch); }
             if expires < Utc::now() { return Err(IdentityError::Expired); }
@@ -63,10 +67,11 @@ impl CommunityKeyStore {
     pub fn os() -> Self {
         Self {
             backend: Arc::new(OsCommunitySecretStore),
+            lease: None,
         }
     }
     pub fn with_backend(backend: Arc<dyn CommunitySecretStore>) -> Self {
-        Self { backend }
+        Self { backend, lease: None }
     }
     /// Reserve locally, then persist this reference before provisioning/HTTP in 2B.
     pub fn reserve_reference() -> Result<String, IdentityError> {
@@ -91,7 +96,8 @@ impl CommunityKeyStore {
         let backend = self.backend.clone();
         let scope = scope.clone();
         let reference = reference.to_string();
-        tokio::task::spawn_blocking(move||{
+        let lease = self.lease.clone();
+        tokio::task::spawn_blocking(move||{let _lease=lease.clone();
    if backend.read(&reference)?.is_some(){return Err(IdentityError::AlreadyExists);}let identity=crypto::PrivateKey::generate()?;let operational=crypto::PrivateKey::generate()?;
    distinct(&identity.public(),&operational.public())?;let a=identity.encode()?;let b=operational.encode()?;
    let record=Zeroizing::new(format!("AI-HOME-COMMUNITY-KEYSET/1\nscope_sha256={}\nidentity_pkcs8={}\noperational_pkcs8={}\n",scope.binding(),a.as_str(),b.as_str()));backend.create(&reference,&record)?;
@@ -106,7 +112,9 @@ impl CommunityKeyStore {
         let backend = self.backend.clone();
         let scope = scope.clone();
         let reference = reference.to_string();
+        let lease = self.lease.clone();
         tokio::task::spawn_blocking(move || {
+            let _lease = lease.clone();
             load(backend.as_ref(), &scope, &reference).map(|(_, _, p)| p)
         })
         .await
@@ -127,7 +135,8 @@ impl CommunityKeyStore {
         let backend = self.backend.clone();
         let scope = scope.clone();
         let reg = registration.clone();
-        tokio::task::spawn_blocking(move||{
+        let lease = self.lease.clone();
+        tokio::task::spawn_blocking(move||{let _lease=lease.clone();
    let(a,b,actual)=load(backend.as_ref(),&scope,&reg.key_ref)?;if actual!=reg.expected_public{return Err(IdentityError::ScopeMismatch);}
    Ok(json!({"registration_id":reg.registration_id,"identity_signature":a.sign(reg.statement.as_bytes()),"operational_signature":b.sign(reg.statement.as_bytes())}))
   }).await.map_err(|_|IdentityError::VaultUnavailable)?
@@ -140,7 +149,9 @@ impl CommunityKeyStore {
         let backend = self.backend.clone();
         let scope = scope.clone();
         let reference = reference.to_string();
+        let lease = self.lease.clone();
         tokio::task::spawn_blocking(move || {
+            let _lease = lease.clone();
             match load(backend.as_ref(), &scope, &reference) {
                 Ok(_) => {}
                 Err(IdentityError::NotFound) => return Ok(()),

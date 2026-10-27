@@ -1,0 +1,2 @@
+SQLite target v15: 13 migration assertions checked
+34 boundary checks PASS

@@ -1,0 +1,9 @@
+cargo test --manifest-path src-tauri/Cargo.toml --no-default-features --all-targets --locked --offline
+Final strengthened byte assertions: cargo test --manifest-path src-tauri/Cargo.toml --no-default-features --lib community_identity::registry::start::tests --locked --offline
+npm ci --no-audit --no-fund
+npm test
+npm run build
+PYTHONDONTWRITEBYTECODE=1 python3 check_contracts.py
+node scripts/verify-boundaries.mjs
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/<name matching each verify-*.txt log>.py
+Scope: Linux headless, real temporary SQLite + reqwest HTTP loopback, mock secrets. Production HTTPS URL validation, not TLS/live server acceptance. No physical POST assumed for a dispatch marker alone.

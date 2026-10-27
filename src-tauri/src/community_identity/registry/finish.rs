@@ -93,6 +93,18 @@ impl RegistrationFinish {
         keys: &CommunityKeyStore,
         scope: &CommunityScope,
     ) -> Result<FinishProgress, FinishError> {
+        let operation = registry.lease(scope, keys.lease.as_ref()).await?;
+        let guarded_keys = keys.scoped(operation.clone());
+        let mut guarded = self.clone();
+        guarded.tokens = self.tokens.scoped(operation);
+        guarded.complete_inner(registry, &guarded_keys, scope).await
+    }
+    async fn complete_inner(
+        &self,
+        registry: &RegistrationRegistry,
+        keys: &CommunityKeyStore,
+        scope: &CommunityScope,
+    ) -> Result<FinishProgress, FinishError> {
         let (intent, context, committed) = archive(registry, keys, scope).await?;
         if let Some(record) = read(registry, scope).await? {
             if record.id() != context.registration_id() {
@@ -127,6 +139,21 @@ impl RegistrationFinish {
     /// Explicit replay of the already persisted complete bytes, including after
     /// an ambiguous dispatch. Server 4A checks committed before pending expiry.
     pub async fn retry_complete(
+        &self,
+        registry: &RegistrationRegistry,
+        keys: &CommunityKeyStore,
+        scope: &CommunityScope,
+        expected_revision: i64,
+    ) -> Result<FinishProgress, FinishError> {
+        let operation = registry.lease(scope, keys.lease.as_ref()).await?;
+        let guarded_keys = keys.scoped(operation.clone());
+        let mut guarded = self.clone();
+        guarded.tokens = self.tokens.scoped(operation);
+        guarded
+            .retry_complete_inner(registry, &guarded_keys, scope, expected_revision)
+            .await
+    }
+    async fn retry_complete_inner(
         &self,
         registry: &RegistrationRegistry,
         keys: &CommunityKeyStore,
@@ -208,6 +235,21 @@ impl RegistrationFinish {
     /// Explicit recovery rotates the token, even if a previous local copy exists.
     /// A new epoch fences older writers; server generation CAS fences late POSTs.
     pub async fn recover(
+        &self,
+        registry: &RegistrationRegistry,
+        keys: &CommunityKeyStore,
+        scope: &CommunityScope,
+        expected_revision: i64,
+    ) -> Result<FinishProgress, FinishError> {
+        let operation = registry.lease(scope, keys.lease.as_ref()).await?;
+        let guarded_keys = keys.scoped(operation.clone());
+        let mut guarded = self.clone();
+        guarded.tokens = self.tokens.scoped(operation);
+        guarded
+            .recover_inner(registry, &guarded_keys, scope, expected_revision)
+            .await
+    }
+    async fn recover_inner(
         &self,
         registry: &RegistrationRegistry,
         keys: &CommunityKeyStore,
@@ -407,6 +449,20 @@ impl RegistrationFinish {
         keys: &CommunityKeyStore,
         scope: &CommunityScope,
     ) -> Result<SecretToken, FinishError> {
+        let operation = registry.lease(scope, keys.lease.as_ref()).await?;
+        let guarded_keys = keys.scoped(operation.clone());
+        let mut guarded = self.clone();
+        guarded.tokens = self.tokens.scoped(operation);
+        guarded
+            .credential_inner(registry, &guarded_keys, scope)
+            .await
+    }
+    async fn credential_inner(
+        &self,
+        registry: &RegistrationRegistry,
+        keys: &CommunityKeyStore,
+        scope: &CommunityScope,
+    ) -> Result<SecretToken, FinishError> {
         let (_, context, _) = archive(registry, keys, scope).await?;
         let record = read(registry, scope)
             .await?
@@ -436,6 +492,18 @@ impl RegistrationFinish {
         Ok(token)
     }
     pub async fn current(
+        &self,
+        registry: &RegistrationRegistry,
+        keys: &CommunityKeyStore,
+        scope: &CommunityScope,
+    ) -> Result<FinishProgress, FinishError> {
+        let operation = registry.lease(scope, keys.lease.as_ref()).await?;
+        let guarded_keys = keys.scoped(operation.clone());
+        let mut guarded = self.clone();
+        guarded.tokens = self.tokens.scoped(operation);
+        guarded.current_inner(registry, &guarded_keys, scope).await
+    }
+    async fn current_inner(
         &self,
         registry: &RegistrationRegistry,
         keys: &CommunityKeyStore,
@@ -564,6 +632,18 @@ async fn read(
         Ok(Record { revision, body })
     })
     .transpose()
+}
+pub(super) async fn validate_restored(
+    registry: &RegistrationRegistry,
+    scope: &CommunityScope,
+    id: &str,
+) -> Result<(), FinishError> {
+    if let Some(record) = read(registry, scope).await? {
+        if record.id() != id || record.ready() {
+            return Err(FinishError::InvalidResponse);
+        }
+    }
+    Ok(())
 }
 async fn claim(
     registry: &RegistrationRegistry,

@@ -1,0 +1,9 @@
+cargo test --manifest-path src-tauri/Cargo.toml --no-default-features --all-targets --locked --offline
+Final current-component run after privacy/readonly/schema/path/flush refinements: cargo test --manifest-path src-tauri/Cargo.toml --no-default-features --lib community_identity --locked --offline
+npm test
+npm run build
+PYTHONDONTWRITEBYTECODE=1 python3 check_contracts.py
+node scripts/verify-boundaries.mjs
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/<name matching each verify-*.txt log>.py
+Linux/headless only, SQLite real files, kernel fs2 locks and a real same-binary child-process probe; in-memory secret backends. No Windows, force-kill, OS vault or live forum acceptance. One lifecycle case has a Unix-specific permission/symlink branch.
+Full run 550 cases; final component run repeats 115 cases. No extra unique-test count is claimed.

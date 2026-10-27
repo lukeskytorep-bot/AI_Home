@@ -985,6 +985,7 @@ fn token_wire_format_is_exact_and_canonical() {
 async fn registry_v2_migration_preserves_start_and_never_sends_http() {
     let s = setup(false).await;
     let before = s.registry.get(&scope()).await.unwrap();
+    sqlx::query("DROP TABLE community_profile_lifecycle").execute(&s.registry.pool).await.unwrap();
     sqlx::query("DROP TABLE community_registration_dispatches")
         .execute(&s.registry.pool)
         .await
@@ -1014,7 +1015,7 @@ async fn registry_v2_migration_preserves_start_and_never_sends_http() {
             .fetch_one(&registry.pool)
             .await
             .unwrap(),
-        3
+        4
     );
 }
 #[tokio::test]

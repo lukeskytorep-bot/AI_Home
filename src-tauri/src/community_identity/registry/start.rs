@@ -99,6 +99,9 @@ impl RegistrationStart {
         scope: &CommunityScope,
         invite: &str,
     ) -> Result<StartOutcome, StartError> {
+        let operation = registry.lease(scope, keys.lease.as_ref()).await?;
+        let guarded_keys = keys.scoped(operation);
+        let keys = &guarded_keys;
         let intent = registry.load_intent(keys, scope).await?;
         let request = intent.start_request(invite)?;
         let fingerprint = super::super::crypto::digest(request.as_bytes());
@@ -138,6 +141,9 @@ impl RegistrationStart {
         keys: &CommunityKeyStore,
         scope: &CommunityScope,
     ) -> Result<Option<StartOutcome>, StartError> {
+        let operation = registry.lease(scope, keys.lease.as_ref()).await?;
+        let guarded_keys = keys.scoped(operation);
+        let keys = &guarded_keys;
         let intent = registry.load_intent(keys, scope).await?;
         let saved: Option<Option<String>> = sqlx::query_scalar(
             "SELECT response FROM community_registration_starts WHERE scope_binding=?",

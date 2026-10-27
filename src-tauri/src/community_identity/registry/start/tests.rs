@@ -900,6 +900,7 @@ async fn late_failure_does_not_clobber_newer_success() {
 async fn registry_v1_migration_preserves_preparation_and_never_posts() {
     let (temp, registry, keys, backend) = setup().await;
     let before = registry.get(&scope()).await.unwrap();
+    sqlx::query("DROP TABLE community_profile_lifecycle").execute(&registry.pool).await.unwrap();
     // Recreate the exact v1 table inventory; preparation DDL is unchanged.
     sqlx::query("DROP TABLE community_registration_dispatches").execute(&registry.pool).await.unwrap();
     sqlx::query("DROP TABLE community_registration_finishes").execute(&registry.pool).await.unwrap();
@@ -919,7 +920,7 @@ async fn registry_v1_migration_preserves_preparation_and_never_posts() {
             .fetch_one(&registry.pool)
             .await
             .unwrap(),
-        3
+        4
     );
     let client = RegistrationStart::new(Duration::from_secs(5)).unwrap();
     assert!(client

@@ -3,7 +3,7 @@ use super::*;
 use std::sync::Arc;
 const SERVICE: &str = "org.aihome.app.community.tokens.v1";
 const PREFIX: &str = "ai-home-community-token:v1:";
-pub struct SecretToken(Zeroizing<String>);
+pub struct SecretToken(Zeroizing<String>,Option<registry::gate::Lease>);
 impl SecretToken {
     pub(super) fn new(token: String) -> Result<Self, IdentityError> {
         let token = Zeroizing::new(token);
@@ -11,7 +11,7 @@ impl SecretToken {
         if suffix.len() != 43 || crypto::decode(suffix, 32)?.len() != 32 {
             return Err(IdentityError::Invalid);
         }
-        Ok(Self(token))
+        Ok(Self(token,None))
     }
     pub fn as_str(&self) -> &str {
         &self.0
@@ -49,15 +49,28 @@ impl CommunitySecretStore for OsTokenBackend {
 #[derive(Clone)]
 pub struct CommunityTokenStore {
     backend: Arc<dyn CommunitySecretStore>,
+    pub(crate) lease: Option<registry::gate::Lease>,
 }
 impl CommunityTokenStore {
+    pub(crate) async fn remove_scoped(&self,scope:&CommunityScope,reference:&str)->Result<(),IdentityError>{
+        validate_ref(reference)?;
+        let backend=self.backend.clone();let r=reference.to_string();let binding=scope.binding();let lease=self.lease.clone();
+        tokio::task::spawn_blocking(move||{
+            let _lease=lease;
+            let Some(record)=backend.read(&r)? else{return Ok(());};
+            if record.len()>1024||!record.starts_with(&format!("AI-HOME-COMMUNITY-TOKEN/1\nscope_sha256={binding}\n")){return Err(IdentityError::ScopeMismatch);}
+            backend.remove(&r)?;if backend.read(&r)?.is_some(){return Err(IdentityError::VaultUnavailable);}Ok(())
+        }).await.map_err(|_|IdentityError::VaultUnavailable)?
+    }
+    pub(crate) fn scoped(&self,lease:registry::gate::Lease)->Self { Self { backend:self.backend.clone(),lease:Some(lease) } }
     pub fn os() -> Self {
         Self {
             backend: Arc::new(OsTokenBackend),
+            lease: None,
         }
     }
     pub fn with_backend(backend: Arc<dyn CommunitySecretStore>) -> Self {
-        Self { backend }
+        Self { backend, lease: None }
     }
     pub(super) fn reserve() -> String {
         format!("{PREFIX}{}", uuid::Uuid::new_v4().simple())
@@ -77,7 +90,8 @@ impl CommunityTokenStore {
         let reference = reference.to_string();
         let id = id.to_string();
         let agent = agent.to_string();
-        tokio::task::spawn_blocking(move||{
+        let lease = self.lease.clone();
+        tokio::task::spawn_blocking(move||{let _lease=lease.clone();
             if !prefixed(&id,"reg_")||!prefixed(&agent,"agt_")||generation<1{return Err(IdentityError::Invalid);}
             let record=Zeroizing::new(format!("AI-HOME-COMMUNITY-TOKEN/1\nscope_sha256={}\nregistration_id={id}\nagent_id={agent}\ngeneration={generation}\ntoken={}\n",scope.binding(),token.as_str()));
             backend.create(&reference,&record)?;
@@ -101,12 +115,13 @@ impl CommunityTokenStore {
         let reference = reference.to_string();
         let id = id.to_string();
         let agent = agent.to_string();
-        tokio::task::spawn_blocking(move||{
+        let lease = self.lease.clone();
+        tokio::task::spawn_blocking(move||{let _lease=lease.clone();
             let record=backend.read(&reference)?.ok_or(IdentityError::NotFound)?;
             let prefix=format!("AI-HOME-COMMUNITY-TOKEN/1\nscope_sha256={binding}\nregistration_id={id}\nagent_id={agent}\ngeneration={generation}\ntoken=");
             if record.len()>1024{return Err(IdentityError::Invalid);}
             let token=record.strip_prefix(&prefix).and_then(|s|s.strip_suffix('\n')).ok_or(IdentityError::ScopeMismatch)?;
-            SecretToken::new(token.into())
+            {let mut secret=SecretToken::new(token.into())?;secret.1=lease;Ok(secret)}
         }).await.map_err(|_|IdentityError::VaultUnavailable)?
     }
     /// Low-level lifecycle primitive; host must exclude in-flight writers first.
@@ -125,7 +140,9 @@ impl CommunityTokenStore {
         }
         let backend = self.backend.clone();
         let r = reference.to_string();
+        let lease = self.lease.clone();
         tokio::task::spawn_blocking(move || {
+            let _lease = lease.clone();
             backend.remove(&r)?;
             if backend.read(&r)?.is_some() {
                 return Err(IdentityError::VaultUnavailable);

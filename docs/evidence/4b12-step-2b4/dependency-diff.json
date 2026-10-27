@@ -1,0 +1,77 @@
+{
+  "newPackages": [
+    {
+      "name": "fs2",
+      "version": "0.4.3",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "checksum": "9564fc758e15025b46aa6643b1b77d047d1a56a1aea6e01002ac0c7026876213",
+      "dependencies": [
+        "libc",
+        "winapi"
+      ]
+    }
+  ],
+  "removedPackages": [],
+  "existingVersionUpgrades": 0,
+  "changedExistingNodes": [
+    {
+      "name": "ai-home",
+      "version": "0.0.1",
+      "oldDependencies": [
+        "base64 0.22.1",
+        "chrono",
+        "image",
+        "keyring",
+        "lopdf",
+        "p256",
+        "rand_core 0.6.4",
+        "regex",
+        "reqwest",
+        "roxmltree",
+        "serde_json",
+        "sha2",
+        "sqlx",
+        "tauri",
+        "tauri-build",
+        "tauri-codegen",
+        "tauri-macros",
+        "tauri-plugin-dialog",
+        "tauri-runtime",
+        "tauri-runtime-wry",
+        "tauri-utils",
+        "tokio",
+        "uuid",
+        "zeroize",
+        "zip"
+      ],
+      "newDependencies": [
+        "base64 0.22.1",
+        "chrono",
+        "fs2",
+        "image",
+        "keyring",
+        "lopdf",
+        "p256",
+        "rand_core 0.6.4",
+        "regex",
+        "reqwest",
+        "roxmltree",
+        "serde_json",
+        "sha2",
+        "sqlx",
+        "tauri",
+        "tauri-build",
+        "tauri-codegen",
+        "tauri-macros",
+        "tauri-plugin-dialog",
+        "tauri-runtime",
+        "tauri-runtime-wry",
+        "tauri-utils",
+        "tokio",
+        "uuid",
+        "zeroize",
+        "zip"
+      ]
+    }
+  ]
+}

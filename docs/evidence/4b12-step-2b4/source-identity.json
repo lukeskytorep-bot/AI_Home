@@ -1,0 +1,36 @@
+{
+  "baseSourceSha256": "c83ad3a3442fd08895ac4235cb876a95d5a5b92568d1a4d3d82e876b14f6d50a",
+  "baseFiles": 844,
+  "originalFourTableDdlUnchanged": true,
+  "frozenP2Changed": false,
+  "appStoreDeletionBackupCodeChanged": false,
+  "providerAdaptersChanged": false,
+  "workflowsChanged": false,
+  "permissionChanges": false,
+  "newDependency": "fs2 =0.4.3",
+  "legacyTestsAdaptedForRegistrySchema4": [
+    "registry/tests.rs future fixture v4 -> v5",
+    "registry/start/tests.rs remove lifecycle when recreating v1 inventory; target4",
+    "registry/finish/tests.rs remove lifecycle when recreating v2 inventory; target4"
+  ],
+  "allowedModifiedBaselineFiles": [
+    "README.md",
+    "SHA256SUMS.txt",
+    "contracts/community.registration.inventory.v1.json",
+    "docs/AI_HOME_4B_ETAPY_PRACY_v1.0_PL.md",
+    "docs/COMMUNITY_IDENTITY_DEVELOPER.md",
+    "docs/evidence/manifest.sha256.json",
+    "src-tauri/Cargo.lock",
+    "src-tauri/Cargo.toml",
+    "src-tauri/src/community_identity/mod.rs",
+    "src-tauri/src/community_identity/registry.rs",
+    "src-tauri/src/community_identity/registry/finish.rs",
+    "src-tauri/src/community_identity/registry/finish/tests.rs",
+    "src-tauri/src/community_identity/registry/start.rs",
+    "src-tauri/src/community_identity/registry/start/tests.rs",
+    "src-tauri/src/community_identity/registry/tests.rs",
+    "src-tauri/src/community_identity/tokens.rs",
+    "src-tauri/src/community_identity/vault.rs"
+  ],
+  "unchangedBaselineFilesOutsideAllowedList": 827
+}

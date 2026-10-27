@@ -1,0 +1,33 @@
+   Compiling ai-home v0.0.1 (/workspace/scratch/8e3755d5c581/community_start/work/AI_Home/src-tauri)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.87s
+     Running unittests src/lib.rs (src-tauri/target/debug/deps/ai_home-115d9982d99b3172)
+
+running 25 tests
+test community_identity::registry::start::tests::content_length_limit_is_checked_before_reading_body ... ok
+test community_identity::registry::start::tests::committed_response_cannot_inject_a_statement_to_be_signed ... ok
+test community_identity::registry::start::tests::committed_start_requires_recovery_even_with_expired_original_challenge ... ok
+test community_identity::registry::start::tests::committed_response_still_checks_scope_before_marking_recovery ... ok
+test community_identity::registry::start::tests::chunked_body_cannot_bypass_response_limit ... ok
+test community_identity::registry::start::tests::corrupted_saved_context_blocks_cache_and_resend ... ok
+test community_identity::registry::start::tests::close_reopen_reads_cached_context_without_invite_or_post ... ok
+test community_identity::registry::start::tests::durable_marker_failure_prevents_http ... ok
+test community_identity::registry::start::tests::changed_invite_is_rejected_before_another_post ... ok
+test community_identity::registry::start::tests::late_pending_response_cannot_overwrite_newer_committed_context ... ok
+test community_identity::registry::start::tests::missing_vault_keys_prevent_any_post_or_dispatch_marker ... ok
+test community_identity::registry::start::tests::late_failure_does_not_clobber_newer_success ... ok
+test community_identity::registry::start::tests::lost_response_restart_explicit_retry_preserves_exact_request_and_keys ... ok
+test community_identity::registry::start::tests::malformed_json_is_safe_and_preserves_uncertain_attempt ... ok
+test community_identity::registry::start::tests::timeout_configuration_is_bounded ... ok
+test community_identity::registry::start::tests::pending_profile_hash_mismatch_is_not_saved ... ok
+test community_identity::registry::start::tests::expired_cached_pending_context_is_not_resent_or_accepted ... ok
+test community_identity::registry::start::tests::wrong_content_type_is_not_a_challenge ... ok
+test community_identity::registry::start::tests::unvalidated_extra_response_fields_and_server_request_id_are_not_persisted ... ok
+test community_identity::registry::start::tests::real_post_has_exact_route_body_and_durable_signable_challenge ... ok
+test community_identity::registry::start::tests::registry_v1_migration_preserves_preparation_and_never_posts ... ok
+test community_identity::registry::start::tests::response_commit_failure_keeps_durable_unknown_state ... ok
+test community_identity::registry::start::tests::redirects_are_not_followed_and_invite_is_not_forwarded ... ok
+test community_identity::registry::start::tests::rate_limits_have_only_bounded_numeric_retry_after ... ok
+test community_identity::registry::start::tests::whole_http_deadline_includes_waiting_for_headers ... ok
+
+test result: ok. 25 passed; 0 failed; 0 ignored; 0 measured; 144 filtered out; finished in 0.87s
+

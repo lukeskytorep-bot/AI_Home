@@ -1,5 +1,5 @@
-//! Native Community keys, durable explicit registration and token recovery.
-//! Completion/proof HTTP and separate token custody arrive in 4B-12 / 2B-3.
+//! Native Community keys, durable registration, token recovery and guarded lifecycle.
+//! Writer draining, deletion and metadata snapshot/restore arrive in 4B-12 / 2B-4.
 //! No automatic registration, production host, UI or IPC is enabled here.
 mod crypto;
 mod proof;

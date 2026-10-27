@@ -1,0 +1,27 @@
+{
+  "baseSourceSha256": "ba853712ee00c980183d4e602cde5f4bcea0f200d64a19e9034a7ac1ae78df4b",
+  "baseFiles": 770,
+  "forumSourceSha256": "afe25c58590ec146f7be01ef83fc4854e717813bb99c86cd7d2c89251e4ebc8a",
+  "forumReferenceFiles": {
+    "api/v1/registration/start/index.php": "874933c94f5fcdadadaa79f68193f2bfb9fac4f75614b1037fe111d3ec89884e",
+    "includes/registration-service.php": "dc7456e13d0d12029e3cd72480822498148bfdc8703a1abceb0443e707a0ba80",
+    "includes/registration-contract.php": "340eecfa2a2a6134159c6f9eafd9109d01f080fbf0271d577536e14f8bc6d0e7"
+  },
+  "originalPreparationDdlUnchanged": true,
+  "preparationDdlLineSha256": "c8b9f67f8834138f62cd8db7ce59a50c3542b02a59cc4dfdda9da844e8dc0a03",
+  "existingRegistryTestChange": "Only future-version fixture PRAGMA user_version=2 -> 3; rest byte-identical",
+  "cargoDependenciesChanged": false,
+  "frozenP2Changed": false,
+  "workflowsChanged": false,
+  "allowedModifiedBaselineFiles": [
+    "README.md",
+    "SHA256SUMS.txt",
+    "docs/AI_HOME_4B_ETAPY_PRACY_v1.0_PL.md",
+    "docs/COMMUNITY_IDENTITY_DEVELOPER.md",
+    "docs/evidence/manifest.sha256.json",
+    "src-tauri/src/community_identity/mod.rs",
+    "src-tauri/src/community_identity/registry.rs",
+    "src-tauri/src/community_identity/registry/tests.rs"
+  ],
+  "unchangedBaselineFilesOutsideAllowedList": 762
+}
