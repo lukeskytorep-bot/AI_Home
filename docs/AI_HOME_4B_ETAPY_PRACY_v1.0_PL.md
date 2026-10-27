@@ -1,3 +1,15 @@
+# Bieżący stan — treść 1.81 — 27 października 2026 — 2B-5.1 CI fix 1
+
+Po przekazaniu 2B-5.1 Edward zgłosił GitHub build-script failure: writeable/base64 wymagane jako rlib, lecz niedostępne. Status: **AWAITING COLD NATIVE CI**. Lokalna poprawność bazy nie zamyka tej bramki. 2B-5.2 jeszcze nie rozpoczęto.
+
+Poprawiono wyłącznie politykę cache w dwóch istniejących jobach foundation.yml: pozostają pobrane registry/git, usunięto src-tauri/target, a prefiks klucza cargo-downloads-v2 omija dawny cache. Hipoteza niespójnych artefaktów wymaga potwierdzenia świeżą kompilacją w GitHub CI. Bez nowych dependencies, zmian kodu Rust, usuwania lockfile, wyłączania testów, retry lub release. Kompilacja może trwać dłużej.
+
+Nałożyć paczkę na dokładną bazę 2B-5.1 i wypchnąć nowy commit; samo Re-run starego workflow nie zastosuje poprawki. Po zielonym cold native CI/audycie kontynuować 2B-5.2. Jeśli błąd powróci bez target cache, zebrać verbose rustc/build-script log zamiast uznawać diagnozę cache za potwierdzoną.
+
+Raport: docs/AI_HOME_4B12_STEP_2B5_1_CI_FIX_1_PL.md. Całe 2B-5 i 4B-12 pozostają OPEN. Poniżej zachowano historię 1.80.
+
+---
+
 # Bieżący stan — treść 1.80 — 27 października 2026 — 4B-12 krok 2B-5.1: saga usuwania profilu
 
 Edward potwierdził zielony wynik 2B-4. Wykonano pierwszy podkrok integracji 2B-5: po natywnym wstrzyknięciu CommunityLifecycle istniejący profile.delete.permanent koordynuje Community keys/tokens/metadata oraz rzeczywisty profil i historię aplikacji. Status nowego kroku: **IMPLEMENTED / AWAITING CI AND AUDIT**. Całe 2B-5, 2B i 4B-12 pozostają OPEN.

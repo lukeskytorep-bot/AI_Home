@@ -1,0 +1,21 @@
+{
+  "checksPassed": [
+    "native: download-only cache",
+    "native: new independent key family",
+    "native: no fallback to old target cache",
+    "desktop_candidate: download-only cache",
+    "desktop_candidate: new independent key family",
+    "desktop_candidate: no fallback to old target cache",
+    "all other workflow semantics identical",
+    "full locked native tests unchanged",
+    "desktop still manual only",
+    "prepare-lock workflow unchanged",
+    "all other baseline files byte-identical, including Rust/build.rs/Cargo/frontend/contracts"
+  ],
+  "checksCount": 11,
+  "baselineSourceSha256": "6e1c4052b6ba062d0fbf8375a13538a4063d364ef47fc3fda8c515bf3fe6dc5f",
+  "baseWorkflowSha256": "5bffa5c5be1b13086919d316bbab2a7d23117cae9495e016e42da9e5f00fcfb5",
+  "newWorkflowSha256": "504df52b0fc90bbf78c67ac5c99afead8d59eaecc9da34c076c4351341e6bd0d",
+  "nativeCiRun": false,
+  "causeConfirmed": false
+}

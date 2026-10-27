@@ -1,0 +1,38 @@
+--- base/.github/workflows/foundation.yml
++++ fixed/.github/workflows/foundation.yml
+@@ -52,14 +52,14 @@
+         id: rust_version
+         shell: bash
+         run: echo "version=$(rustc --version)" >> "$GITHUB_OUTPUT"
+-      - name: Cache Rust dependencies and build artifacts
++      # Do not restore target/: build scripts must use freshly compiled rlibs.
++      - name: Cache downloaded Rust dependencies
+         uses: actions/cache@v5
+         with:
+           path: |
+             ~/.cargo/registry
+             ~/.cargo/git
+-            src-tauri/target
+-          key: ${{ runner.os }}-${{ github.job }}-${{ steps.rust_version.outputs.version }}-${{ hashFiles('src-tauri/Cargo.lock', 'src-tauri/Cargo.toml') }}
++          key: cargo-downloads-v2-${{ runner.os }}-${{ github.job }}-${{ steps.rust_version.outputs.version }}-${{ hashFiles('src-tauri/Cargo.lock', 'src-tauri/Cargo.toml') }}
+       - name: Linux dependencies
+         if: runner.os == 'Linux'
+         run: sudo apt-get update && sudo apt-get install -y build-essential libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+@@ -107,14 +107,14 @@
+         id: rust_version
+         shell: bash
+         run: echo "version=$(rustc --version)" >> "$GITHUB_OUTPUT"
+-      - name: Cache Rust dependencies and build artifacts
++      # Do not restore target/: build scripts must use freshly compiled rlibs.
++      - name: Cache downloaded Rust dependencies
+         uses: actions/cache@v5
+         with:
+           path: |
+             ~/.cargo/registry
+             ~/.cargo/git
+-            src-tauri/target
+-          key: ${{ runner.os }}-${{ github.job }}-${{ steps.rust_version.outputs.version }}-${{ hashFiles('src-tauri/Cargo.lock', 'src-tauri/Cargo.toml') }}
++          key: cargo-downloads-v2-${{ runner.os }}-${{ github.job }}-${{ steps.rust_version.outputs.version }}-${{ hashFiles('src-tauri/Cargo.lock', 'src-tauri/Cargo.toml') }}
+       - name: Linux dependencies
+         if: runner.os == 'Linux'
+         run: sudo apt-get update && sudo apt-get install -y build-essential libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf
