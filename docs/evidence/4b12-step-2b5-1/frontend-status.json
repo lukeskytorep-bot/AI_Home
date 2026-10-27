@@ -1,0 +1,21 @@
+[
+  {
+    "name": "frontend",
+    "command": [
+      "npm",
+      "test"
+    ],
+    "exitCode": 0,
+    "elapsedSeconds": 8.86
+  },
+  {
+    "name": "build",
+    "command": [
+      "npm",
+      "run",
+      "build"
+    ],
+    "exitCode": 0,
+    "elapsedSeconds": 2.63
+  }
+]

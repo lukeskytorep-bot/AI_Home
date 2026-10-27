@@ -29,6 +29,8 @@ mod memory_history;
 #[path = "memory_retrieval.rs"] mod memory_retrieval;
 #[path = "profile_imports.rs"] mod profile_imports;
 #[path = "activity.rs"] mod activity;
+#[path = "profile_deletion.rs"]
+pub(crate) mod profile_deletion;
 pub(crate) type Failure = &'static str;
 pub(crate) type Tx<'a> = Transaction<'a, Sqlite>;
 const COMMANDS: &[&str] = &[
@@ -243,6 +245,7 @@ pub struct Connections {
     pool: SqlitePool,
     imports: crate::imports::ImportService,
     vault: Vault,
+    community: Option<crate::community_host::CommunityLifecycle>,
     gate: Arc<Mutex<()>>,
     active: Arc<Mutex<HashMap<String, (Cancellation, CallBudget)>>>,
 }
@@ -253,13 +256,25 @@ impl Connections {
             pool,
             imports: crate::imports::ImportService::new(None),
             vault,
+            community: None,
             gate: Arc::new(Mutex::new(())),
             active: Arc::new(Mutex::new(HashMap::new())),
         }
     }
     pub fn with_picker(pool:SqlitePool,vault:Vault,picker:Arc<dyn crate::imports::FilePicker>)->Self{let mut service=Self::new(pool,vault);service.imports=crate::imports::ImportService::new(Some(picker));service}
+    pub fn with_community_lifecycle(mut self, service: crate::community_host::CommunityLifecycle) -> Self {
+        self.community = Some(service);
+        self
+    }
+    pub fn has_community_lifecycle(&self) -> bool { self.community.is_some() }
     pub async fn dispatch(&self, r: Value) -> Value {
-        match self.execute(&r).await {
+        // Once accepted, deletion must keep its host gate and finish (or retain
+        // a durable intent) even when the WebView drops the waiting IPC future.
+        let outcome = if r["command"] == "profile.delete.permanent" {
+            let service = self.clone(); let request = r.clone();
+            tokio::spawn(async move { service.execute(&request).await }).await.unwrap_or(Err("STORAGE_ERROR"))
+        } else { self.execute(&r).await };
+        match outcome {
             Ok(v) => v,
             Err(code) => error(&r, code),
         }
@@ -354,6 +369,11 @@ impl Connections {
             )
         );
         let mut tx = self.pool.begin().await.map_err(|_| "STORAGE_ERROR")?;
+        profile_deletion::bind_host(&mut tx,self.community.as_ref(),command,contract["mutates"]==true).await?;
+        profile_deletion::check_request(&mut tx, r, &fingerprint).await?;
+        if !profile.is_empty() && command != "profile.delete.permanent" && profile_deletion::pending(&mut tx, profile).await? {
+            return Err("POLICY_DENIED");
+        }
         if contract["mutates"] == true {
             if let Some(row) =
                 sqlx::query("SELECT fingerprint,response FROM receipts WHERE request_id=?")
@@ -393,6 +413,9 @@ impl Connections {
                 return Ok(result);
             }
         }
+        if command == "profile.delete.permanent" {
+            return profile_deletion::execute(self, tx, r, &fingerprint, contract).await;
+        }
         let mut launch = None;
         let mut chat_launch = None;
         let mut memory_launch = None;
@@ -404,21 +427,6 @@ impl Connections {
         }
         let result = match command {
             "conversation.delete.permanent" => conversation_storage::execute(&mut tx,command,profile,payload,expected).await?,
-            "profile.delete.permanent" => {
-                if payload["confirm"] != true { return Err("VALIDATION_ERROR"); }
-                let p=get(&mut tx,"profiles","",profile).await?;
-                if revision(&p)? != expected { return Err("REVISION_CONFLICT"); }
-                if p["status"] != "archived" { return Err("POLICY_DENIED"); }
-                let running:i64=sqlx::query_scalar("SELECT COUNT(*) FROM operations WHERE profile_id=? AND json_extract(body,'$.status') IN ('queued','running')").bind(profile).fetch_one(&mut *tx).await.map_err(|_|"STORAGE_ERROR")?;if running!=0{return Err("POLICY_DENIED");}
-                let experimental_statuses:Vec<String>=sqlx::query_scalar("SELECT json_extract(body,'$.status') FROM experimental_instances WHERE profile_id=?").bind(profile).fetch_all(&mut *tx).await.map_err(|_|"STORAGE_ERROR")?;
-                if experimental_statuses.iter().any(|status|status!="inactive"){return Err("POLICY_DENIED");}
-                for table in ["experimental_self_records","experimental_self_reviews","experimental_private_reflections","experimental_reflection_runs","experimental_wake_candidates","experimental_internal_state_events","experimental_internal_state_snapshots","experimental_internal_state_blobs","experimental_semantic_checkpoints","experimental_technical_checkpoints","experimental_event_cursors","experimental_actions","experimental_refusals","experimental_decisions","experimental_wake_plans","experimental_work_episodes","experimental_instances","message_documents","chat_replay","attachments","chat_runs","context_segments","messages","knowledge_sources","persistent_guidance","memory_version_metadata","memory_versions","memory_attempts","memory_decisions","memory_proposals","memory_runs","memory_metadata","memory_records","profile_import_materials","import_materials","chat_vision_policies","chat_policies","memory_contexts","connection_models","routes","connections","import_blobs","operations","conversation_cursors","conversations","profile_events"]{let q=format!("DELETE FROM {table} WHERE profile_id=?");sqlx::query(&q).bind(profile).execute(&mut *tx).await.map_err(|_|"STORAGE_ERROR")?;}
-                crate::deletion::tombstone_profile_receipts(&mut tx,profile).await?;
-                sqlx::query("DELETE FROM profiles WHERE id=?").bind(profile).execute(&mut *tx).await.map_err(|_|"STORAGE_ERROR")?;
-                sqlx::query("DELETE FROM profile_cursors").execute(&mut *tx).await.map_err(|_|"STORAGE_ERROR")?;
-                let fk:Vec<(String,i64,String,i64)>=sqlx::query_as("PRAGMA foreign_key_check").fetch_all(&mut *tx).await.map_err(|_|"STORAGE_ERROR")?;if !fk.is_empty(){return Err("STORAGE_ERROR");}
-                json!({"deleted":true,"profileId":profile})
-            }
             "profile.create" => {
                 let name = payload["displayName"].as_str().unwrap().trim();
                 if name.is_empty() || name.len() > 256 {

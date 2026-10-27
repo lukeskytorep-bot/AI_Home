@@ -21,6 +21,11 @@ impl Application {
     pub fn new(store:Store)->Self{Self::with_vault(store,crate::vault::Vault::os())}
     pub fn with_vault(store:Store,vault:crate::vault::Vault)->Self{let mut kernel=Kernel::new();kernel.ready();let connections=crate::connections::Connections::new(store.pool.clone(),vault);Self{store,kernel,gate:Mutex::new(()),connections}}
     pub fn with_file_picker(store:Store,vault:crate::vault::Vault,picker:std::sync::Arc<dyn crate::imports::FilePicker>)->Self{let mut kernel=Kernel::new();kernel.ready();let connections=crate::connections::Connections::with_picker(store.pool.clone(),vault,picker);Self{store,kernel,gate:Mutex::new(()),connections}}
+    /// Native integration seam only. Registration/UI and coordinated backup
+    /// are not enabled by this builder. The desktop host does not call it yet.
+    pub fn with_community_lifecycle(mut self,service:crate::community_host::CommunityLifecycle)->Self{
+        self.connections=self.connections.clone().with_community_lifecycle(service);self
+    }
     pub fn stop(&mut self){self.kernel.stop();}
     pub async fn dispatch(&self,r:Value)->Dispatch{
         let _guard=self.gate.lock().await;
@@ -31,6 +36,22 @@ impl Application {
         if r["contractVersion"]!=1{return Ok(reject("UNSUPPORTED_CONTRACT_VERSION"))}
         if !schema::dto("CommandEnvelope",r){return Ok(reject("VALIDATION_ERROR"))}
         let command=r["command"].as_str().unwrap();
+        if command!="profile.delete.permanent" {
+            if let Some(profile)=r["profileId"].as_str(){
+                let pending:Option<i64>=sqlx::query_scalar("SELECT 1 FROM profile_deletion_jobs WHERE profile_id=?").bind(profile).fetch_optional(&self.store.pool).await?;
+                if pending.is_some(){return Ok(reject("POLICY_DENIED"))}
+            }
+        }
+        // Pending cross-store deletion owns its request ID across all command
+        // families, not just profile/connection commands.
+        if crate::connections::profile_deletion::reserved_request(&self.store.pool,r).await? {return Ok(reject("IDEMPOTENCY_CONFLICT"))}
+        // This intermediate native seam cannot promise a backup of both stores.
+        // Refuse backup mutation until the next coordinated-backup substep.
+        if matches!(command,"backup.create"|"backup.restore.preflight"|"backup.restore.request") &&
+            (self.connections.has_community_lifecycle() || crate::connections::profile_deletion::backup_blocked(&self.store.pool).await?) {
+            return Ok(reject("POLICY_DENIED"));
+        }
+
         if crate::backup::restore_pending_for_store(&self.store) && command!="backup.restore.request" {
             let mutates=if crate::connections::supports(command){crate::connections::mutates(command)}else{
                 let catalog=embedded(include_str!("../../contracts/ipc.catalog.json"));let foundation=embedded(include_str!("../../contracts/foundation.ipc.json"));let backup=embedded(include_str!("../../contracts/backup.ipc.json"));let export=embedded(include_str!("../../contracts/export.ipc.json"));let diagnostics=embedded(include_str!("../../contracts/diagnostics.ipc.json"));
@@ -91,6 +112,10 @@ impl Application {
         if !["en","pl"].contains(&p["locale"].as_str().unwrap_or(""))||!["orbital","aurora"].contains(&p["themeId"].as_str().unwrap_or("")){return Ok(reject("VALIDATION_ERROR"))}
         let fingerprint=format!("{:x}",Sha256::digest(json!([r["command"],expected,p["locale"],p["themeId"],p["themeVariant"]]).to_string().as_bytes()));
         let mut tx=self.store.pool.begin().await?;
+        // Check inside this transaction too: another host may reserve the ID
+        // after the dispatcher-level check and before preferences are written.
+        let deletion_id:Option<i64>=sqlx::query_scalar("SELECT 1 FROM profile_deletion_jobs WHERE request_id=?").bind(r["requestId"].as_str().unwrap()).fetch_optional(&mut *tx).await?;
+        if deletion_id.is_some(){return Ok(reject("IDEMPOTENCY_CONFLICT"))}
         if let Some(row)=sqlx::query("SELECT fingerprint,response FROM receipts WHERE request_id=?").bind(r["requestId"].as_str().unwrap()).fetch_optional(&mut *tx).await?{
             let response=if row.get::<&str,_>("fingerprint")==fingerprint{serde_json::from_str(row.get::<&str,_>("response")).map_err(|_|sqlx::Error::Protocol("invalid receipt".into()))?}else{error(r,"IDEMPOTENCY_CONFLICT")};
             if response["ok"]==true && (!schema::dto("AppPreferences",&response["result"])||response["requestId"]!=r["requestId"]||response["contractVersion"]!=1){return Err(sqlx::Error::Protocol("invalid receipt".into()))}

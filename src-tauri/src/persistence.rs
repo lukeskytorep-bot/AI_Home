@@ -2,6 +2,7 @@ use serde_json::{json,Value};
 use sqlx::{sqlite::{SqliteConnectOptions,SqlitePoolOptions},Row,SqlitePool};
 use std::path::{Path,PathBuf};
 use crate::domain::schema;
+pub const CURRENT_SCHEMA:i64=16;
 pub struct Store {pub pool:SqlitePool,path:Option<PathBuf>}
 impl Store {
     pub async fn open(path:&Path)->Result<Self,sqlx::Error>{
@@ -14,7 +15,7 @@ impl Store {
         let pool=SqlitePoolOptions::new().max_connections(1).connect_with(options).await?;
         let mut tx=pool.begin().await?;
         let version:i64=sqlx::query_scalar("PRAGMA user_version").fetch_one(&mut *tx).await?;
-        if version>15{return Err(sqlx::Error::Protocol("unsupported storage version".into()))}
+        if version>CURRENT_SCHEMA{return Err(sqlx::Error::Protocol("unsupported storage version".into()))}
         sqlx::query("CREATE TABLE IF NOT EXISTS preferences (id INTEGER PRIMARY KEY CHECK(id=1), revision INTEGER NOT NULL, body TEXT NOT NULL)").execute(&mut *tx).await?;
         sqlx::query("CREATE TABLE IF NOT EXISTS receipts (request_id TEXT PRIMARY KEY, fingerprint TEXT NOT NULL, response TEXT NOT NULL)").execute(&mut *tx).await?;
         sqlx::query("CREATE TABLE IF NOT EXISTS app_events (sequence INTEGER PRIMARY KEY AUTOINCREMENT, body TEXT NOT NULL)").execute(&mut *tx).await?;
@@ -71,6 +72,10 @@ impl Store {
             let record=json!({"schemaVersion":1,"id":format!("working-{profile}"),"profileId":profile,"revision":1,"createdAt":timestamp,"kind":"working","state":"empty"});
             sqlx::query("INSERT OR IGNORE INTO memory_records(profile_id,id,revision,body) VALUES(?,?,1,?)").bind(profile).bind(record["id"].as_str().unwrap()).bind(record.to_string()).execute(&mut *tx).await?;
         }
+        // Durable app-side intent; no success receipt exists until both stores
+        // have completed deletion. FK keeps an unfinished profile available.
+        sqlx::query("CREATE TABLE IF NOT EXISTS profile_deletion_jobs (profile_id TEXT PRIMARY KEY REFERENCES profiles(id), request_id TEXT NOT NULL UNIQUE CHECK(length(request_id) BETWEEN 1 AND 128), fingerprint TEXT NOT NULL CHECK(length(fingerprint)=64), expected_revision INTEGER NOT NULL CHECK(expected_revision>0))").execute(&mut *tx).await?;
+        sqlx::query("CREATE TABLE IF NOT EXISTS community_host_binding (id INTEGER PRIMARY KEY CHECK(id=1), registry_binding TEXT NOT NULL CHECK(length(registry_binding)=64))").execute(&mut *tx).await?;
         // A restarted process cannot resume a network request. Keep a durable safe error.
         let pending=sqlx::query("SELECT profile_id,id,revision,body FROM operations WHERE json_extract(body,'$.status') IN ('queued','running')").fetch_all(&mut *tx).await?;
         for row in pending {
@@ -126,7 +131,7 @@ impl Store {
         let recovery_now=chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis,true);
         sqlx::query("UPDATE experimental_instances SET revision=revision+1, body=json_set(body,'$.revision',revision+1,'$.runtimeGeneration',json_extract(body,'$.runtimeGeneration')+1,'$.status','interrupted','$.updatedAt',?) WHERE json_extract(body,'$.status')='running'").bind(&recovery_now).execute(&mut *tx).await?;
         sqlx::query("UPDATE experimental_actions SET revision=revision+1, body=json_set(body,'$.revision',revision+1,'$.state','uncertain','$.updatedAt',?) WHERE json_extract(body,'$.state')='sent'").bind(&recovery_now).execute(&mut *tx).await?;
-        sqlx::query("PRAGMA user_version=15").execute(&mut *tx).await?;tx.commit().await?;
+        sqlx::query("PRAGMA user_version=16").execute(&mut *tx).await?;tx.commit().await?;
         let store=Self{pool,path};store.preferences().await?;Ok(store)
     }
 

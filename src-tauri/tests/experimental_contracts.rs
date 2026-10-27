@@ -56,7 +56,7 @@ fn experimental_dtos_validate_and_reject_privacy_shortcuts(){
 async fn schema_14_persists_experimental_and_internal_state_foundation_with_foreign_keys(){
     let store=Store::memory().await.unwrap();
     let pool=&store.pool;
-    assert_eq!(sqlx::query_scalar::<_,i64>("PRAGMA user_version").fetch_one(pool).await.unwrap(),15);
+    assert_eq!(sqlx::query_scalar::<_,i64>("PRAGMA user_version").fetch_one(pool).await.unwrap(),16);
     let profile=json!({"schemaVersion":1,"id":"profile-a","revision":1,"displayName":"Experimental","createdAt":"2026-10-24T12:00:00Z","updatedAt":"2026-10-24T12:00:00Z"});
     sqlx::query("INSERT INTO profiles(id,revision,body) VALUES(?,1,?)").bind("profile-a").bind(profile.to_string()).execute(pool).await.unwrap();
     let inst=instance("profile-a");
@@ -83,7 +83,7 @@ async fn actual_v13_database_migrates_to_v14_without_changing_existing_experimen
     for table in ["experimental_wake_candidates","experimental_internal_state_events","experimental_internal_state_snapshots","experimental_internal_state_blobs"] {sqlx::query(&format!("DROP TABLE {table}")).execute(&pool).await.unwrap();}
     sqlx::query("PRAGMA user_version=13").execute(&pool).await.unwrap();drop(store);pool.close().await;
     let store=Store::open(&path).await.unwrap();let pool=store.pool.clone();
-    assert_eq!(sqlx::query_scalar::<_,i64>("PRAGMA user_version").fetch_one(&pool).await.unwrap(),15);
+    assert_eq!(sqlx::query_scalar::<_,i64>("PRAGMA user_version").fetch_one(&pool).await.unwrap(),16);
     let body:String=sqlx::query("SELECT body FROM profiles WHERE id='standard-a'").fetch_one(&pool).await.unwrap().get(0);assert_eq!(body,profile_body);
     let exp_body:String=sqlx::query("SELECT body FROM profiles WHERE id='experimental-a'").fetch_one(&pool).await.unwrap().get(0);assert_eq!(exp_body,exp_profile);
     let instance_count:i64=sqlx::query_scalar("SELECT COUNT(*) FROM experimental_instances WHERE profile_id='experimental-a'").fetch_one(&pool).await.unwrap();assert_eq!(instance_count,1);

@@ -1,4 +1,5 @@
 pub mod community_identity;
+pub mod community_host;
 pub mod community_connector;
 pub mod application;
 pub mod domain;

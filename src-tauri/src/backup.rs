@@ -4,7 +4,7 @@ use sqlx::{Connection,Row,SqliteConnection};
 use std::{fs,fs::OpenOptions,io::{Read,Write},path::{Path,PathBuf}};
 use crate::persistence::Store;
 
-const CURRENT_SCHEMA:i64=15;
+use crate::persistence::CURRENT_SCHEMA;
 const MANIFEST_VERSION:i64=1;
 
 fn io_error(message:&str)->sqlx::Error{sqlx::Error::Protocol(message.into())}
@@ -80,10 +80,13 @@ async fn freeze_operations(store:&Store)->Result<(),sqlx::Error>{
     tx.commit().await?;Ok(())
 }
 
-async fn validate_restore_target(store:&Store,id:&str)->Result<Value,sqlx::Error>{let root=root(store)?;let m=find_manifest(&root,id)?;let db=database_path(&backup_dir(&root),id);if file_hash(&db)?!=m["sha256"]{return Err(io_error("backup checksum mismatch"))}let check=inspect(&db).await?;Ok(json!({"manifest":m,"check":check}))}
+async fn validate_restore_target(store:&Store,id:&str)->Result<Value,sqlx::Error>{let root=root(store)?;let m=find_manifest(&root,id)?;let db=database_path(&backup_dir(&root),id);if file_hash(&db)?!=m["sha256"]{return Err(io_error("backup checksum mismatch"))}let check=inspect(&db).await?;reject_incomplete_community(&db).await?;Ok(json!({"manifest":m,"check":check}))}
 
 pub async fn dispatch(store:&Store,r:&Value)->Result<Value,sqlx::Error>{
     let root=root(store)?;let command=r["command"].as_str().unwrap_or("");
+    if matches!(command,"backup.create"|"backup.restore.preflight"|"backup.restore.request") && crate::connections::profile_deletion::backup_blocked(&store.pool).await? {
+        return Err(io_error("profile deletion pending"));
+    }
     match command{
         "backup.create"=>create(store,r["requestId"].as_str().unwrap(),"manual").await,
         "backup.list"=>Ok(json!({"items":list_manifests(&root)?})),
@@ -123,7 +126,7 @@ async fn recover_current_from_safety(app_data:&Path,req:&Value)->Result<(),sqlx:
 async fn apply_one(app_data:&Path,req:&Value)->Result<Value,sqlx::Error>{
     let request_id=req["requestId"].as_str().ok_or_else(||io_error("pending restore request id invalid"))?;let id=req["backupId"].as_str().filter(|x|safe_id(x)).ok_or_else(||io_error("pending restore invalid"))?;
     if let Some(done)=result_by_request(app_data,request_id)?{return Ok(done)}
-    let source=database_path(&backup_dir(app_data),id);if file_hash(&source)?!=req["backupSha256"]{return Err(io_error("pending restore checksum mismatch"))}let source_check=inspect(&source).await?;
+    let source=database_path(&backup_dir(app_data),id);if file_hash(&source)?!=req["backupSha256"]{return Err(io_error("pending restore checksum mismatch"))}let source_check=inspect(&source).await?;reject_incomplete_community(&source).await?;
     recover_current_from_safety(app_data,req).await?;let target=app_data.join("foundation.sqlite3");
     if file_hash(&target).ok().as_deref()==req["backupSha256"].as_str()&&inspect(&target).await.is_ok(){let result=json!({"applied":true,"requestId":request_id,"backupId":id,"safetyBackupId":req["safetyBackupId"],"appliedAt":chrono::Utc::now().to_rfc3339(),"sourceSchemaVersion":source_check["schemaVersion"],"restoredSchemaVersion":source_check["schemaVersion"]});write_json_once(&result_for(app_data,request_id),&result)?;return Ok(result)}
     // WAL/SHM are never unlinked manually. SQLite checkpoints the closed current database after a verified final safety snapshot exists.
@@ -140,5 +143,20 @@ async fn apply_one(app_data:&Path,req:&Value)->Result<Value,sqlx::Error>{
 /// manufacture an empty replacement for user data. A failure aborts startup with the safety backup and ledger intact.
 pub async fn apply_pending_restore(app_data:&Path)->Result<Option<Value>,sqlx::Error>{
     fs::create_dir_all(request_dir(app_data)).map_err(|_|io_error("restore ledger directory create failed"))?;fs::create_dir_all(result_dir(app_data)).map_err(|_|io_error("restore result directory create failed"))?;
-    let Some(req)=pending_request(app_data)? else{return Ok(None)};apply_one(app_data,&req).await.map(Some)
+    let Some(req)=pending_request(app_data)? else{return Ok(None)};
+    // Do not let an older queued restore discard an unfinished deletion intent.
+    // Refusal is not corruption and must never trigger safety-copy replacement.
+    let current=app_data.join("foundation.sqlite3");
+    if current.is_file(){reject_incomplete_community(&current).await?;}
+    apply_one(app_data,&req).await.map(Some)
+}
+
+async fn reject_incomplete_community(path:&Path)->Result<(),sqlx::Error>{
+    let options=sqlx::sqlite::SqliteConnectOptions::new().filename(path).read_only(true).create_if_missing(false);
+    let mut c=SqliteConnection::connect_with(&options).await?;
+    for table in ["profile_deletion_jobs","community_host_binding"]{
+        let has:i64=sqlx::query_scalar("SELECT count(*) FROM sqlite_master WHERE type='table' AND name=?").bind(table).fetch_one(&mut c).await?;
+        if has!=0 && sqlx::query_scalar::<_,i64>(&format!("SELECT count(*) FROM {table}")).fetch_one(&mut c).await?!=0{return Err(io_error("coordinated Community restore required"));}
+    }
+    c.close().await?;Ok(())
 }

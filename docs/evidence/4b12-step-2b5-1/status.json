@@ -1,0 +1,134 @@
+[
+  {
+    "name": "rust-all",
+    "command": [
+      "/workspace/scratch/8e3755d5c581/step2b5/cargo/bin/cargo",
+      "test",
+      "--manifest-path",
+      "src-tauri/Cargo.toml",
+      "--no-default-features",
+      "--all-targets",
+      "--locked",
+      "--offline"
+    ],
+    "exitCode": 0,
+    "elapsedSeconds": 199.14
+  },
+  {
+    "name": "p2",
+    "command": [
+      "python3",
+      "check_contracts.py"
+    ],
+    "exitCode": 0,
+    "elapsedSeconds": 0.05
+  },
+  {
+    "name": "verify-boundaries",
+    "command": [
+      "node",
+      "scripts/verify-boundaries.mjs"
+    ],
+    "exitCode": 0,
+    "elapsedSeconds": 0.08
+  },
+  {
+    "name": "verify-command-parity",
+    "command": [
+      "python3",
+      "scripts/verify-command-parity.py"
+    ],
+    "exitCode": 0,
+    "elapsedSeconds": 0.03
+  },
+  {
+    "name": "verify-standard-closure",
+    "command": [
+      "python3",
+      "scripts/verify-standard-closure.py"
+    ],
+    "exitCode": 0,
+    "elapsedSeconds": 0.04
+  },
+  {
+    "name": "verify-standard-release",
+    "command": [
+      "python3",
+      "scripts/verify-standard-release.py"
+    ],
+    "exitCode": 0,
+    "elapsedSeconds": 0.02
+  },
+  {
+    "name": "verify-experimental-foundation",
+    "command": [
+      "python3",
+      "scripts/verify-experimental-foundation.py"
+    ],
+    "exitCode": 0,
+    "elapsedSeconds": 0.03
+  },
+  {
+    "name": "verify-experimental-runtime",
+    "command": [
+      "python3",
+      "scripts/verify-experimental-runtime.py"
+    ],
+    "exitCode": 0,
+    "elapsedSeconds": 0.03
+  },
+  {
+    "name": "verify-experimental-continuity",
+    "command": [
+      "python3",
+      "scripts/verify-experimental-continuity.py"
+    ],
+    "exitCode": 0,
+    "elapsedSeconds": 0.02
+  },
+  {
+    "name": "verify-experimental-internal-state",
+    "command": [
+      "python3",
+      "scripts/verify-experimental-internal-state.py"
+    ],
+    "exitCode": 0,
+    "elapsedSeconds": 0.02
+  },
+  {
+    "name": "verify-experimental-reflection",
+    "command": [
+      "python3",
+      "scripts/verify-experimental-reflection.py"
+    ],
+    "exitCode": 0,
+    "elapsedSeconds": 0.02
+  },
+  {
+    "name": "verify-community-reader",
+    "command": [
+      "python3",
+      "scripts/verify-community-reader.py"
+    ],
+    "exitCode": 0,
+    "elapsedSeconds": 0.03
+  },
+  {
+    "name": "verify-community-identity",
+    "command": [
+      "python3",
+      "scripts/verify-community-identity.py"
+    ],
+    "exitCode": 0,
+    "elapsedSeconds": 0.03
+  },
+  {
+    "name": "verify-rust-source-text",
+    "command": [
+      "python3",
+      "scripts/verify-rust-source-text.py"
+    ],
+    "exitCode": 0,
+    "elapsedSeconds": 0.05
+  }
+]

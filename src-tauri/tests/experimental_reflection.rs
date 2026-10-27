@@ -592,7 +592,7 @@ async fn actual_v14_migration_preserves_preferences_and_existing_instance_withou
         .fetch_one(&migrated.pool)
         .await
         .unwrap();
-    assert_eq!(version, 15);
+    assert_eq!(version, 16);
     assert_eq!(migrated.preferences().await.unwrap(), prefs);
     let after: String =
         sqlx::query_scalar("SELECT body FROM experimental_instances WHERE id='exp'")
@@ -670,7 +670,7 @@ async fn full_backup_restore_keeps_private_records_but_portable_export_and_diagn
     let backup = backup::dispatch(&f.store, &request("backup.create", json!({}), None))
         .await
         .unwrap();
-    assert_eq!(backup["schemaVersion"], 15);
+    assert_eq!(backup["schemaVersion"], 16);
     let bid = backup["id"].as_str().unwrap();
     let app = Application::new(Store::open(&path).await.unwrap());
     let ex = app

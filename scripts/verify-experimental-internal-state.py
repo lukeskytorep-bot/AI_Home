@@ -14,7 +14,7 @@ ok('One transition receives the whole elapsed interval' in mod,'restart must not
 ok('NeutralEventDraft' in mod and 'WakeCandidateDraft' in mod,'neutral event/wake candidate outputs missing')
 ok('experimental_internal_state_snapshots' in p and 'experimental_internal_state_blobs' in p,'versioned internal state storage missing')
 ok('experimental_internal_state_events' in p and 'experimental_wake_candidates' in p,'event/candidate storage missing')
-ok('if version>15' in p and 'PRAGMA user_version=15' in p,'storage target must be v15')
+ok('if version>CURRENT_SCHEMA' in p and 'pub const CURRENT_SCHEMA:i64=16' in p and 'PRAGMA user_version=16' in p,'storage target must be v16')
 ok('internal_state:Option<Value>' in rt and 'internal_state_events:Vec<Value>' in rt and 'wake_candidates:Vec<Value>' in rt,'OpportunityPacket internal state fields missing')
 ok('internal_wake_reason' in rt and 'origin=="initial_configuration"' in rt,'wake candidate scheduler boundary missing')
 ok('interruptEvents' in rt and 'internal_state:' in rt,'AI-selected sleep must control internal wake interrupts')
@@ -27,7 +27,7 @@ ok('candidates.first()' not in rt,'internal wake selection must not stop at firs
 ok('candidates.iter().find_map' in rt,'internal wake selection must scan for an allowed candidate')
 ok('internal_wake_selects_first_candidate_allowed_by_ai_not_first_candidate_in_storage' in t,'allowed-candidate ordering regression missing')
 ok('ActionExecutor' not in mod and 'DecisionChoice' not in mod,'InternalStateProvider must not execute actions or decide')
-conn=(root/'src-tauri/src/connections.rs').read_text();life=(root/'src-tauri/tests/lifecycle.rs').read_text()
+conn=(root/'src-tauri/src/connections.rs').read_text()+(root/'src-tauri/src/profile_deletion.rs').read_text();life=(root/'src-tauri/tests/lifecycle.rs').read_text()
 ok(all(x in conn for x in ['experimental_wake_candidates','experimental_internal_state_events','experimental_internal_state_snapshots','experimental_internal_state_blobs']),'internal-state records must participate in permanent profile deletion')
 ok('state-event-delete-a' in life and 'candidate-delete-a' in life and 'blob-delete-a' in life,'internal-state lifecycle deletion regression missing')
 if fail:

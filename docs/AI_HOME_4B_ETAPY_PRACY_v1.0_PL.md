@@ -1,3 +1,49 @@
+# Bieżący stan — treść 1.80 — 27 października 2026 — 4B-12 krok 2B-5.1: saga usuwania profilu
+
+Edward potwierdził zielony wynik 2B-4. Wykonano pierwszy podkrok integracji 2B-5: po natywnym wstrzyknięciu CommunityLifecycle istniejący profile.delete.permanent koordynuje Community keys/tokens/metadata oraz rzeczywisty profil i historię aplikacji. Status nowego kroku: **IMPLEMENTED / AWAITING CI AND AUDIT**. Całe 2B-5, 2B i 4B-12 pozostają OPEN.
+
+- Store **v16** dodaje trwały profile_deletion_jobs i community_host_binding; registry pozostaje **v4**. Intencja i powiązanie z kanonicznym registry path są zapisane przed cleanup. Receipt sukcesu powstaje dopiero z finalnym usunięciem danych aplikacji.
+- Błąd vault lub finalnego commitu zachowuje profil i intent do jawnego retry/restart recovery. Nowy request ID może dołączyć do tego samego profile/revision intent, a finalny commit utrwala także oryginalny receipt. ID zarezerwowane przez intent nie może zostać użyte dla innej komendy.
+- Porzucenie oczekiwania IPC nie porzuca lokalnego workera. Restart sam nie uruchamia HTTP ani cleanup. Nie generuje się nowych kluczy.
+- Wymagania archived / brak queued/running operations / wyłącznie inactive Experimental pozostają warunkami przed vault. Nie ma owner override. Inne profile są izolowane.
+- Pin blokuje przypadkowe podłączenie innego rejestru oraz obejście po odłączeniu native serwisu. Profil w trakcie sagi nie przyjmuje innych scoped poleceń. Odczyt nie tworzy pina.
+- **Desktop nadal nie wstrzykuje serwisu. Registration/UI/nowe IPC pozostają wyłączone.** Ten podkrok testuje natywną integrację przez rzeczywisty dispatcher; nie jest odbiorem użytkowym.
+- Koordynowane backup/restore jeszcze nie powstało. Native Community host/pin/intent odrzucają Store-only backup i restore zamiast deklarować niekompletną kopię jako pełną. Startup guard nie pozwala staremu restore ledger skasować pina/intentów. Domyślny Standard bez aktywacji tego seam nadal wykonuje zwykłe backupy v16.
+
+Lokalnie: **Rust 563/563 (w tym 13 nowych), UI 219/219, build PASS, P2 193/193, granice 34/34, scanner 14 asercji v16, parity 54/54**. Cargo.toml/lock, frontend, frozen P2, uprawnienia i workflow bez zmian. Windows/Tauri/WebView, real OS vault/live forum i force-kill nadal wymagają osobnego odbioru. Szczegóły i logi: docs/AI_HOME_4B12_STEP_2B5_1_PROFILE_DELETION_PL.md oraz docs/evidence/4b12-step-2b5-1/.
+
+Następne podkroki są jawnie rozdzielone:
+
+1. **2B-5.2** — wspólne backup/restore obu baz, restart recovery etapów i jawne uzgodnienie host pina bez cofania lokalnych tombstone i bez automatycznego token trust.
+2. **2B-5.3** — direction/capability checks oraz registration IPC; dopiero po nich włączenie ścieżki w produkcyjnym desktopie.
+3. Dalsze 4B-12 — podpisane zapisy forum i feed; Messenger/A2A 4B-13, UI Experimental 4B-14.
+
+Standardowe CI z push wystarczy; nie dodano release/instalatorów. Poniżej zachowano historyczny plan i zakres 2B-4.
+
+---
+
+# Bieżący stan — treść 1.79 — 27 października 2026 — 4B-12 krok 2B-4: natywny lifecycle Community
+
+Edward potwierdził zielony wynik 2B-3 i upoważnił następny krok. Dokładna baza AI_HOME_4B12_STEP_2B3_SOURCE.zip, SHA-256 `c83ad3a3442fd08895ac4235cb876a95d5a5b92568d1a4d3d82e876b14f6d50a`, 844 pliki. Potwierdzenie użytkownika bez niezależnego odczytu nowego GitHub run.
+
+Wykonany 2B-4 jest natywnym lifecycle rejestru Community. Nie jest jeszcze integracją z profile.delete.permanent, backup.create/restore aplikacji ani IPC. Te połączenia pozostają następnym odbiorem 2B-5 przed udostępnieniem registration użytkownikowi. Produkcyjny host nadal nie otwiera ani nie wywołuje modułu automatycznie.
+
+Dodano OS owner-lock per stabilna chroniona ścieżka rejestru, współdzielony w jednym procesie i blokujący drugi proces. Scoped read leases żyją także w spawn_blocking i w zwróconym SecretToken. Utrzymanie czeka na exclusive drain, więc cancel async nie pozostawia writera, który po cleanup zapisze sekret. Lokalny maintenance worker kończy krytyczną pracę także po porzuceniu future callera; nie jest to wznowienie zadania AI ani automatyczny HTTP. Owner-lock nie wolno usuwać/przenosić podczas pracy. Dodano tylko fs2 =0.4.3, bez upgrade/removal istniejących wersji, bez zmiany deklarowanego MSRV i workflow.
+
+Natywne delete_profile utrwala deleting, usuwa scoped keys i wszystkie journal/active token references, potwierdza brak sekretów i dopiero potem kasuje w transakcji rekordy Community. Minimalny tombstone profile-ID/deleted blokuje ponowne prepare i odtworzenie starej kopii. Inne profile są zachowane. Błąd vault pozostawia deleting i referencje do powtórzenia. Nie usuwamy głównego profilu/rozmów aplikacji ani aktora na zdalnym forum; nie kasujemy wyeksportowanych kopii.
+
+snapshot tworzy nowy prywatny plik SQLite, nie nadpisuje istniejącego i nie eksportuje vault secrets. Zawiera jednak metadane publicznego profilu, referencje i podpisane artefakty, więc nie jest content-free. Kopia wymaga reconcile, token pointers są wycofane; live readiness nie zmienia się. Rejestr/kopia/owner-lock mają Unix 0600; Windows wymaga chronionego katalogu hosta i odbioru ACL. Ścieżki są absolutne UTF8, limit 64MiB. Plik i katalog Unix są synchronizowane przed sukcesem.
+
+restore_metadata sprawdza SHA256, tożsamość/pełny kształt schematu przed oceną danych, integrity/FK, wyłączone pointery i zamknięte gate. Kopiuje parametryzowane dane znanych tabel, bez DDL źródła, w jednej transakcji. Merge obejmuje tylko nieobecne profile; live/deleted/deleting/reconcile IDs są pomijane, więc nie cofamy generacji ani tombstone. Restore nie robi HTTP, nie przyjmuje starego tokenu i nie regeneruje kluczy. reconcile_profile wymaga rzeczywistych oryginalnych key references i zgodnych public keys; braki/niejednoznaczne provisioning zostają zamknięte. reconcile_keys może jawnie przyjąć wyłącznie istniejący scoped keyset. Po otwarciu gate nadal potrzeba proof recovery do tokenu. Read-only lookups i błędne prepare nie rezerwują profilu.
+
+Dedykowany rejestr migruje v1/v2/v3 -> v4 (lifecycle table). Store aplikacji pozostaje v15; P2, provider adapters, MainStore/deletion/backup, permissions i workflow są niezmienione. Historyczne testy korygowano tylko dla rzeczywistego inventory migracji i aktualnego target v4/future v5. Status **IMPLEMENTED / AWAITING CI AND AUDIT**, 2B i 4B-12 OPEN.
+
+Lokalnie Rust/Linux headless 550/550 (22 zestawy), nowe lifecycle 21/21 (w tym Unix private-file/symlink i rzeczywisty subprocess lock probe), końcowy komponentowy run 115/115 po doprecyzowaniu prywatności/readonly i walidacji snapshotu; te same przypadki, nie dodatkowe unique tests. UI 219/219, build PASS, P2 193/193, granice 34/34 i pozostałe kontrole PASS. Real OS vault, Windows/Tauri/WebView, live forum/PHP/TLS nieodebrane. Raport docs/AI_HOME_4B12_STEP_2B4_LIFECYCLE_PL.md; EN developer guide docs/COMMUNITY_IDENTITY_DEVELOPER.md; dowody docs/evidence/4b12-step-2b4/.
+
+Następne 2B-5: host orchestration rzeczywistego usuwania profilu i receipts, wspólnego backup/restore obu baz, kierunku/capabilities i IPC. Dopiero potem registration można udostępnić. Signed forum writes/feed nadal dalej w 4B-12; Messenger/A2A 4B-13, UI Experimental 4B-14. Standardowa kontrola GitHub wystarczy, bez dodatkowego release/instalatorów.
+
+---
+
 # Bieżący stan — treść 1.78 — 27 października 2026 — 4B-12 krok 2B-3: complete, custody i odzyskiwanie tokenu
 
 Edward potwierdził zielony wynik 2B-2 i upoważnił następny krok. Baza: dokładny AI_HOME_4B12_STEP_2B2_SOURCE.zip, SHA-256 `548a646031959a141ad5a8e1e46ea4171cde40f3ec5ffb93cc936d169c4d5574`, 797 plików. To potwierdzenie użytkownika, bez niezależnego odczytu numeru nowego przebiegu GitHub.

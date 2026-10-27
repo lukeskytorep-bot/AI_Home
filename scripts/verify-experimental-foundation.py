@@ -26,8 +26,8 @@ ok(defs['ExperimentalInstance']['properties']['direction'].get('const')=='experi
 ok('permanently_deleted' in defs['ExperimentalSourceRef']['properties']['availability'].get('enum',[]),'source refs must represent permanent deletion without hidden copies')
 # Storage remains backward compatible; 4B-10 raises the current version to 14 for internal-state persistence.
 p=(root/'src-tauri/src/persistence.rs').read_text()
-ok('if version>15' in p and 'PRAGMA user_version=15' in p,'storage target must be v15')
-for file_name,needle in [('src-tauri/src/backup.rs','CURRENT_SCHEMA:i64=15'),('src-tauri/src/export.rs','\"schemaVersion\":15'),('src-tauri/src/diagnostics.rs','\"storageSchemaVersion\":15')]:
+ok('if version>CURRENT_SCHEMA' in p and 'pub const CURRENT_SCHEMA:i64=16' in p and 'PRAGMA user_version=16' in p,'storage target must be v16')
+for file_name,needle in [('src-tauri/src/backup.rs','use crate::persistence::CURRENT_SCHEMA;'),('src-tauri/src/export.rs','\"schemaVersion\":crate::persistence::CURRENT_SCHEMA'),('src-tauri/src/diagnostics.rs','\"storageSchemaVersion\":crate::persistence::CURRENT_SCHEMA')]:
     ok(needle in (root/file_name).read_text(),f'stale storage schema constant in {file_name}')
 for table in ['experimental_instances','experimental_wake_plans','experimental_decisions','experimental_refusals','experimental_work_episodes','experimental_technical_checkpoints','experimental_semantic_checkpoints','experimental_actions','experimental_event_cursors','experimental_internal_state_blobs','experimental_internal_state_snapshots','experimental_internal_state_events','experimental_wake_candidates']:
     ok(f'CREATE TABLE IF NOT EXISTS {table}' in p,f'missing storage table {table}')
@@ -47,8 +47,8 @@ for base in [root/'src-tauri/src',root/'src-tauri/tests']:
 # Required regression files.
 ok((root/'src-tauri/tests/experimental_contracts.rs').exists(),'missing native Experimental contract/migration regressions')
 ok((root/'tests/experimental-contracts.test.ts').exists(),'missing TypeScript Experimental schema regressions')
-connections=(root/'src-tauri/src/connections.rs').read_text()
-ok('experimental_statuses' in connections and 'status!="inactive"' in connections,'profile permanent delete must reject non-inactive Experimental instance')
+connections=(root/'src-tauri/src/connections.rs').read_text()+(root/'src-tauri/src/profile_deletion.rs').read_text()
+ok('let statuses: Vec<String>' in connections and 's != "inactive"' in connections,'profile permanent delete must reject non-inactive Experimental instance')
 for table in ['experimental_wake_candidates','experimental_internal_state_events','experimental_internal_state_snapshots','experimental_internal_state_blobs','experimental_semantic_checkpoints','experimental_technical_checkpoints','experimental_event_cursors','experimental_actions','experimental_refusals','experimental_decisions','experimental_wake_plans','experimental_work_episodes','experimental_instances']:
     ok(table in connections,f'profile permanent delete must cover {table}')
 if fail:

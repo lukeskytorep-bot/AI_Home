@@ -1,5 +1,5 @@
 //! Durable, native-only registration preparation. Uses its own SQLite file,
-//! never the application's v15 database. Explicit HTTP lives in `start`/`finish`;
+//! never the application's Store database. Explicit HTTP lives in `start`/`finish`;
 //! opening the registry never dispatches HTTP, creates keys or accepts tokens.
 //!
 //! A provisioning claim never expires: OS keyring cannot fence a delayed writer.
@@ -11,10 +11,14 @@ use sqlx::{
 };
 use std::{path::Path, time::Duration};
 pub mod finish;
+pub(crate) mod gate;
+pub mod lifecycle;
 pub mod start;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RegistryError {
+    PolicyDenied,
+    Busy,
     Storage,
     Conflict,
     NotFound,
@@ -71,11 +75,13 @@ impl Preparation {
 #[derive(Clone)]
 pub struct RegistrationRegistry {
     pool: SqlitePool,
+    gate: std::sync::Arc<gate::Gate>,
 }
 impl RegistrationRegistry {
     /// Dedicated database ONLY. Existing unrelated databases are refused, not migrated.
     /// The host must protect the directory and later wire deletion/backup lifecycle.
     pub async fn open(path: &Path) -> Result<Self, RegistryError> {
+        let gate = gate::Gate::open(path).await?;
         let options = SqliteConnectOptions::new()
             .filename(path)
             .create_if_missing(true)
@@ -101,9 +107,20 @@ impl RegistrationRegistry {
         if !((version == 0 && app == 0 && tables == 0)
             || (version == 1 && app == 1095254851 && tables == 1)
             || (version == 2 && app == 1095254851 && tables == 2)
-            || (version == 3 && app == 1095254851 && tables == 4))
+            || (version == 3 && app == 1095254851 && tables == 4)
+            || (version == 4 && app == 1095254851 && tables == 5))
         {
             return Err(RegistryError::Corrupt);
+        }
+        #[cfg(unix)] {
+            use std::os::unix::fs::PermissionsExt;
+            for file in [path.to_path_buf(),std::path::PathBuf::from(format!("{}-wal",path.display())),std::path::PathBuf::from(format!("{}-shm",path.display()))] {
+                if file.exists(){if std::fs::symlink_metadata(&file).is_ok_and(|m|m.file_type().is_symlink()){return Err(RegistryError::Corrupt);}std::fs::set_permissions(file,std::fs::Permissions::from_mode(0o600)).map_err(|_|RegistryError::Storage)?;}
+            }
+        }
+        if version == 4 {
+            tx.commit().await?;
+            return Ok(Self { pool, gate });
         }
         sqlx::query("CREATE TABLE IF NOT EXISTS community_preparations (scope_binding TEXT PRIMARY KEY, profile_id TEXT NOT NULL, api_root TEXT NOT NULL, origin TEXT NOT NULL, instance TEXT NOT NULL, display_name TEXT NOT NULL, about TEXT NOT NULL, client_start_id TEXT NOT NULL UNIQUE, key_reference TEXT NOT NULL UNIQUE, state TEXT NOT NULL CHECK(state IN ('reserved','provisioning','ready')), revision INTEGER NOT NULL CHECK(revision>0), owner TEXT, identity_public_key TEXT, operational_public_key TEXT, CHECK((state='reserved' AND owner IS NULL AND identity_public_key IS NULL AND operational_public_key IS NULL) OR (state='provisioning' AND owner IS NOT NULL AND identity_public_key IS NULL AND operational_public_key IS NULL) OR (state='ready' AND owner IS NULL AND identity_public_key IS NOT NULL AND operational_public_key IS NOT NULL)))").execute(&mut *tx).await?;
         sqlx::query("PRAGMA application_id=1095254851")
@@ -112,11 +129,13 @@ impl RegistrationRegistry {
         sqlx::query("CREATE TABLE IF NOT EXISTS community_registration_starts (scope_binding TEXT PRIMARY KEY REFERENCES community_preparations(scope_binding), request_sha256 TEXT NOT NULL CHECK(length(request_sha256)=64), attempts INTEGER NOT NULL CHECK(attempts>0), response TEXT CHECK(response IS NULL OR length(response)<=16384), last_failure TEXT)").execute(&mut *tx).await?;
         sqlx::query("CREATE TABLE IF NOT EXISTS community_registration_finishes (scope_binding TEXT PRIMARY KEY REFERENCES community_preparations(scope_binding), revision INTEGER NOT NULL CHECK(revision>0), body TEXT NOT NULL)").execute(&mut *tx).await?;
         sqlx::query("CREATE TABLE IF NOT EXISTS community_registration_dispatches (id TEXT PRIMARY KEY, scope_binding TEXT NOT NULL REFERENCES community_registration_finishes(scope_binding), epoch INTEGER NOT NULL CHECK(epoch>0), kind TEXT NOT NULL, packet TEXT NOT NULL, token_ref TEXT UNIQUE)").execute(&mut *tx).await?;
-        sqlx::query("PRAGMA user_version=3")
+        sqlx::query("CREATE TABLE IF NOT EXISTS community_profile_lifecycle (profile_id TEXT PRIMARY KEY, state TEXT NOT NULL CHECK(state IN ('active','reconcile','deleting','deleted')), revision INTEGER NOT NULL CHECK(revision>0))").execute(&mut *tx).await?;
+        sqlx::query("INSERT OR IGNORE INTO community_profile_lifecycle SELECT DISTINCT profile_id,'active',1 FROM community_preparations").execute(&mut *tx).await?;
+        sqlx::query("PRAGMA user_version=4")
             .execute(&mut *tx)
             .await?;
         tx.commit().await?;
-        Ok(Self { pool })
+        Ok(Self { pool, gate })
     }
     pub async fn close(self) {
         self.pool.close().await;
@@ -137,6 +156,7 @@ impl RegistrationRegistry {
         {
             return Err(RegistryError::Identity(IdentityError::Invalid));
         }
+        let _operation = self.prepare_lease(scope).await?;
         let reference = CommunityKeyStore::reserve_reference()?;
         // Unique start IDs also prevent accidental reuse across different scopes.
         sqlx::query("INSERT INTO community_preparations(scope_binding,profile_id,api_root,origin,instance,display_name,about,client_start_id,key_reference,state,revision) VALUES(?,?,?,?,?,?,?,?,?,'reserved',1) ON CONFLICT DO NOTHING")
@@ -235,6 +255,9 @@ impl RegistrationRegistry {
         scope: &CommunityScope,
         expected_revision: i64,
     ) -> Result<Preparation, RegistryError> {
+        let operation = self.lease(scope, keys.lease.as_ref()).await?;
+        let guarded_keys = keys.scoped(operation);
+        let keys = &guarded_keys;
         let record = self.get(scope).await?;
         if record.revision != expected_revision {
             return Err(RegistryError::Conflict);
@@ -262,6 +285,9 @@ impl RegistrationRegistry {
         scope: &CommunityScope,
         expected_revision: i64,
     ) -> Result<Preparation, RegistryError> {
+        let operation = self.lease(scope, keys.lease.as_ref()).await?;
+        let guarded_keys = keys.scoped(operation);
+        let keys = &guarded_keys;
         let record = self.get(scope).await?;
         if record.revision != expected_revision {
             return Err(RegistryError::Conflict);
@@ -303,6 +329,9 @@ impl RegistrationRegistry {
         keys: &CommunityKeyStore,
         scope: &CommunityScope,
     ) -> Result<RegistrationIntent, RegistryError> {
+        let operation = self.lease(scope, keys.lease.as_ref()).await?;
+        let guarded_keys = keys.scoped(operation);
+        let keys = &guarded_keys;
         let record = self.get(scope).await?;
         if record.state != PreparationState::Ready {
             return Err(RegistryError::ProvisioningUncertain);

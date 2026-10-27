@@ -1,0 +1,37 @@
+{
+  "baseSource": "AI_HOME_4B12_STEP_2B4_SOURCE.zip",
+  "baseSha256": "6287d53b79fc0a9ee03ef26a5f5bedcae70679d130044ae5fac7382ae7b16614",
+  "baseFiles": 870,
+  "planContentVersion": "1.80",
+  "step": "4B-12 / 2B-5.1",
+  "appStoreSchema": 16,
+  "communityRegistrySchema": 4,
+  "rustTests": 563,
+  "rustSuites": 23,
+  "newHostIntegrationTests": 13,
+  "frontendTests": 219,
+  "frontendTestFiles": 21,
+  "p2References": 193,
+  "boundaryChecks": 34,
+  "migrationAssertions": 14,
+  "commandParity": 54,
+  "productionHostEnabled": false,
+  "registrationIpcEnabled": false,
+  "appBackupRestoreWired": false,
+  "nativeHostInjectionOnly": true,
+  "newDependencies": 0,
+  "warnings": [
+    "Unchanged unused InternalStateProvider import in experimental_internal_state integration test"
+  ],
+  "notTested": [
+    "desktop feature build",
+    "Windows/Tauri/WebView",
+    "real OS vault",
+    "live forum API/TLS",
+    "force-kill"
+  ],
+  "next": [
+    "2B-5.2 coordinated backup/restore and explicit pin reconciliation",
+    "2B-5.3 direction/capability checks and registration IPC before desktop enablement"
+  ]
+}
