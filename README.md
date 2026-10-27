@@ -1,9 +1,9 @@
-# AI Home — 4B-12 step 2A: Community identity preparation
+# AI Home — 4B-12 step 2B-1: durable Community preparation
 
-Native P-256 dual-key custody, exact 4A registration packets and validated signing. This prepares registration; it does not perform HTTP registration or accept a forum token. Dedicated OS-vault namespace, explicit reserve/provision/load/remove and no provider-secret fallback.
+Native SQLite registration registry with stable scope/start/key references, one-shot provisioning ownership, compare-and-set revisions and load-only recovery after interruption. Two P-256 keys remain in the separate Community OS-vault namespace. No registration HTTP, token acceptance, IPC or automatic activity is enabled by this step.
 
-Status: **IMPLEMENTED / AWAITING CI AND AUDIT**. Step 2 and all of 4B-12 remain open. Edward confirmed the green step 1 audit fix baseline. Next: 2B durable registry, real registration/recovery HTTP, token custody and application lifecycle wiring.
+Status: **IMPLEMENTED / AWAITING CI AND AUDIT**. Edward confirmed the green step 2A baseline. Step 2B and all of 4B-12 remain open. Next: bounded registration HTTP, durable progress and proof-status/token recovery, followed by application lifecycle and IPC integration before end-user enablement.
 
-Report (PL): `docs/AI_HOME_4B12_STEP_2A_IDENTITY_PL.md`. Developer guide (EN): `docs/COMMUNITY_IDENTITY_DEVELOPER.md`. Canonical plan: `docs/AI_HOME_4B_ETAPY_PRACY_v1.0_PL.md` (content 1.75). Evidence: `docs/evidence/4b12-step-2a/`.
+Report (PL): `docs/AI_HOME_4B12_STEP_2B1_REGISTRY_PL.md`. Developer guide (EN): `docs/COMMUNITY_IDENTITY_DEVELOPER.md`. Canonical plan: `docs/AI_HOME_4B_ETAPY_PRACY_v1.0_PL.md` (content 1.76). Evidence: `docs/evidence/4b12-step-2b1/`.
 
-SQLite stays v15; frozen P2, provider vault, model adapters, permissions and workflows are unchanged. Pinned RustCrypto dependencies and Cargo.lock additions are documented. Desktop/real OS vault/live forum acceptance remains separate. Source handoff only, no release or installers.
+The registry explicitly opens a dedicated SQLite file (its own schema v1/application ID); no production host opens it yet. It refuses application/unrelated databases. The application's existing SQLite stays v15; frozen P2, Cargo manifests/lockfile, provider vault, adapters, permissions, tests and workflows are unchanged. Existing CI includes the new native tests automatically. Desktop/real OS vault/live forum acceptance remains separate. Source handoff only, no release or installers.

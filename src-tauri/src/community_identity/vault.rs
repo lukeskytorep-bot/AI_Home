@@ -176,7 +176,7 @@ fn load(
     Ok((a, b, public))
 }
 
-fn reference_valid(reference: &str) -> Result<(), IdentityError> {
+pub(super) fn reference_valid(reference: &str) -> Result<(), IdentityError> {
     let suffix = reference
         .strip_prefix(PREFIX)
         .ok_or(IdentityError::Invalid)?;

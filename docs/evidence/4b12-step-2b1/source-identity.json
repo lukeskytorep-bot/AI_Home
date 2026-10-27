@@ -1,0 +1,20 @@
+{
+  "stage": "4B-12 step 2B-1",
+  "baseSourceSha256": "2f13c3d0aba0ad610b0a9d8eb78f4218ebe524a203de0defb51e72aff95d1f78",
+  "baseSourceFiles": 747,
+  "unchangedBaselineFiles": 740,
+  "allowedModifiedBaselineFiles": [
+    "README.md",
+    "SHA256SUMS.txt",
+    "docs/AI_HOME_4B_ETAPY_PRACY_v1.0_PL.md",
+    "docs/COMMUNITY_IDENTITY_DEVELOPER.md",
+    "docs/evidence/manifest.sha256.json",
+    "src-tauri/src/community_identity/mod.rs",
+    "src-tauri/src/community_identity/vault.rs"
+  ],
+  "newDependencyPackages": 0,
+  "dependencyVersionsChanged": 0,
+  "appStoreSchema": 15,
+  "dedicatedRegistrySchema": 1,
+  "productionHostIntegration": false
+}

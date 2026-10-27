@@ -1,3 +1,21 @@
+# Bieżący stan — treść 1.76 — 27 października 2026 — 4B-12 krok 2B-1: trwałe przygotowanie rejestracji
+
+Edward potwierdził zielony wynik całego kroku 2A i upoważnił następny krok. Baza: dokładny `AI_HOME_4B12_STEP_2A_SOURCE.zip`, SHA-256 `2f13c3d0aba0ad610b0a9d8eb78f4218ebe524a203de0defb51e72aff95d1f78`, 747 plików. Jest to potwierdzenie użytkownika, bez niezależnego odczytu numeru nowego przebiegu GitHub.
+
+2B podzielono na odbiory. Wykonany teraz **2B-1** dodaje natywny trwały rejestr przygotowania rejestracji, bez HTTP i bez tokenów. `prepare` utrwala zakres, pierwotny client_start_id, publiczny profil i zarezerwowaną referencję. Atomowy CAS przyznaje jednej instancji prawo do provision; claim jest zatwierdzony przed jakimkolwiek zapisem kluczy. Zakończenie zapisuje oczekiwane public keys. `recover` tylko odczytuje istniejący wpis, a `load_intent` porównuje rzeczywiste klucze z oczekiwaniem i odtwarza pierwotny pakiet start.
+
+Claim nie wygasa i nie ma automatycznego przejęcia: anulowane spawn_blocking może nadal zapisywać OS vault. Przerwanie przed zapisem kluczy może pozostawić próbę wymagającą jawnego wyjaśnienia. Brak kluczy po restarcie/restore jest błędem, nigdy zgodą na nową tożsamość. `Ready` oznacza wyłącznie gotowe lokalne klucze, nie rejestrację ani zalogowanie na forum.
+
+Rejestr wymaga osobnej jawnej ścieżki SQLite; jego schema v1/application ID są niezależne od aplikacyjnego Store v15. Nie otwiera się automatycznie. Bazy obce/przyszłe są odrzucane. W pliku są metadane publicznego profilu, nie invite, private keys lub tokeny. Przyszły host musi zapewnić jedną stabilną chronioną ścieżkę i objąć ten plik usuwaniem profilu/backup/restore przed udostępnieniem rejestracji. Native moduł jeszcze nie sprawdza istnienia/kierunku profilu w Store. Nie wolno omijać go surowym provision w przyszłym produkcyjnym flow.
+
+Weryfikacja lokalna: nowe testy rejestru 18/18, cały Rust/Linux headless 474/474 (22 zestawy), frontend 219/219 (21 plików), build PASS, P2 193/193, granice 34/34 i pozostałe kontrole PASS. Testy rejestru używają rzeczywistych tymczasowych plików SQLite i backendu sekretów w pamięci. Obejmują zamknięcie/ponowne otwarcie, dwa niezależne poole, CAS, anulowanego caller przy nadal działającym writerze blokującym, readback failure, brakujące/zmienione klucze, izolację scope i brak sekretów w SQLite. To nie test rzeczywistego OS vault ani restartu procesu systemowego.
+
+Status **IMPLEMENTED / AWAITING CI AND AUDIT**. 2B i całe 4B-12 pozostają OPEN. Raport: `docs/AI_HOME_4B12_STEP_2B1_REGISTRY_PL.md`; developer guide EN: `docs/COMMUNITY_IDENTITY_DEVELOPER.md`; dowody: `docs/evidence/4b12-step-2b1/`. Cargo.toml/lock, frozen P2, workflow, provider vault/adapters, dotychczasowe testy i uprawnienia pozostają bajtowo zgodne z bazą. Aplikacyjna migracja nie została dodana. Nie tworzymy release ani instalatorów.
+
+Następne części 2B: trwały postęp start/complete oraz ograniczony transport HTTPS; rzeczywiste proof-status i reissue po utracie jednorazowego tokenu; oddzielne custody tokenów; obsługa usuwania profilu/backup/restore, kontrola kierunku/capabilities i IPC przed udostępnieniem użytkownikowi. Referencje, IDs i przyszłe signed bytes mają przetrwać restart. Usuwanie aktywnego claimu lub pliku rejestru nie jest metodą recovery. Później podpisane zapisy/feed w 4B-12; Messenger/A2A nadal 4B-13, zintegrowane UI Experimental 4B-14. Real OS vault, live forum/API i Windows/Tauri/WebView pozostają osobnymi bramkami.
+
+---
+
 # Bieżący stan — treść 1.75 — 27 października 2026 — 4B-12 krok 2A: klucze i protokół rejestracji
 
 Edward potwierdził zielony wynik całego 4B-12 kroku 1 AUDIT FIX 1 i upoważnił kolejny krok. Bazą jest dokładny `AI_HOME_4B12_STEP_1_AUDIT_FIX_1_SOURCE.zip`, SHA-256 `ba55a869fb069cdea1893072e21e35189ee342a220aff8d1b52a60471840bd83`.

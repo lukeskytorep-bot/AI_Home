@@ -1,3 +1,37 @@
+# Community identity and durable preparation (4B-12 / 2B-1)
+
+`community_identity::registry::RegistrationRegistry` implements native local preparation. The host does not open it automatically and there is no IPC, HTTP, forum token or user-facing registration flow. `Ready` means local keys were provisioned and their public metadata committed; it never means online registration or authentication succeeded.
+
+## Registry ownership and storage
+
+Call `RegistrationRegistry::open(dedicated_path)`, never with the application database path. The registry uses SQLite WAL, schema 1 and application ID 1095254851. Existing unrelated/future databases are refused. The application Store schema remains v15. This isolates pending registration coordination from app migrations while the coordinator is still native-only. The future host must supply one protected stable path for the installation; a new path is not a recovery strategy. Deletion/backup/restore integration must include this separate file before enabling registration.
+
+The public metadata row binds local profile, explicit API root, pinned origin/instance, exact profile content, original client_start_id, reserved key reference and later expected public keys. Start IDs and references are unique. No invite, private PKCS8 key, token or request body is persisted. This is content-bearing local public-profile metadata, not a content-free diagnostic. The registry trusts the local profile ID supplied by the host; it does not yet query app profile existence/direction/capabilities. The future host must perform those checks.
+
+1. `prepare(scope, profile, original_start_id)` durably reserves one reference. Repeating exactly the same input returns the same record. Changed input conflicts; a start ID cannot move to another scope.
+2. `provision(keys, scope, expected_revision)` atomically claims a reserved row and commits the claim before calling the vault. Only one competing database handle can claim it. The private owner marker remains internal.
+3. A claim has **no expiry or automatic takeover**. Cancelling a future does not stop a blocking OS-keyring call. A delayed original writer must never race a replacement provisioner. A failed or cancelled attempt therefore stays `Provisioning`.
+4. `recover(keys, scope, expected_revision)` only loads the previously reserved entry. Existing valid keys can become `Ready` using CAS. Missing/unavailable keys leave the claim unchanged; they never generate replacements. A crash before the key write can leave an intentionally blocked attempt. Explicit operator reconciliation/cleanup is not implemented yet; do not reset the claim by editing SQLite.
+5. `load_intent(keys, scope)` requires `Ready`, reloads the actual keyset, compares both public keys with the durable expectation and reconstructs the original RegistrationIntent. Missing keys after database restore are a recovery error. A new database connection or a new key-store object is not an OS-vault restart proof.
+
+The claim is not a time lease and does not fence malicious native callers that bypass this API. The existing low-level `CommunityKeyStore::provision` still requires caller exclusivity. Future production code must go through this registry rather than directly reserve/provision a second reference. Neither successful key generation nor recovery makes an HTTP request.
+
+## Lifecycle and next integration
+
+No application code calls registry open/prepare/provision in this handoff, so normal users do not create registry files or Community keys through the app. Mock-backed tests create temporary files only. Do not enable it in UI/IPC until profile deletion, backup/restore and in-flight operation ownership cover the registry file and vault entries. Existing `CommunityKeyStore::remove` remains a low-level primitive; app `profile.delete.permanent` is not wired to the registry. Deleting registry rows/files while provisioning could orphan late vault writes and must not be offered as automatic recovery.
+
+Next: durable start/complete transitions and bounded HTTPS; committed-response validation; proof-status and token reissue after lost one-time token; separate token custody; profile lifecycle, capability checks and IPC. Stable IDs, keys and future signed bytes must survive restart. The forum protocol, frozen P2 and provider secrets remain separate.
+
+## Validation boundaries
+
+The new tests exercise temporary real SQLite files, close/reopen, independent pools, concurrent claims, a cancelled async caller with a still-running blocking writer, readback failure, missing/replaced keys and secret-free database bytes. They use an in-memory secret backend. They do not prove real OS keyring, cross-process OS operations, live PHP or desktop integration. Existing GitHub cargo all-targets job discovers the tests without workflow changes.
+
+---
+
+## Previous 2A protocol and cryptography reference (historical scope)
+
+The following describes the accepted 2A primitive, before addition of the registry above.
+
 # Community identity preparation (4B-12 / 2A)
 
 This native Rust module prepares keys and exact registration packets. It does not register an agent, accept a bearer token, persist registration state, or expose IPC. Production registration is the next coordinator step (2B).

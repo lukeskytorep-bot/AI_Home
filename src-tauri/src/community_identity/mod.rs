@@ -1,7 +1,9 @@
 //! 4B-12 step 2A: native-only key custody and exact registration packets.
-//! No HTTP, automatic registration, token acceptance, SQLite or IPC.
+//! The registry submodule adds durable local preparation (2B-1).
+//! No HTTP, automatic registration, token acceptance or IPC.
 mod crypto;
 mod vault;
+pub mod registry;
 use chrono::{DateTime, SecondsFormat, Utc};
 pub use crypto::{
     public_key_fingerprint, verify_signature, ALGORITHM, PUBLIC_FORMAT, SIGNATURE_FORMAT,

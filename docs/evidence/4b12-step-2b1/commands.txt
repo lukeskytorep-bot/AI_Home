@@ -1,0 +1,7 @@
+Rust: cargo test --manifest-path src-tauri/Cargo.toml --no-default-features --all-targets --locked --offline
+Frontend: npm ci --no-audit --no-fund; npm test; npm run build
+Contracts: PYTHONDONTWRITEBYTECODE=1 python3 check_contracts.py
+Boundaries: node scripts/verify-boundaries.mjs
+Other checks: PYTHONDONTWRITEBYTECODE=1 python3 scripts/<verify-*.py as named by corresponding log>
+Scope: Linux/headless, temporary real SQLite, mock CommunitySecretStore. No HTTP or real OS vault invocation by registry tests.
+Existing warning: unused InternalStateProvider in unchanged tests/experimental_internal_state.rs.
