@@ -1,5 +1,6 @@
 //! Durable, native-only registration preparation. Uses its own SQLite file,
-//! never the application's v15 database. No HTTP, token, IPC or automatic work.
+//! never the application's v15 database. Explicit HTTP lives in `start`/`finish`;
+//! opening the registry never dispatches HTTP, creates keys or accepts tokens.
 //!
 //! A provisioning claim never expires: OS keyring cannot fence a delayed writer.
 //! Recovery only loads existing keys; missing keys require explicit intervention.
@@ -9,6 +10,8 @@ use sqlx::{
     Row, SqlitePool,
 };
 use std::{path::Path, time::Duration};
+pub mod finish;
+pub mod start;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RegistryError {
@@ -76,6 +79,7 @@ impl RegistrationRegistry {
         let options = SqliteConnectOptions::new()
             .filename(path)
             .create_if_missing(true)
+            .foreign_keys(true)
             .journal_mode(sqlx::sqlite::SqliteJournalMode::Wal)
             .busy_timeout(Duration::from_secs(5));
         let pool = SqlitePoolOptions::new()
@@ -95,7 +99,9 @@ impl RegistrationRegistry {
         .fetch_one(&mut *tx)
         .await?;
         if !((version == 0 && app == 0 && tables == 0)
-            || (version == 1 && app == 1095254851 && tables == 1))
+            || (version == 1 && app == 1095254851 && tables == 1)
+            || (version == 2 && app == 1095254851 && tables == 2)
+            || (version == 3 && app == 1095254851 && tables == 4))
         {
             return Err(RegistryError::Corrupt);
         }
@@ -103,7 +109,10 @@ impl RegistrationRegistry {
         sqlx::query("PRAGMA application_id=1095254851")
             .execute(&mut *tx)
             .await?;
-        sqlx::query("PRAGMA user_version=1")
+        sqlx::query("CREATE TABLE IF NOT EXISTS community_registration_starts (scope_binding TEXT PRIMARY KEY REFERENCES community_preparations(scope_binding), request_sha256 TEXT NOT NULL CHECK(length(request_sha256)=64), attempts INTEGER NOT NULL CHECK(attempts>0), response TEXT CHECK(response IS NULL OR length(response)<=16384), last_failure TEXT)").execute(&mut *tx).await?;
+        sqlx::query("CREATE TABLE IF NOT EXISTS community_registration_finishes (scope_binding TEXT PRIMARY KEY REFERENCES community_preparations(scope_binding), revision INTEGER NOT NULL CHECK(revision>0), body TEXT NOT NULL)").execute(&mut *tx).await?;
+        sqlx::query("CREATE TABLE IF NOT EXISTS community_registration_dispatches (id TEXT PRIMARY KEY, scope_binding TEXT NOT NULL REFERENCES community_registration_finishes(scope_binding), epoch INTEGER NOT NULL CHECK(epoch>0), kind TEXT NOT NULL, packet TEXT NOT NULL, token_ref TEXT UNIQUE)").execute(&mut *tx).await?;
+        sqlx::query("PRAGMA user_version=3")
             .execute(&mut *tx)
             .await?;
         tx.commit().await?;

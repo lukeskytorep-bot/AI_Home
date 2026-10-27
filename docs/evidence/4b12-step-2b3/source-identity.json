@@ -1,0 +1,48 @@
+{
+  "baseSourceSha256": "548a646031959a141ad5a8e1e46ea4171cde40f3ec5ffb93cc936d169c4d5574",
+  "baseFiles": 797,
+  "forumSourceSha256": "afe25c58590ec146f7be01ef83fc4854e717813bb99c86cd7d2c89251e4ebc8a",
+  "forumReferenceFiles": {
+    "includes/registration-service.php": "dc7456e13d0d12029e3cd72480822498148bfdc8703a1abceb0443e707a0ba80",
+    "includes/registration-contract.php": "340eecfa2a2a6134159c6f9eafd9109d01f080fbf0271d577536e14f8bc6d0e7",
+    "includes/token.php": "3991ee72cc21a590aab9c29ea121c3a72cc40bef63aee6c2f9a4d12ed5bbc553",
+    "includes/registration-id.php": "0248ed6b63e5ba038697930b4ddc02c3e4941e34b115f50fabd015936a847b7a",
+    "api/v1/registration/complete/index.php": "e07e80485bbefdbb1d950fee5d669f70424f9ad09b15641df57e64a431576957",
+    "api/v1/registration/proof-challenge/index.php": "30cc9a6316906c9b526b5cf448a7bc791c270b61d88d126d812c91e5dba99902",
+    "api/v1/registration/status/index.php": "59a3ad3da81b06a197f78f4425696aecf65f93f8741873eb8532c31ea3a368cb",
+    "api/v1/registration/token/reissue/index.php": "6a95a78ae9e1e3c0c8fb4de21424798e875a4f4648e4589fa3f41ccde3275e97"
+  },
+  "originalPreparationAndStartDdlUnchanged": true,
+  "cargoDependenciesChanged": false,
+  "frozenP2Changed": false,
+  "workflowsChanged": false,
+  "identityPrimitiveInventoryRetainedAtHistorical2AScope": true,
+  "coordinatorInventory": "contracts/community.registration.inventory.v1.json",
+  "fixtureFiles": {
+    "reissue.txt": "10cd0dfa72c25504ae65aa3a74758811a4040bd109b3d0905dc5755f4cf735d0",
+    "fields.json": "95538ecdd5d2485c5b517c3d0adb2a5c05ce47dd2320cb2a40b31a45655191e1",
+    "status.txt": "d0528751ce6058f2d45e527cb8cb3dcdb9cef6a131d70db6ee7b8227b2d6b0fb"
+  },
+  "publicProofArtifactFiles": {
+    "reissue.json": "c543f3dc57b3500f7f87d709bba2de42df5c6cfeafcc32cf27521fabdb31d1c1",
+    "status.json": "caf1fa3471a26efe455f40521a5f066f4dc17e68c70d99b0062e3260e5069190"
+  },
+  "legacyTestAdaptations": [
+    "registry/tests.rs future version 3 -> 4",
+    "registry/start/tests.rs exact v1 inventory excludes new v3 tables; current registry assertion 2 -> 3"
+  ],
+  "allowedModifiedBaselineFiles": [
+    "README.md",
+    "SHA256SUMS.txt",
+    "docs/AI_HOME_4B_ETAPY_PRACY_v1.0_PL.md",
+    "docs/COMMUNITY_IDENTITY_DEVELOPER.md",
+    "docs/evidence/manifest.sha256.json",
+    "src-tauri/src/community_identity/mod.rs",
+    "src-tauri/src/community_identity/registry.rs",
+    "src-tauri/src/community_identity/registry/start.rs",
+    "src-tauri/src/community_identity/registry/start/tests.rs",
+    "src-tauri/src/community_identity/registry/tests.rs",
+    "src-tauri/src/community_identity/vault.rs"
+  ],
+  "unchangedBaselineFilesOutsideAllowedList": 786
+}

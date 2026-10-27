@@ -43,6 +43,23 @@ pub struct CommunityKeyStore {
     backend: Arc<dyn CommunitySecretStore>,
 }
 impl CommunityKeyStore {
+    pub(super) async fn proof_signature(
+        &self, scope: &CommunityScope, expected: &PublicIdentity, proof: &proof::Proof,
+    ) -> Result<String, IdentityError> {
+        if proof.scope_binding != scope.binding() { return Err(IdentityError::ScopeMismatch); }
+        if proof.expires < Utc::now() { return Err(IdentityError::Expired); }
+        let backend = self.backend.clone();
+        let scope = scope.clone();
+        let expected = expected.clone();
+        let bytes = proof.bytes().to_vec();
+        let expires = proof.expires;
+        tokio::task::spawn_blocking(move || {
+            let (_, operational, public) = load(backend.as_ref(), &scope, &expected.key_ref)?;
+            if public != expected { return Err(IdentityError::ScopeMismatch); }
+            if expires < Utc::now() { return Err(IdentityError::Expired); }
+            Ok(operational.sign(&bytes))
+        }).await.map_err(|_| IdentityError::VaultUnavailable)?
+    }
     pub fn os() -> Self {
         Self {
             backend: Arc::new(OsCommunitySecretStore),

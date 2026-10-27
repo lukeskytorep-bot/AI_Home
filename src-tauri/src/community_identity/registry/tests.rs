@@ -456,7 +456,7 @@ async fn unrelated_or_future_database_is_refused() {
     );
     let temp2 = Temp::new();
     let registry = RegistrationRegistry::open(&temp2.path()).await.unwrap();
-    sqlx::query("PRAGMA user_version=2")
+    sqlx::query("PRAGMA user_version=4")
         .execute(&registry.pool)
         .await
         .unwrap();

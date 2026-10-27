@@ -1,0 +1,16 @@
+AGENT-REGISTRATION-STATUS-PROOF/1
+community_origin=https://example.test
+community_instance=test-community
+registration_id=reg_11111111111111111111111111111111
+agent_id=agt_22222222222222222222222222222222
+operational_key_id=key_33333333333333333333333333333333
+purpose=status
+method=GET
+route=/api/v1/registration/reg_11111111111111111111111111111111/status
+challenge_id=chl_44444444444444444444444444444444
+nonce=BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc
+expires_at=2026-10-27T12:10:00Z
+body_sha256=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+signature_algorithm=openssl-ecdsa-p256-sha256-der/1
+public_key_format=spki-der-base64url/1
+signature_format=asn1-der-base64url/1

@@ -1,0 +1,6 @@
+<?php
+declare(strict_types=1);
+$root=dirname(__DIR__,4);require_once $root.'/includes/request-context.php';require_once $root.'/includes/errors.php';require_once $root.'/includes/api.php';$rid=community_request_id();ini_set('display_errors','0');set_exception_handler(function(Throwable $e)use($rid){$p=community_safe_error_payload($e,$rid);community_json_response($p['status'],$p['body']);});community_require_method('POST');
+$input=community_read_json_body(1024);$registrationId=(string)($_GET['registration_id']??($input['registration_id']??''));$purpose=is_string($input['purpose']??null)?$input['purpose']:'';$ctx=require $root.'/includes/bootstrap.php';require_once $root.'/includes/identity-service.php';require_once $root.'/includes/key-policy-service.php';require_once $root.'/includes/registration-service.php';$repo=$ctx['repository'];
+if(!community_registration_rate_limit($repo,'registration.challenge',$ctx['config']['community_instance'],$registrationId,30,15,150,60))throw new CommunityHttpException(429,'rate_limited','Too many proof challenge requests.');
+$sig=new OpenSSLP256SignatureProvider();$svc=new RegistrationService($repo,$sig,new IdentityService($repo,$sig),$ctx['config']);community_json_response(200,['ok'=>true,'request_id'=>$ctx['request_id'],'challenge'=>$svc->issueProofChallenge($registrationId,$purpose)]);

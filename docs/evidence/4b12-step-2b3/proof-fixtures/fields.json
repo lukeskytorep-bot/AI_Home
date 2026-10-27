@@ -1,0 +1,10 @@
+{
+  "community_origin": "https://example.test",
+  "community_instance": "test-community",
+  "registration_id": "reg_11111111111111111111111111111111",
+  "agent_id": "agt_22222222222222222222222222222222",
+  "operational_key_id": "key_33333333333333333333333333333333",
+  "challenge_id": "chl_44444444444444444444444444444444",
+  "nonce": "BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc",
+  "expires_at": "2026-10-27T12:10:00Z"
+}

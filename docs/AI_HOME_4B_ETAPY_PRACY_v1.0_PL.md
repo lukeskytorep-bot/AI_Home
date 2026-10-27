@@ -1,3 +1,39 @@
+# Bieżący stan — treść 1.78 — 27 października 2026 — 4B-12 krok 2B-3: complete, custody i odzyskiwanie tokenu
+
+Edward potwierdził zielony wynik 2B-2 i upoważnił następny krok. Baza: dokładny AI_HOME_4B12_STEP_2B2_SOURCE.zip, SHA-256 `548a646031959a141ad5a8e1e46ea4171cde40f3ec5ffb93cc936d169c4d5574`, 797 plików. To potwierdzenie użytkownika, bez niezależnego odczytu numeru nowego przebiegu GitHub.
+
+Wykonano natywny 2B-3: jawny complete POST z utrwaleniem dokładnych podpisanych bajtów przed wysłaniem; dedykowany immutable vault tokenów; signed proof-status i token reissue po utracie odpowiedzi/tokenu. Każdy dispatch ma trwały journal przed HTTP. Token najpierw trafia do osobnej zarezerwowanej referencji i przechodzi readback, dopiero potem pointer jest aktywowany w SQLite przez CAS. Token nie trafia do SQLite ani publicznego wyniku.
+
+Unknown wynik nie powoduje automatycznego complete/reissue. Jawny retry_complete odtwarza ten sam pakiet; null token oznacza RecoveryRequired. Jawny recover przydziela nową rewizję operacji i wyłącza stary pointer, sprawdza podpisany status i generację, pobiera świeży reissue challenge i wymaga N -> N+1. Starsze wyniki nie mogą nadpisać nowego pointera ani wpisu vault. Po przerwaniu mogą pozostać osierocone immutable candidates; każda referencja jest wcześniej zapisana w journal, a cleanup należy do przyszłego host lifecycle. Zewnętrzne cofnięcie generacji poniżej lokalnie znanej jest odrzucane.
+
+Community token service `org.aihome.app.community.tokens.v1` jest oddzielny od kluczy `org.aihome.app.community.identity.v1` i od credentiali modeli. Oryginalne pary kluczy nie są regenerowane podczas recovery. current()/credential() sprawdzają aktualne klucze, token, scope i rewizję; progress.ready_metadata jest tylko stanem SQLite, nie gwarancją dostępu. Proofy są konstruowane lokalnie z zamrożonego kontraktu 4A. Fizyczne PHP URL-e z query różnią się od wirtualnych tras podpisu; zachowano dokładne oba warianty.
+
+Dedykowany rejestr migruje v1/v2 -> v3, dodając finish i dispatches. Store aplikacji pozostaje v15, frozen P2, Cargo.toml/lock, provider vault/adapters, workflow i uprawnienia bez zmian. Dotychczasowe testy zmieniono wyłącznie w dwóch miejscach migracyjnych: future-version fixture z 3 na 4 oraz odtworzenie pełnego historycznego inventory v1 i aktualna asercja v3. Nie zmniejszono zakresu testów.
+
+Status **IMPLEMENTED / AWAITING CI AND AUDIT**, 2B i całe 4B-12 nadal OPEN. Lokalnie Rust/Linux headless 529/529 (22 zestawy), nowe finish/proof/token testy 30/30, końcowy focused run 30/30 po doprecyzowaniu null-token replay, UI 219/219, build PASS, P2 193/193, granice 34/34. OpenSSL: 2/2 podpisy proofów potwierdzone, 2/2 zmiany odrzucone; eksport wyłącznie publiczny. Fixture proofów odtworzony niezależnym generatorem Python. Testy używają loopback HTTP, prawdziwego SQLite i mock vault, nie PHP/live forum/TLS ani OS keyring. Raport `docs/AI_HOME_4B12_STEP_2B3_COMPLETE_RECOVERY_PL.md`, developer guide EN `docs/COMMUNITY_IDENTITY_DEVELOPER.md`, dowody `docs/evidence/4b12-step-2b3/`.
+
+Następny odbiór 2B: profile lifecycle/permanent deletion, backup/restore i kontrolowane uzgadnianie rejestru oraz wszystkich referencji sekretów, obsługa niejednoznacznych claimów, host direction/capability checks i IPC. Dopiero po tym udostępniać registration użytkownikowi; teraz żadne miejsce produkcyjnej aplikacji go nie otwiera/nie wywołuje automatycznie. Signed forum writes i feed nadal później w 4B-12; Messenger/A2A w 4B-13, UI Experimental w 4B-14. Windows/Tauri/WebView, real OS vault i live forum są osobnymi bramkami. Nie tworzymy release ani instalatorów; istniejące CI wykryje testy.
+
+---
+
+# Bieżący stan — treść 1.77 — 27 października 2026 — 4B-12 krok 2B-2: trwały registration/start przez HTTP
+
+Edward potwierdził zielony wynik 2B-1 i upoważnił kolejny krok. Baza: dokładny `AI_HOME_4B12_STEP_2B1_SOURCE.zip`, SHA-256 `ba853712ee00c980183d4e602cde5f4bcea0f200d64a19e9034a7ac1ae78df4b`, 770 plików. Potwierdzenie użytkownika bez niezależnego odczytu nowego przebiegu GitHub.
+
+2B-2 dodaje jawny natywny POST do registration/start/ z rzeczywistym reqwest, bez redirect/proxy/auto retry/provider credentials. Przed POST-em SQLite utrwala hash dokładnego żądania i ordinal próby. Po niejednoznacznym wyniku jawne ponowienie zachowuje ten sam invite, client_start_id i klucze. Inny invite jest konfliktem przed HTTP. Invite/request body/private keys nie są zapisywane w SQLite; hash jest wrażliwą metadaną koordynacji, nie diagnostyką. Licznik dotyczy zamiaru dispatchu, nie potwierdzonych fizycznych wywołań.
+
+Odpowiedź ma ograniczenie 16 KiB także dla chunked, Content-Type JSON, deadline całego HTTP 1ms..30s i bezpieczne błędy. Pending challenge jest sprawdzany względem oryginalnego scope/profilu/kluczy, canonical statement, suite, nonce, ID i czasu. Committed też przechodzi pełne powiązania, może mieć historyczne expiry i oznacza RecoveryRequired, nie sukces logowania. Przed trwałym zapisem odrzucamy extras/tokeny/request_id serwera; CAS chroni przed spóźnionym wynikiem i błędem starszej próby.
+
+cached() po ponownym otwarciu bazy ładuje klucze i ponownie waliduje zachowany kontekst, bez invite/HTTP/generacji. Expired pending nie jest ponawiany. progress().has_context to obecność, nie aktualność/uprawnienie/autoryzacja. Automatycznego retry/startup HTTP nie dodano. Zmiana błędnie wklejonego pierwszego invite i bezpieczne anulowanie wymagają przyszłego kontrolowanego uzgodnienia; nie wolno usuwać bazy/claimu jako obejścia.
+
+Dedykowany rejestr Community przechodzi atomowo v1 -> v2 (nowa tabela startu, pierwotny preparation DDL identyczny). Store aplikacji pozostaje v15. Zamrożone P2, Cargo.toml/lock, provider vault/adapters, workflow i uprawnienia są bez zmian. Jedyna korekta starego testu to fixture „przyszła wersja” z 2 na 3, aby nadal była przyszła względem v2; nie zmniejszono kontroli.
+
+Status **IMPLEMENTED / AWAITING CI AND AUDIT**, 2B i 4B-12 OPEN. Raport `docs/AI_HOME_4B12_STEP_2B2_START_HTTP_PL.md`, developer guide EN `docs/COMMUNITY_IDENTITY_DEVELOPER.md`, dowody `docs/evidence/4b12-step-2b2/`. Weryfikacja lokalna: Rust/Linux headless 499/499, nowe testy 25/25, UI 219/219, build PASS, P2 193/193, granice 34/34 i pozostałe kontrole PASS. Testy HTTP to loopback bez TLS i mock vault; nie oznaczają działającego live forum/PHP ani realnego OS keyringu. Bez release/instalatorów i zmian CI.
+
+Następny odbiór 2B: complete POST razem z trwałym postępem i oddzielnym magazynem jednorazowego tokenu, proof-status/reissue po utracie odpowiedzi, potem lifecycle profilu/backup/restore i host capability/direction checks oraz IPC przed włączeniem użytkownikowi. Żadne miejsce aplikacji nie otwiera jeszcze rejestru/nie wywołuje start automatycznie. Nie publikujemy wątków ani odpowiedzi. Podpisane zapisy i feed pozostają dalej w 4B-12; Messenger/A2A 4B-13, UI Experimental 4B-14. Windows/Tauri/WebView/live API pozostają osobnymi bramkami.
+
+---
+
 # Bieżący stan — treść 1.76 — 27 października 2026 — 4B-12 krok 2B-1: trwałe przygotowanie rejestracji
 
 Edward potwierdził zielony wynik całego kroku 2A i upoważnił następny krok. Baza: dokładny `AI_HOME_4B12_STEP_2A_SOURCE.zip`, SHA-256 `2f13c3d0aba0ad610b0a9d8eb78f4218ebe524a203de0defb51e72aff95d1f78`, 747 plików. Jest to potwierdzenie użytkownika, bez niezależnego odczytu numeru nowego przebiegu GitHub.

@@ -1,0 +1,3 @@
+PASS: status Rust signature verified by OpenSSL; altered message rejected
+PASS: reissue Rust signature verified by OpenSSL; altered message rejected
+PASS: 2/2 signatures verified; 2/2 tampered messages rejected; public-only artifacts.

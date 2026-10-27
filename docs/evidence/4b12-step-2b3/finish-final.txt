@@ -1,0 +1,38 @@
+   Compiling ai-home v0.0.1 (/workspace/scratch/8e3755d5c581/community_start/work/AI_Home/src-tauri)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 9.87s
+     Running unittests src/lib.rs (src-tauri/target/debug/deps/ai_home-115d9982d99b3172)
+
+running 30 tests
+test community_identity::registry::finish::tests::expired_proof_cannot_be_signed ... ok
+test community_identity::registry::finish::tests::changed_operational_key_id_between_proofs_is_rejected ... ok
+test community_identity::registry::finish::tests::generation_change_between_status_and_challenge_stops_without_reissue ... ok
+test community_identity::registry::finish::tests::durable_dispatch_failure_prevents_complete_post ... ok
+test community_identity::registry::finish::tests::committed_start_runs_full_status_and_reissue_protocol ... ok
+test community_identity::registry::finish::tests::immutable_token_candidates_are_scoped_and_removable ... ok
+test community_identity::registry::finish::tests::complete_persists_packet_and_token_before_reporting_ready ... ok
+test community_identity::registry::finish::tests::cancelled_complete_can_be_recovered_without_new_keys ... ok
+test community_identity::registry::finish::tests::database_failure_after_vault_write_does_not_lose_recovery_reference ... ok
+test community_identity::registry::finish::tests::missing_identity_keys_block_all_complete_http ... ok
+test community_identity::registry::finish::tests::independent_database_pools_have_one_recovery_cas_winner ... ok
+test community_identity::registry::finish::tests::late_reissue_candidate_cannot_replace_a_newer_generation ... ok
+test community_identity::registry::finish::tests::late_old_token_cannot_replace_newer_recovery_token ... ok
+test community_identity::registry::finish::tests::lost_complete_response_replays_exact_packet_then_recovers_lost_token ... ok
+test community_identity::registry::finish::tests::lost_reissue_response_requires_fresh_proofs_and_new_generation ... ok
+test community_identity::registry::finish::tests::registry_v2_migration_preserves_start_and_never_sends_http ... ok
+test community_identity::registry::finish::tests::persisted_complete_packet_tampering_cannot_be_replayed ... ok
+test community_identity::registry::finish::tests::proofs_match_independent_python_contract_fixtures_and_signatures ... ok
+test community_identity::registry::finish::tests::missing_local_token_is_not_ready_and_explicit_recovery_restores_access ... ok
+test community_identity::registry::finish::tests::sqlite_and_public_progress_do_not_contain_bearer_tokens ... ok
+test community_identity::registry::finish::tests::stale_revision_does_not_dispatch_recovery ... ok
+test community_identity::registry::finish::tests::token_wire_format_is_exact_and_canonical ... ok
+test community_identity::registry::finish::tests::malformed_or_mismatched_token_receipts_are_not_accepted ... ok
+test community_identity::registry::finish::tests::status_cannot_return_a_token_instead_of_public_metadata ... ok
+test community_identity::registry::finish::tests::token_store_never_accepts_provider_or_identity_references ... ok
+test community_identity::registry::finish::tests::readback_failure_leaves_recoverable_candidate_not_false_ready ... ok
+test community_identity::registry::finish::tests::malformed_reissue_receipt_remains_recoverable ... ok
+test community_identity::registry::finish::tests::token_survives_real_database_close_reopen_without_http ... ok
+test community_identity::registry::finish::tests::token_generation_rollback_is_rejected_without_reissue ... ok
+test community_identity::registry::finish::tests::wrong_challenge_scope_or_purpose_or_expiry_stops_before_signed_request ... ok
+
+test result: ok. 30 passed; 0 failed; 0 ignored; 0 measured; 169 filtered out; finished in 2.64s
+

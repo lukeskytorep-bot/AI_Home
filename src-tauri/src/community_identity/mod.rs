@@ -1,9 +1,11 @@
-//! 4B-12 step 2A: native-only key custody and exact registration packets.
-//! The registry submodule adds durable local preparation (2B-1).
-//! No HTTP, automatic registration, token acceptance or IPC.
+//! Native Community keys, durable explicit registration and token recovery.
+//! Completion/proof HTTP and separate token custody arrive in 4B-12 / 2B-3.
+//! No automatic registration, production host, UI or IPC is enabled here.
 mod crypto;
-mod vault;
+mod proof;
 pub mod registry;
+pub mod tokens;
+mod vault;
 use chrono::{DateTime, SecondsFormat, Utc};
 pub use crypto::{
     public_key_fingerprint, verify_signature, ALGORITHM, PUBLIC_FORMAT, SIGNATURE_FORMAT,
@@ -204,6 +206,25 @@ impl RegistrationIntent {
         response: &Value,
         now: DateTime<Utc>,
     ) -> Result<ValidatedRegistration, IdentityError> {
+        self.validate_context(response, now, false)
+    }
+    // A committed start is recovery metadata only. The HTTP coordinator validates
+    // the same canonical bindings before exposing RecoveryRequired, never a token.
+    fn validate_context(
+        &self,
+        response: &Value,
+        now: DateTime<Utc>,
+        allow_committed: bool,
+    ) -> Result<ValidatedRegistration, IdentityError> {
+        self.context(response, now, allow_committed, false)
+    }
+    fn context(
+        &self,
+        response: &Value,
+        now: DateTime<Utc>,
+        allow_committed: bool,
+        archived: bool,
+    ) -> Result<ValidatedRegistration, IdentityError> {
         if response.to_string().len() > 16384
             || response["ok"] != true
             || !response["request_id"]
@@ -213,10 +234,11 @@ impl RegistrationIntent {
             return Err(IdentityError::Invalid);
         }
         let r = &response["registration"];
-        if r["state"] == "committed" {
+        let committed = r["state"] == "committed";
+        if committed && !allow_committed {
             return Err(IdentityError::RecoveryRequired);
         }
-        if r["state"] != "pending" || !r["retry"].is_boolean() {
+        if (r["state"] != "pending" && !committed) || !r["retry"].is_boolean() {
             return Err(IdentityError::Invalid);
         }
         if r["community_origin"] != self.scope.origin
@@ -253,7 +275,7 @@ impl RegistrationIntent {
         if deadline.to_rfc3339_opts(SecondsFormat::Secs, true) != expires {
             return Err(IdentityError::Invalid);
         }
-        if deadline < now {
+        if deadline < now && !committed && !archived {
             return Err(IdentityError::Expired);
         }
         if deadline > now + chrono::Duration::hours(24) {
