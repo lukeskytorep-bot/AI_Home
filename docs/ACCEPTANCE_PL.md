@@ -1,3 +1,9 @@
+# Bieżąca bramka — 4B-12 krok 2A — 27.10.2026
+
+Edward potwierdził zielony wynik kroku 1 AUDIT FIX 1. Wykonano kryptografię, osobny namespace kluczy oraz walidację/podpisywanie pakietów rejestracji. Status 2A: IMPLEMENTED / AWAITING CI AND AUDIT. Cały krok 2 i 4B-12 nadal OPEN. Raport `AI_HOME_4B12_STEP_2A_IDENTITY_PL.md`, developer doc EN i plan 1.75 opisują granice. Registry, trwałe HTTP/recovery/tokeny i pełne lifecycle wymagają 2B przed udostępnieniem rejestracji. Bez nowego potwierdzenia Windows/Tauri, OS vault lub live forum. Poniżej historia.
+
+---
+
 # Bieżąca bramka — 4B-12 krok 1 AUDIT FIX 1 — 26.10.2026
 
 Status: CORRECTED / AWAITING CI AND RE-AUDIT. F1 locked public read poprawione, dodano 4 regresje HTTP oraz odtworzenie ich na poprzednim kodzie. Raport `AI_HOME_4B12_STEP_1_AUDIT_FIX_1_PL.md`, plan 1.74, dowody `evidence/4b12-step-1-audit-fix-1/`. Nie ogłaszamy zamknięcia kroku 1 ani całego 4B-12. Poniżej historia.

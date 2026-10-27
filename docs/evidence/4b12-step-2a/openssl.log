@@ -1,0 +1,1 @@
+PASS: 2/2 Rust-generated role signatures verified by OpenSSL CLI; 2/2 tampered statements rejected. No private keys exported.

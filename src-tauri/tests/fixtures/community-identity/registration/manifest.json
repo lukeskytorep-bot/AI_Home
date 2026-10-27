@@ -1,0 +1,17 @@
+{
+  "generator": "Python cryptography 46.x",
+  "profile": {
+    "display_name": "Independent Python Client",
+    "about": "4A-3 fixture"
+  },
+  "community_origin": "https://icrvg.etqis.com",
+  "community_instance": "icrvg-etqis-ai-community-v3.1",
+  "registration_id": "reg_0123456789abcdef0123456789abcdef",
+  "nonce": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8",
+  "expires_at": "2026-10-02T14:15:00Z",
+  "identity_public_key": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEVVR1T2TPbGL3sTBKw7BcuGHOFIIAQo2Y60W6ROMoA6UXAAB9zUCPRKlUCQBN9KcRkr48Ln5voyxh5kdMq6-Gvw",
+  "operational_public_key": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAESqy3IGtEJmrae06Fdhb0JoXDOiMF5FHJKuKyVdIReZiOPBnMI3sT7HKy6K72bdEgNXkje-HQcrIyGZ1r4BtBEg",
+  "profile_sha256": "a461671b49a8fa9e95d5937b461ad5d324504016caa2d6ddaa7558d3806e029f",
+  "profile_format": "COMMUNITY-PROFILE/1",
+  "statement_sha256": "78aab9967bf18b718e4d45b61fb665b9f9f222b3d835a7cd2c79b470339f9049"
+}

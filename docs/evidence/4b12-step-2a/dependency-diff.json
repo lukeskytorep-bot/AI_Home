@@ -1,0 +1,196 @@
+{
+  "directAdded": {
+    "p256": "=0.13.2",
+    "rand_core": "=0.6.4",
+    "zeroize": "=1.9.1"
+  },
+  "removedPackages": [],
+  "upgradedExistingVersions": [],
+  "newPackages": [
+    {
+      "name": "base16ct",
+      "version": "0.2.0"
+    },
+    {
+      "name": "base64ct",
+      "version": "1.8.3"
+    },
+    {
+      "name": "const-oid",
+      "version": "0.9.6"
+    },
+    {
+      "name": "crypto-bigint",
+      "version": "0.5.5"
+    },
+    {
+      "name": "der",
+      "version": "0.7.10"
+    },
+    {
+      "name": "ecdsa",
+      "version": "0.16.9"
+    },
+    {
+      "name": "elliptic-curve",
+      "version": "0.13.8"
+    },
+    {
+      "name": "ff",
+      "version": "0.13.1"
+    },
+    {
+      "name": "group",
+      "version": "0.13.0"
+    },
+    {
+      "name": "p256",
+      "version": "0.13.2"
+    },
+    {
+      "name": "pem-rfc7468",
+      "version": "0.7.0"
+    },
+    {
+      "name": "pkcs8",
+      "version": "0.10.2"
+    },
+    {
+      "name": "primeorder",
+      "version": "0.13.6"
+    },
+    {
+      "name": "rfc6979",
+      "version": "0.4.0"
+    },
+    {
+      "name": "sec1",
+      "version": "0.7.3"
+    },
+    {
+      "name": "signature",
+      "version": "2.2.0"
+    },
+    {
+      "name": "spki",
+      "version": "0.7.3"
+    }
+  ],
+  "existingNodesWithFeatureDependencyChanges": [
+    {
+      "name": "ai-home",
+      "version": "0.0.1",
+      "before": {
+        "name": "ai-home",
+        "version": "0.0.1",
+        "dependencies": [
+          "base64 0.22.1",
+          "chrono",
+          "image",
+          "keyring",
+          "lopdf",
+          "regex",
+          "reqwest",
+          "roxmltree",
+          "serde_json",
+          "sha2",
+          "sqlx",
+          "tauri",
+          "tauri-build",
+          "tauri-codegen",
+          "tauri-macros",
+          "tauri-plugin-dialog",
+          "tauri-runtime",
+          "tauri-runtime-wry",
+          "tauri-utils",
+          "tokio",
+          "uuid",
+          "zip"
+        ]
+      },
+      "after": {
+        "name": "ai-home",
+        "version": "0.0.1",
+        "dependencies": [
+          "base64 0.22.1",
+          "chrono",
+          "image",
+          "keyring",
+          "lopdf",
+          "p256",
+          "rand_core 0.6.4",
+          "regex",
+          "reqwest",
+          "roxmltree",
+          "serde_json",
+          "sha2",
+          "sqlx",
+          "tauri",
+          "tauri-build",
+          "tauri-codegen",
+          "tauri-macros",
+          "tauri-plugin-dialog",
+          "tauri-runtime",
+          "tauri-runtime-wry",
+          "tauri-utils",
+          "tokio",
+          "uuid",
+          "zeroize",
+          "zip"
+        ]
+      }
+    },
+    {
+      "name": "digest",
+      "version": "0.10.7",
+      "before": {
+        "name": "digest",
+        "version": "0.10.7",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "checksum": "9ed9a281f7bc9b7576e61468ba615a66a5c8cfdff42420a70aa82701a3b1e292",
+        "dependencies": [
+          "block-buffer",
+          "crypto-common",
+          "subtle"
+        ]
+      },
+      "after": {
+        "name": "digest",
+        "version": "0.10.7",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "checksum": "9ed9a281f7bc9b7576e61468ba615a66a5c8cfdff42420a70aa82701a3b1e292",
+        "dependencies": [
+          "block-buffer",
+          "const-oid",
+          "crypto-common",
+          "subtle"
+        ]
+      }
+    },
+    {
+      "name": "generic-array",
+      "version": "0.14.7",
+      "before": {
+        "name": "generic-array",
+        "version": "0.14.7",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "checksum": "85649ca51fd72272d7821adaf274ad91c288277713d9c18820d8499a7ff69e9a",
+        "dependencies": [
+          "typenum",
+          "version_check"
+        ]
+      },
+      "after": {
+        "name": "generic-array",
+        "version": "0.14.7",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "checksum": "85649ca51fd72272d7821adaf274ad91c288277713d9c18820d8499a7ff69e9a",
+        "dependencies": [
+          "typenum",
+          "version_check",
+          "zeroize"
+        ]
+      }
+    }
+  ]
+}

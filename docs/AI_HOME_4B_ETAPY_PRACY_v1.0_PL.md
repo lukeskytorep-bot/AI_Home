@@ -1,3 +1,19 @@
+# Bieżący stan — treść 1.75 — 27 października 2026 — 4B-12 krok 2A: klucze i protokół rejestracji
+
+Edward potwierdził zielony wynik całego 4B-12 kroku 1 AUDIT FIX 1 i upoważnił kolejny krok. Bazą jest dokładny `AI_HOME_4B12_STEP_1_AUDIT_FIX_1_SOURCE.zip`, SHA-256 `ba55a869fb069cdea1893072e21e35189ee342a220aff8d1b52a60471840bd83`.
+
+Krok 2 podzielono na 2A i 2B, żeby nie utożsamiać podpisania pakietu z ukończeniem rejestracji. Wykonany 2A obejmuje rzeczywiste dwie pary P-256, odrębny namespace systemowego magazynu kluczy, jawne reserve/provision/load/remove, canonical profile i registration statement zgodne z 4A, kontrolę challenge oraz podpisany complete packet. Dane profilu mają identyczne z PHP limity UTF-8/ASCII trim. Weryfikujemy podpisy i kodowania na niezależnych fixture'ach forum; OpenSSL CLI potwierdza podpisy wygenerowane przez Rust.
+
+Referencja kluczy może zostać zapisana przed provisioningiem. Retry load/sign nie generuje nowych kluczy. Scope obejmuje lokalny profileId, API root oraz jawnie przypięte community_origin/community_instance; nie ma w nim ModelRoute ani klucza dostawcy. Backend systemowy ma własny service org.aihome.app.community.identity.v1. Brak fallbacku plaintext. Caller przyszłego koordynatora musi posiadać wyłączne prawo provisioningu danej referencji — OS keyring nie jest cross-process CAS.
+
+2A nie wysyła POST-ów i nie przyjmuje tokenów forum. Status committed w odpowiedzi start wymaga RecoveryRequired, nie pozornego sukcesu. Nie dodano SQLite registry ani IPC/UI. SQLite pozostaje v15. Nowe zależności: pinned p256 0.13.2, rand_core 0.6.4, zeroize 1.9.1; bez aktualizacji istniejących wersji pakietów. Vault dostawców, modele i workflow bez zmian.
+
+Status: **IMPLEMENTED / AWAITING CI AND AUDIT**. Całe 4B-12 i cały krok 2 nadal OPEN. Raport: `docs/AI_HOME_4B12_STEP_2A_IDENTITY_PL.md`; developer doc EN: `docs/COMMUNITY_IDENTITY_DEVELOPER.md`; dowody `docs/evidence/4b12-step-2a/`.
+
+Następny krok 2B: trwały registry/intents i lease przed provision/HTTP, rejestracja start/complete, proof-status i reissue po utracie jednorazowego tokenu, zapis tokenów w oddzielnym namespace, profile lifecycle/backup/restore metadata i integracja z dispatcherem. Referencje/IDs/signed bytes muszą przetrwać restart bez regeneracji. Dopiero po tym podpisane zapisy i feed. Nie nazywać 2A działającą rejestracją na forum, pełnym odzyskiwaniem ani automatycznie wpiętym usuwaniem kluczy przy kasowaniu profilu. Podział nie rozszerza pracy do 4B-13.
+
+---
+
 # Bieżący stan — treść 1.74 — 26 października 2026 — 4B-12 krok 1 AUDIT FIX 1
 
 Audyt główny kroku 1 wykrył F1: klient publicznego odczytu odrzucał locked, chociaż odebrane 4A nadal udostępnia treść zablokowanego wątku. Poprawiono obie gałęzie walidatora: listę obsługiwanych statusów i warunek dopuszczenia normalnego payloadu. locked pozostaje locked i nie nadaje prawa do pisania. hidden i nieznane statusy nadal są niepoprawną odpowiedzią; deleted wymaga tombstone, a tombstone nie może zawierać payloadu.

@@ -19,7 +19,8 @@
     "verify:experimental-continuity": "python3 scripts/verify-experimental-continuity.py",
     "verify:experimental-internal-state": "python3 scripts/verify-experimental-internal-state.py",
     "verify:experimental-reflection": "python3 scripts/verify-experimental-reflection.py",
-    "verify:community-reader": "python3 scripts/verify-community-reader.py"
+    "verify:community-reader": "python3 scripts/verify-community-reader.py",
+    "verify:community-identity": "python3 scripts/verify-community-identity.py"
   },
   "dependencies": {
     "@tauri-apps/api": "2.11.1",

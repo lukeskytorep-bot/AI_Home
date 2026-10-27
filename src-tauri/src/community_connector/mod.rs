@@ -231,7 +231,7 @@ impl CommunityReader {
         .map_err(|_| ReadError::Timeout)?
     }
 }
-fn normalize_root(raw: &str) -> Result<Url, ReadError> {
+pub(crate) fn normalize_root(raw: &str) -> Result<Url, ReadError> {
     if raw.len() > 2048
         || raw.chars().any(|c| c.is_control() || c.is_whitespace())
         || raw.contains(['%', '\\', '?', '#'])

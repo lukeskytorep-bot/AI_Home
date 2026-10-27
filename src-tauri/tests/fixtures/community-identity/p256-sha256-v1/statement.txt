@@ -1,0 +1,4 @@
+COMMUNITY-SIGNATURE-FIXTURE/1
+algorithm=openssl-ecdsa-p256-sha256-der/1
+purpose=4A-2-independent-client-fixture
+payload_sha256=3ec2d6262d0df517f1c07f74f97138e5e58951393da8ce1baa4c1484bc5bcde0

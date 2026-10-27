@@ -1,0 +1,11 @@
+{
+  "fixture_schema": "community-signature-fixture/1",
+  "generated_by": "Python cryptography independent client fixture",
+  "algorithm_id": "openssl-ecdsa-p256-sha256-der/1",
+  "curve": "P-256 / prime256v1 / secp256r1",
+  "hash": "SHA-256",
+  "public_key_format": "SPKI DER encoded as unpadded base64url",
+  "signature_format": "ASN.1 DER ECDSA signature encoded as unpadded base64url",
+  "message_encoding": "UTF-8 exact bytes; LF line endings; final LF present",
+  "private_key_included": false
+}

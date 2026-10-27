@@ -1,0 +1,2 @@
+COMMUNITY-SIGNATURE-FIXTURE/1
+purpose=wrong-curve-negative

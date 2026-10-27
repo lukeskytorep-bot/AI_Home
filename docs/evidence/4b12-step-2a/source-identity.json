@@ -1,0 +1,34 @@
+{
+  "forumSourceArchive": "REFERENCE_FORUM_4A8C4_V4.zip",
+  "forumSourceSha256": "afe25c58590ec146f7be01ef83fc4854e717813bb99c86cd7d2c89251e4ebc8a",
+  "phpSourceFiles": {
+    "includes/registration-contract.php": "340eecfa2a2a6134159c6f9eafd9109d01f080fbf0271d577536e14f8bc6d0e7",
+    "includes/registration-service.php": "dc7456e13d0d12029e3cd72480822498148bfdc8703a1abceb0443e707a0ba80",
+    "includes/openssl-signature-provider.php": "46fa537edda2fb5c77566ebfa2830396c8f6ccba842aabedcaffcc26afef3275",
+    "includes/protocol.php": "2d0e28eea4af1c868047e7c6894c8244c3b7d29f9275da866a6a47ca96e70be9",
+    "api/v1/registration/start/index.php": "874933c94f5fcdadadaa79f68193f2bfb9fac4f75614b1037fe111d3ec89884e",
+    "api/v1/registration/complete/index.php": "e07e80485bbefdbb1d950fee5d669f70424f9ad09b15641df57e64a431576957",
+    "tests/registration-self-test.php": "ec317f49910208a162fc504075ea3d20342698cc18e6f0e9d448e55495c4f495"
+  },
+  "copiedPublicFixtures": {
+    "registration/identity_public_key.b64u": "41b01d94b1b89ac0f24024a7d84093558de3e6f6fc2148ee7d26be1d971573be",
+    "registration/profile.txt": "a461671b49a8fa9e95d5937b461ad5d324504016caa2d6ddaa7558d3806e029f",
+    "registration/operational_signature.b64u": "f88c6be5c5498cc83762d8fecaba422fafa88cf40ffe94894e9a6b09f9c2cf6b",
+    "registration/identity_public_key_compressed_alias.b64u": "b9ec8f3a58d238d772ea4e35ae4bab73bed12a514b6dd066c0679f1e6d989164",
+    "registration/manifest.json": "7484eeb02f1c4778fb1ce15783415b8789b60e17443c325845befd24edd09517",
+    "registration/operational_public_key.b64u": "08b411f26abcbbbd407c63bf4a217ed31a6f1b4b6465189a8370ddb0842c0b56",
+    "registration/statement.txt": "78aab9967bf18b718e4d45b61fb665b9f9f222b3d835a7cd2c79b470339f9049",
+    "registration/identity_public_key_trailing_alias.b64u": "ad0b475fa6a1be7c422c8e17324e08610bab8b694355d983f1391c370de907c5",
+    "registration/identity_signature.b64u": "11c151ba45fe012e8fd802f3eafa0d5297694667a9204b79d3f865977db3b528",
+    "p256-sha256-v1/public_key.b64u": "2dd05edc061334270d2b6508cb0e75d6edb7b01fcb49c06b6d87b77759ce8b47",
+    "p256-sha256-v1/manifest.json": "777f2da357ac31eef864ebd1736d669d913296baa534de3fea52a975299c6d7c",
+    "p256-sha256-v1/README.txt": "389b9c0783d8aee40a763820a632855aae23e53ddafab37d57c4603450245b0d",
+    "p256-sha256-v1/statement.txt": "a336e1c088d537915966eacd7be6d664c8fddc4e3dde503572582efe358ec3c6",
+    "p256-sha256-v1/signature.b64u": "71c1b41a8d0572761dd785334f4123c5641eca9d5dbeb10ac1d565760e6616b6",
+    "p384-negative/public_key.b64u": "4915e5f659df676b21b98f49a027f1314a713e3972517372a6f120dbb1bc5db3",
+    "p384-negative/README.txt": "2e59882462b5d8536e9c90d8fc2b86f3b64dde168d68b9b67f919327e5d35b6b",
+    "p384-negative/statement.txt": "f0cb9310b6f9954f5f8d57d47b35ed64213cd211eecb69829ebc43aa53d87c88",
+    "p384-negative/signature.b64u": "9f3e1feb7b8160defc31b0f386ff484fddf236cd52ea01fe4cc9ff0c3904ac86"
+  },
+  "privateKeysIncluded": false
+}

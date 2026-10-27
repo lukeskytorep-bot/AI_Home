@@ -1,0 +1,10 @@
+cargo test --manifest-path src-tauri/Cargo.toml --no-default-features --all-targets --locked --offline
+npm ci --ignore-scripts
+npm test
+npm run build
+npm run verify:boundaries
+PYTHONDONTWRITEBYTECODE=1 python3 snapshots/p2-v1.1/check_contracts.py
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/verify-*.py (individual logs)
+Optional OpenSSL verification: python3 scripts/verify-community-identity-openssl.py
+Public bridge generated with AI_HOME_PUBLIC_INTEROP_OUT set for the native community_identity test only; no private keys exported.
+No real OS vault, PHP/live server, Windows/Tauri or live-model tests.

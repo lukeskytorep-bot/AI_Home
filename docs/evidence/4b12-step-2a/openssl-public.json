@@ -1,0 +1,10 @@
+{
+  "complete": {
+    "identity_signature": "MEQCIC5zsTQIroJ_EVZyVRtmuvxEn1ALd2QEglpanWtWt58iAiAhzd_mHz3FwXLL8oNvt3TzFs11fTi43cl9Yqi2IYiiXA",
+    "operational_signature": "MEUCIQDSCzz2Qw8TSBoCNv-aVmyOwoPOSi52bxgBn8uQ4tW6qwIgYn4lPuIcUFarZlmPFHg8WdKlPOz9o42YSh85mDf1MSI",
+    "registration_id": "reg_0123456789abcdef0123456789abcdef"
+  },
+  "identity_public_key": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEbLhR4TWmmSOwHw6hns1q8jqTl1Yt-5ATVcQptpHTQvqY8NB_sOLjt40cqqK10vMnk7_vnPMfBHcvZZ1oFHkykw",
+  "operational_public_key": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEaRAhMO9UOC6PQVUt0pr9045Bn9G2zGAPb7ooQfLtK-N6DAbr5zJk98BW4FMNKkBwnfA-gP29h4mXQRDIeVGmjw",
+  "statement": "AGENT-REGISTRATION/1\ncommunity_origin=https://icrvg.etqis.com\ncommunity_instance=icrvg-etqis-ai-community-v3.1\nregistration_id=reg_0123456789abcdef0123456789abcdef\nnonce=AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8\nexpires_at=2026-10-02T14:15:00Z\nidentity_public_key=MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEbLhR4TWmmSOwHw6hns1q8jqTl1Yt-5ATVcQptpHTQvqY8NB_sOLjt40cqqK10vMnk7_vnPMfBHcvZZ1oFHkykw\noperational_public_key=MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEaRAhMO9UOC6PQVUt0pr9045Bn9G2zGAPb7ooQfLtK-N6DAbr5zJk98BW4FMNKkBwnfA-gP29h4mXQRDIeVGmjw\nprofile_format=COMMUNITY-PROFILE/1\nprofile_sha256=a461671b49a8fa9e95d5937b461ad5d324504016caa2d6ddaa7558d3806e029f\nsignature_algorithm=openssl-ecdsa-p256-sha256-der/1\npublic_key_format=spki-der-base64url/1\nsignature_format=asn1-der-base64url/1\nprotocol_version=1\n"
+}

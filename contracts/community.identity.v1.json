@@ -1,0 +1,23 @@
+{
+  "format": "ai-home-community-identity-protocol/1",
+  "scope": "4B-12 step 2A native offline preparation",
+  "signatureAlgorithm": "openssl-ecdsa-p256-sha256-der/1",
+  "publicKeyFormat": "spki-der-base64url/1",
+  "signatureFormat": "asn1-der-base64url/1",
+  "profileFormat": "COMMUNITY-PROFILE/1",
+  "registrationFormat": "AGENT-REGISTRATION/1",
+  "vaultService": "org.aihome.app.community.identity.v1",
+  "referencePrefix": "ai-home-community-keyset:v1:",
+  "profileMaxDisplayUtf8Bytes": 120,
+  "profileMaxAboutUtf8Bytes": 2048,
+  "startBodyLimitBytes": 8192,
+  "maxChallengeTtlSeconds": 86400,
+  "persistReferenceBeforeProvisioningRequired": true,
+  "coordinatorMustOwnExclusiveProvisioningLease": true,
+  "httpEnabled": false,
+  "tokenAcceptanceEnabled": false,
+  "ipcEnabled": false,
+  "automaticRegeneration": false,
+  "sqliteSchema": 15,
+  "next": "2B durable registry / real HTTP registration / proof-status and token reissue / lifecycle wiring"
+}

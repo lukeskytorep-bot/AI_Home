@@ -1,0 +1,22 @@
+{
+  "stage": "4B-12 step 2A identity preparation",
+  "status": "IMPLEMENTED_AWAITING_CI_AND_AUDIT",
+  "planContentVersion": "1.75",
+  "sqliteSchema": 15,
+  "nativeTests": 456,
+  "newIdentityTests": 21,
+  "frontendTests": 219,
+  "opensslVerifiedSignatures": 2,
+  "opensslTamperRejections": 2,
+  "baseSha256": "ba55a869fb069cdea1893072e21e35189ee342a220aff8d1b52a60471840bd83",
+  "unchangedBaselineFilesOutsideAllowedList": 681,
+  "newLockedPackages": 17,
+  "existingPackageVersionUpgrades": 0,
+  "httpRegistrationEnabled": false,
+  "tokenAcceptanceEnabled": false,
+  "appLifecycleWired": false,
+  "realOsVaultTested": false,
+  "desktopTested": false,
+  "liveForumTested": false,
+  "newGitHubRunVerified": false
+}
