@@ -1,0 +1,25 @@
+{
+  "allowedBaselineMutations": [
+    "README.md",
+    "SHA256SUMS.txt",
+    "contracts/community.registration.inventory.v1.json",
+    "docs/AI_HOME_4B_ETAPY_PRACY_v1.0_PL.md",
+    "docs/COMMUNITY_IDENTITY_DEVELOPER.md",
+    "docs/evidence/manifest.sha256.json",
+    "src-tauri/src/backup.rs",
+    "src-tauri/src/community_identity/registry/gate.rs",
+    "src-tauri/src/community_identity/registry/lifecycle.rs",
+    "src-tauri/src/lib.rs",
+    "src-tauri/src/persistence.rs",
+    "src-tauri/src/profile_deletion.rs"
+  ],
+  "allOtherBaselineFilesUnchanged": true,
+  "unchangedBaselineCount": 889,
+  "cargoAndPackageLockfilesUnchanged": true,
+  "workflowsIncludingColdCacheFixUnchanged": true,
+  "allOldTestsUnchanged": true,
+  "frozenP2AndWireFilesUnchanged": true,
+  "providersAndFrontendUnchanged": true,
+  "permissionsUnchanged": true,
+  "deletions": []
+}

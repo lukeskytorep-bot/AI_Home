@@ -81,7 +81,7 @@ pub async fn delete_profile(
     let profile = profile.to_string();
     tokio::spawn(async move{
         if !scalar(&profile,256){return Err(RegistryError::PolicyDenied.into());}
-        let exclusive=r.gate.exclusive().await;let keys=keys.scoped(exclusive.clone());let tokens=tokens.scoped(exclusive);
+        let exclusive=r.gate.exclusive().await;if r.gate.fenced(){return Err(RegistryError::PolicyDenied.into());}let keys=keys.scoped(exclusive.clone());let tokens=tokens.scoped(exclusive);
         sqlx::query("INSERT INTO community_profile_lifecycle(profile_id,state,revision) VALUES(?,'deleting',1) ON CONFLICT(profile_id) DO UPDATE SET state=CASE WHEN state='deleted' THEN 'deleted' ELSE 'deleting' END,revision=revision+1").bind(&profile).execute(&r.pool).await?;
         let scopes=scopes(&r,&profile).await?;let mut key_count=0;let mut token_count=0;
         for scope in scopes {
@@ -109,8 +109,10 @@ pub async fn snapshot(
 ) -> Result<Snapshot, LifecycleError> {
     let registry = registry.clone();
     let path = path.to_path_buf();
-    tokio::spawn(async move{
-        let _exclusive=registry.gate.exclusive().await;
+    tokio::spawn(async move{let lease=registry.maintenance().await;if registry.gate.fenced(){return Err(RegistryError::PolicyDenied.into());}snapshot_with_lease(&registry,&path,&lease).await}).await.map_err(|_|LifecycleError::Io)?
+}
+pub(crate) async fn snapshot_with_lease(registry:&RegistrationRegistry,path:&Path,lease:&gate::Lease)->Result<Snapshot,LifecycleError>{
+    if !lease.exclusive_for(&registry.gate){return Err(RegistryError::PolicyDenied.into());}
         if !path.is_absolute() || path.to_str().is_none() { return Err(LifecycleError::Io); }
         if sqlx::query_scalar::<_,i64>("SELECT count(*) FROM community_profile_lifecycle WHERE state='deleting'").fetch_one(&registry.pool).await?!=0{return Err(RegistryError::PolicyDenied.into());}
         let mut options=std::fs::OpenOptions::new();options.create_new(true).write(true);
@@ -132,7 +134,7 @@ pub async fn snapshot(
             Ok(Snapshot{sha256:super::super::crypto::digest(&bytes),profile_count,secrets_included:false,requires_reconciliation:true})
         }.await;
         if result.is_err(){let _=std::fs::remove_file(&path);}result
-    }).await.map_err(|_|LifecycleError::Io)?
+
 }
 // Merge only absent profiles. Never roll back live metadata or erase a deletion
 // tombstone. Restored credentials stay disabled until explicit reconciliation.
@@ -144,8 +146,10 @@ pub async fn restore_metadata(
     let registry = registry.clone();
     let path = path.to_path_buf();
     let sha = expected_sha256.to_string();
-    tokio::spawn(async move{
-        let _exclusive=registry.gate.exclusive().await;
+    tokio::spawn(async move{let lease=registry.maintenance().await;if registry.gate.fenced(){return Err(RegistryError::PolicyDenied.into());}restore_with_lease(&registry,&path,&sha,&lease).await}).await.map_err(|_|LifecycleError::Io)?
+}
+pub(crate) async fn restore_with_lease(registry:&RegistrationRegistry,path:&Path,sha:&str,lease:&gate::Lease)->Result<Restored,LifecycleError>{
+    if !lease.exclusive_for(&registry.gate){return Err(RegistryError::PolicyDenied.into());}
         let before=read_snapshot(&path,&sha)?;
         let mut source=sqlx::SqliteConnection::connect_with(&SqliteConnectOptions::new().filename(&path).read_only(true).immutable(true).create_if_missing(false)).await?;
         let version:i64=sqlx::query_scalar("PRAGMA user_version").fetch_one(&mut source).await?;
@@ -172,10 +176,33 @@ pub async fn restore_metadata(
         }
         source.close().await?;if read_snapshot(&path,&sha)?!=before{return Err(LifecycleError::InvalidSnapshot);}
         tx.commit().await?;Ok(report)
-    }).await.map_err(|_|LifecycleError::Io)?
+
 }
 fn schema_shape(rows:Vec<sqlx::sqlite::SqliteRow>)->Result<Vec<(String,String,String,Option<String>)>,LifecycleError>{
     rows.into_iter().map(|r|Ok((r.try_get("type")?,r.try_get("name")?,r.try_get("tbl_name")?,r.try_get("sql")?))).collect()
+}
+pub(crate) async fn inspect_snapshot(registry:&RegistrationRegistry,path:&Path,sha:&str,lease:&gate::Lease)->Result<Vec<(String,String)>,LifecycleError>{
+    if !lease.exclusive_for(&registry.gate){return Err(RegistryError::PolicyDenied.into());}
+    let before=read_snapshot(path,sha)?;
+    let mut source=sqlx::SqliteConnection::connect_with(&SqliteConnectOptions::new().filename(path).read_only(true).immutable(true).create_if_missing(false)).await?;
+    let version:i64=sqlx::query_scalar("PRAGMA user_version").fetch_one(&mut source).await?;
+    let app:i64=sqlx::query_scalar("PRAGMA application_id").fetch_one(&mut source).await?;
+    if version!=4||app!=1095254851{return Err(LifecycleError::InvalidSnapshot);}
+    let a=sqlx::query("SELECT type,name,tbl_name,sql FROM sqlite_master ORDER BY type,name").fetch_all(&mut source).await?;
+    let b=sqlx::query("SELECT type,name,tbl_name,sql FROM sqlite_master ORDER BY type,name").fetch_all(&registry.pool).await?;
+    if schema_shape(a)?!=schema_shape(b)?{return Err(LifecycleError::InvalidSnapshot);}
+    let check:String=sqlx::query_scalar("PRAGMA integrity_check").fetch_one(&mut source).await?;
+    if check!="ok"||!sqlx::query("PRAGMA foreign_key_check").fetch_all(&mut source).await?.is_empty(){return Err(LifecycleError::InvalidSnapshot);}
+    let states:Vec<(String,String)>=sqlx::query_as("SELECT profile_id,state FROM community_profile_lifecycle ORDER BY profile_id").fetch_all(&mut source).await?;
+    for (profile,state) in &states{
+        if !scalar(profile,256)||!["reconcile","deleted"].contains(&state.as_str()){return Err(LifecycleError::InvalidSnapshot);}
+        if state=="deleted"&&sqlx::query_scalar::<_,i64>("SELECT count(*) FROM community_preparations WHERE profile_id=?").bind(profile).fetch_one(&mut source).await?!=0{return Err(LifecycleError::InvalidSnapshot);}
+    }
+    let unsafe_ready:i64=sqlx::query_scalar("SELECT count(*) FROM community_registration_finishes WHERE json_extract(body,'$.state') IS NOT 'uncertain' OR json_extract(body,'$.tokenRef') IS NOT NULL").fetch_one(&mut source).await?;
+    let orphan:i64=sqlx::query_scalar("SELECT count(*) FROM community_preparations p WHERE NOT EXISTS(SELECT 1 FROM community_profile_lifecycle l WHERE l.profile_id=p.profile_id AND l.state='reconcile')").fetch_one(&mut source).await?;
+    source.close().await?;
+    if unsafe_ready!=0||orphan!=0||read_snapshot(path,sha)?!=before{return Err(LifecycleError::InvalidSnapshot);}
+    Ok(states)
 }
 fn read_snapshot(path: &Path, expected: &str) -> Result<Vec<u8>, LifecycleError> {
     if !path.is_absolute() || path.to_str().is_none() { return Err(LifecycleError::Io); }
@@ -236,7 +263,7 @@ pub async fn reconcile_profile(
     let keys = keys.clone();
     let profile = profile.to_string();
     tokio::spawn(async move{
-        let exclusive=registry.gate.exclusive().await;let keys=keys.scoped(exclusive);
+        let exclusive=registry.gate.exclusive().await;if registry.gate.fenced(){return Err(RegistryError::PolicyDenied.into());}let keys=keys.scoped(exclusive);
         match state(&registry,&profile).await?.as_deref(){Some("active")=>return Ok(Reconciled{active:true,missing_keys:0,pending_provisioning:0,token_recovery_required:0}),Some("reconcile")=>{},_=>return Err(RegistryError::PolicyDenied.into())}
         let mut result=Reconciled{active:false,missing_keys:0,pending_provisioning:0,token_recovery_required:0};
         for scope in scopes(&registry,&profile).await? {
@@ -268,7 +295,7 @@ pub async fn reconcile_keys(
     let keys = keys.clone();
     let scope = scope.clone();
     tokio::spawn(async move{
-        let exclusive=registry.gate.exclusive().await;let keys=keys.scoped(exclusive);
+        let exclusive=registry.gate.exclusive().await;if registry.gate.fenced(){return Err(RegistryError::PolicyDenied.into());}let keys=keys.scoped(exclusive);
         if !matches!(state(&registry,&scope.profile_id).await?.as_deref(),Some("active"|"reconcile")){return Err(RegistryError::PolicyDenied.into());}
         let record=registry.get(&scope).await?;if record.revision!=expected_revision{return Err(RegistryError::Conflict.into());}
         let public=keys.load(&scope,&record.key_reference).await?;

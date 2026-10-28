@@ -1,3 +1,23 @@
+# Bieżący stan — treść 1.82 — 28 października 2026 — 4B-12 / 2B-5.2: wspólny offline backup/restore
+
+Edward potwierdził zielony wynik po CI fix 1. Wykonano natywny OfflineCommunityBackup: spójny bundle Store + Community, safety copy, journal i roll-forward po przerwaniu. Status **IMPLEMENTED / AWAITING CI AND AUDIT**. Store **v16**, registry **v4**, bez migracji i nowych dependencies. Całe 2B-5, 2B i 4B-12 pozostają OPEN.
+
+- Maintenance jest **offline**, wymaga zamknięcia wszystkich Store-derived pools. Shared OS owner jest utrzymywany przez klony puli; koordynator wymaga exclusive Main owner i registry lease. Nie wymusza ani nie wygasza cudzej własności. Legacy startup restore może do 5 s czekać na disposal SQLx, potem odmawia; nie odblokowuje bazy siłą.
+- Bundle formatu 1 ma dokładnie application.sqlite3, community.sqlite3 i manifest; publikuje się dopiero kompletny zsynchronizowany katalog. Hashy i kanonicznych schematów nie zastępuje samo poprawne SQLite integrity. Limity: Main 1 GiB, registry 64 MiB, JSON 64 KiB. Unix 0700/0600; backup jest wrażliwy mimo braku eksportu vault.
+- Restore zachowuje nowszą lokalną historię/generacje/tombstone Community. Odtwarzany Main jest oczyszczany z lokalnie usuniętych profili i receipts. Nie osieraca nowszych żywych Community IDs nieobecnych w backupie. Pending deletion, registry deleting i nie-inactive bieżące Experimental blokują destrukcyjny restore. Brak owner override.
+- Importowane dane są reconcile, bez zaufania do odtworzonego tokena. Nie czyta się vault, nie generuje kluczy i nie wykonuje HTTP. Oryginalne klucze mogą zostać jawnie uzgodnione później; brak materiału nie tworzy nowej tożsamości.
+- Journal, main pending marker i trwały registry fence blokują zwykłe operacje także po przerwaniu. Restart nie tworzy pustej bazy; operator musi jawnie wznowić. Cztery okna awarii są testowane. receipt(requestId) działa bez inputu; finish_cleanup kończy housekeeping tylko dla już committed result, także po utracie bundle. Wadliwy receipt nie odblokowuje aplikacji.
+- SameInstallation wymaga pina. Jawne FreshInstallationRelocation działa wyłącznie do pustego Main bez pina i pustego rejestru. Bound install z pustym rejestrem nie jest uznawany za brak dawnych tombstone. Przenoszenie instalacji podczas pending restore nie jest obsługiwane.
+- **To native offline API, jeszcze bez przycisku/IPC i bez produkcyjnego host enablement.** Istniejący app backup dispatcher Community nadal odmawia Store-only kopii; routing przez maintenance/recovery mode należy do 2B-5.3. Domyślny Standard bez Community zachowuje dotychczasowy backup.
+
+Lokalnie **Rust 585/585 (22 nowe testy z 2 subprocess helperami), UI 219/219, build PASS, P2 193/193, granice 34/34, parity 54/54**. Cache fix, Cargo.toml/lock, frozen P2, frontend, providers i permissions pozostają bez zmian. Windows/WebView, systemowy vault, live API i power-loss/force-kill wymagają osobnego odbioru. Raport: docs/AI_HOME_4B12_STEP_2B5_2_OFFLINE_BACKUP_PL.md. Evidence: docs/evidence/4b12-step-2b5-2/.
+
+Dalej **2B-5.3**: host maintenance/recovery bootstrap oraz routing backupów, direction/capability checks, registration IPC; dopiero potem świadome włączenie w desktopie. Dalej signed writes/feed 4B-12, Messenger/A2A 4B-13 i UI Experimental 4B-14. Zwykłe CI z push wystarczy; bez nowego release/instalatorów.
+
+Poniżej zachowano wcześniejszy plan i CI gate 1.81 jako historię.
+
+---
+
 # Bieżący stan — treść 1.81 — 27 października 2026 — 2B-5.1 CI fix 1
 
 Po przekazaniu 2B-5.1 Edward zgłosił GitHub build-script failure: writeable/base64 wymagane jako rlib, lecz niedostępne. Status: **AWAITING COLD NATIVE CI**. Lokalna poprawność bazy nie zamyka tej bramki. 2B-5.2 jeszcze nie rozpoczęto.

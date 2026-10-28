@@ -248,7 +248,7 @@ async fn save_receipt(
     Ok(())
 }
 
-async fn delete_rows(tx: &mut Tx<'_>, profile: &str) -> Result<(), Failure> {
+pub(crate) async fn delete_rows(tx: &mut Tx<'_>, profile: &str) -> Result<(), Failure> {
     for table in [
         "experimental_self_records",
         "experimental_self_reviews",

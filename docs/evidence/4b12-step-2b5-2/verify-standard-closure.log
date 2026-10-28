@@ -1,0 +1,9 @@
+PASS activity.list native route
+PASS ActivityPanel visible in Standard UI
+PASS Activity skips permanent-deletion tombstones
+PASS Activity refresh reloads profiles
+PASS Standard uses NullState
+PASS no periodic frontend interval
+PASS no periodic native interval
+PASS no forum/community runtime package dependency
+RESULT: 8/8 Standard closure static checks PASS.

@@ -24,11 +24,24 @@ struct Inner {
 #[derive(Clone)]
 pub(crate) struct Lease(Arc<Inner>);
 impl Lease {
+    pub(crate) fn exclusive_for(&self, owner: &Arc<Gate>) -> bool {
+        Arc::ptr_eq(&self.0.owner, owner) && matches!(self.0._hold, Hold::Write { .. })
+    }
+
     fn permits(&self, owner: &Arc<Gate>, profile: &str) -> bool {
         Arc::ptr_eq(&self.0.owner, owner) && self.0.profile.as_deref().is_none_or(|p| p == profile)
     }
 }
 impl Gate {
+    pub(crate) fn fence_path(&self) -> std::path::PathBuf {
+        let mut p = self.path.as_os_str().to_os_string();
+        p.push(".restore-fence.json");
+        std::path::PathBuf::from(p)
+    }
+    pub(crate) fn fenced(&self) -> bool {
+        std::fs::symlink_metadata(self.fence_path()).is_ok()
+    }
+
     pub(super) async fn open(path: &Path) -> Result<Arc<Self>, RegistryError> {
         let path = path.to_path_buf();
         tokio::task::spawn_blocking(move || {
@@ -111,9 +124,29 @@ impl Gate {
     }
 }
 impl RegistrationRegistry {
+    pub(crate) async fn maintenance(&self) -> Lease {
+        self.gate.exclusive().await
+    }
+    pub(crate) async fn maintenance_states(
+        &self,
+        lease: &Lease,
+    ) -> Result<Vec<(String, String)>, RegistryError> {
+        if !lease.exclusive_for(&self.gate) {
+            return Err(RegistryError::PolicyDenied);
+        }
+        Ok(sqlx::query_as(
+            "SELECT profile_id,state FROM community_profile_lifecycle ORDER BY profile_id",
+        )
+        .fetch_all(&self.pool)
+        .await?)
+    }
+
+    pub(crate) fn restore_fence(&self) -> std::path::PathBuf {
+        self.gate.fence_path()
+    }
     /// Native host pin, not an authentication credential or a portable identity.
     pub(crate) fn host_binding(&self) -> String {
-        let mut bytes=b"ai-home-community-registry-path/1\n".to_vec();
+        let mut bytes = b"ai-home-community-registry-path/1\n".to_vec();
         bytes.extend_from_slice(self.gate.path.as_os_str().as_encoded_bytes());
         super::super::crypto::digest(&bytes)
     }
@@ -143,6 +176,9 @@ impl RegistrationRegistry {
             return Err(RegistryError::PolicyDenied);
         }
         let hold = self.gate.lock.clone().read_owned().await;
+        if self.gate.fenced() {
+            return Err(RegistryError::PolicyDenied);
+        }
         if create {
             sqlx::query("INSERT INTO community_profile_lifecycle(profile_id,state,revision) VALUES(?,'active',1) ON CONFLICT DO NOTHING").bind(&scope.profile_id).execute(&self.pool).await?;
         }

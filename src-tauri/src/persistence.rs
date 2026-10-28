@@ -6,13 +6,20 @@ pub const CURRENT_SCHEMA:i64=16;
 pub struct Store {pub pool:SqlitePool,path:Option<PathBuf>}
 impl Store {
     pub async fn open(path:&Path)->Result<Self,sqlx::Error>{
+        let owner=crate::app_ownership::acquire(path,false)?;
+        if path.parent().is_some_and(crate::app_ownership::pending){return Err(sqlx::Error::Protocol("native Community restore pending; resume maintenance before opening Store".into()))}
         let options=SqliteConnectOptions::new().filename(path).create_if_missing(true)
             .journal_mode(sqlx::sqlite::SqliteJournalMode::Wal).busy_timeout(std::time::Duration::from_secs(5));
-        Self::connect(options,Some(path.to_path_buf())).await
+        Self::connect(options,Some(path.to_path_buf()),Some(owner)).await
     }
-    pub async fn memory()->Result<Self,sqlx::Error>{Self::connect(SqliteConnectOptions::new().in_memory(true),None).await}
-    async fn connect(options:SqliteConnectOptions,path:Option<PathBuf>)->Result<Self,sqlx::Error>{
-        let pool=SqlitePoolOptions::new().max_connections(1).connect_with(options).await?;
+    pub async fn memory()->Result<Self,sqlx::Error>{Self::connect(SqliteConnectOptions::new().in_memory(true),None,None).await}
+    async fn connect(options:SqliteConnectOptions,path:Option<PathBuf>,owner:Option<std::sync::Arc<crate::app_ownership::Owner>>)->Result<Self,sqlx::Error>{
+        // Pool options retain this closure while any clone of the pool exists.
+        // Dropping Store alone must not release ownership of a cloned pool.
+        let options_pool=SqlitePoolOptions::new().max_connections(1).after_connect(move|_,_|{
+            let owner=owner.clone();Box::pin(async move{let _owner=owner;Ok(())})
+        });
+        let pool=options_pool.connect_with(options).await?;
         let mut tx=pool.begin().await?;
         let version:i64=sqlx::query_scalar("PRAGMA user_version").fetch_one(&mut *tx).await?;
         if version>CURRENT_SCHEMA{return Err(sqlx::Error::Protocol("unsupported storage version".into()))}

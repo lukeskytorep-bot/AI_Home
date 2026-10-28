@@ -1,0 +1,14 @@
+{
+  "command": [
+    "/workspace/scratch/8e3755d5c581/backup2b52/cargo/bin/cargo",
+    "test",
+    "--manifest-path",
+    "src-tauri/Cargo.toml",
+    "--no-default-features",
+    "--all-targets",
+    "--locked",
+    "--offline"
+  ],
+  "exitCode": 0,
+  "elapsedSeconds": 237.53
+}

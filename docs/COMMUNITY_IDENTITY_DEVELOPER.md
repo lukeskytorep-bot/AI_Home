@@ -1,3 +1,53 @@
+# Community offline backup/restore integration (4B-12 / 2B-5.2)
+
+The native offline coordinator is implemented; production host/UI/IPC enablement remains next in 2B-5.3. Keep the current app command guards until the host can close every Store pool and enter a recovery bootstrap. Store is 16; Community registry is 4. No schema migration or dependency update is introduced here.
+
+## Native API
+
+```rust
+use ai_home::community_backup::{OfflineCommunityBackup, RestorePolicy};
+// Protected existing absolute UTF-8 app_data; the stable registry is already open.
+// Close and drop ALL Store-derived pools before maintenance, including clones.
+let coordinator = OfflineCommunityBackup::new(&app_data, registry.clone())?;
+let manifest = coordinator.create(&destination, "backup-request-id").await?;
+let applied = coordinator.restore(
+    &destination, "restore-request-id", RestorePolicy::SameInstallation
+).await?;
+let receipt = coordinator.receipt("restore-request-id")?;
+// If a terminal result committed but marker cleanup was interrupted:
+let applied = coordinator.finish_cleanup("restore-request-id").await?;
+```
+
+These results are native values/formats, **not frozen P2 IPC DTOs**. Add proper command/result validation and error mapping in the future IPC seam; do not expose filesystem paths or native enum names accidentally. Native errors are bounded categories without SQL/key/token payloads. No HTTP or keyring calls occur in this coordinator.
+
+## Ownership and capture
+
+Store pools now retain a shared fs2 owner on a persistent sibling `.app-owner-lock`. A surviving clone of a Store-created pool retains it even after the Store wrapper is dropped. Maintenance requires exclusive app ownership and the registry's exclusive lease. It never expires ownership. The Standard startup restore waits at most five seconds for asynchronous SQLx disposal, then refuses rather than forcing access. This protocol assumes a protected local filesystem and cooperating participants; raw SQL/keyring and unowned pools are privileged integration mechanisms, not a supported bypass.
+
+Capture takes a logical VACUUM snapshot of Main and reuses the sanitized registry snapshot under the same held lease. The bundle contains exactly application.sqlite3, community.sqlite3 and manifest.json. Both files, manifest and directory are synced before a private temporary directory is renamed into the final destination. Existing destinations are verified idempotent replays or rejected, never overwritten. Incomplete private temporary directories can remain after an I/O failure; they are not published backups or silently removed.
+
+Format 1 is deliberately strict: canonical current schema 16/4, known metadata fields, per-component SHA-256, integrity/FKs, profile coverage and disabled imported token pointers. Extra DDL is rejected even after rehash. Maximum sizes: Main 1 GiB, Community 64 MiB, JSON 64 KiB. This does not replace the legacy Standard backup/migration format. Direct component/directory symlinks and extra bundle files are rejected. Private Unix files/directories use 0600/0700; Windows relies on the protected directory ACL and needs acceptance. Bundles contain private app content and sensitive signed metadata despite excluding vault secrets.
+
+## Restore and recovery
+
+Restore validates both inputs and current installation, refuses pending deletion/deleting registry state or non-inactive current Experimental, and refuses to orphan a newer live Community profile absent from the source app DB. Source Main remains an app snapshot; it never authorizes stopping a live Experimental instance.
+
+A durable request journal and main pending marker precede mutation. A persistent registry restore fence closes normal registry/start/finish and public lifecycle/reconciliation entry points across interruptions. Main startup and the old restore path reject the marker, including when the main DB was moved but its replacement has not yet been installed. Do not delete owner/fence/journal files manually.
+
+A complete safety bundle is committed and recorded before Community merge. Restore merges only missing registry IDs, preserving live history/generation/tombstones. Imported profiles remain reconcile, with no trusted token pointer. The staged app DB is verified before any DML, pruned with the shared app deletion tree for currently deleted IDs, and explicitly pinned to the selected registry. Source bytes are checked again before swap. The previous Main is retained; WAL/SHM are never manually unlinked.
+
+SameInstallation requires the correct pin. FreshInstallationRelocation explicitly permits rebinding only into an empty Main with no pin and an empty registry; it does not generate keys or change signed Community scope. A bound but empty registry is refused during restore because missing tombstones cannot be ruled out. Keep current registry history intact. A moved installation or input bundle during an in-flight restore is unsupported.
+
+Replaying the same request continues roll-forward. A different fingerprint cannot take over a pending job. The terminal receipt is strictly validated and readable without the original input. finish_cleanup only uses an already committed receipt: before releasing a main pending marker it verifies the installed hash; it never turns an incomplete import into success. The normal restore replay path also checks the installed Main hash while its pending marker remains; a missing or changed file keeps both guards intact. If main was already released but the registry fence survived, housekeeping can clear the matching fence without rolling back subsequent legitimate app changes. Future host startup must offer explicit resume/cleanup before enabling normal Community work.
+
+Local create/restore/cleanup workers retain their owners after the awaiting caller drops its future. No restart automatically posts to a provider/forum, generates keys, or reissues tokens. Missing keys stay missing until explicit reconciliation; original existing keys can be adopted through the existing lifecycle APIs. Live retained records remain subject to current()/credential() checks. Retention and a user-facing maintenance/recovery flow are not implemented here.
+
+22 new Linux tests include four interruption windows, a normal cross-process restart, file ownership in a second process, receipt corruption, input removal after committed restore, tombstone pruning, current generation preservation, original/missing keys and destination/policy isolation. Two functions are subprocess probes. Tests use fake vault backends and test-only per-instance fault points. They do not prove real OS-vault, Windows/WebView, live TLS/API, forced process kill or physical power-loss behavior.
+
+The previous integration details below remain useful. Their statements about backup being "next" describe the historical 2B-5.1 host seam; the native offline coordinator above now exists, while app IPC/desktop routing is still disabled.
+
+---
+
 # Community identity, registration and app deletion (4B-12 / 2B-5.1)
 
 Native explicit services only. `Application::with_community_lifecycle(CommunityLifecycle::new(registry, keys, tokens))` connects the existing profile.delete.permanent dispatcher to real Community cleanup. This is an opt-in native integration seam; the production desktop still does not construct it. Registration UI/IPC, scheduler, forum-content writes and automatic recovery remain disabled.

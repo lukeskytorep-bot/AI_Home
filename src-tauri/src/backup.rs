@@ -142,11 +142,13 @@ async fn apply_one(app_data:&Path,req:&Value)->Result<Value,sqlx::Error>{
 /// Startup restore is fail-closed. We never swallow an error and then let Store::open(create_if_missing=true)
 /// manufacture an empty replacement for user data. A failure aborts startup with the safety backup and ledger intact.
 pub async fn apply_pending_restore(app_data:&Path)->Result<Option<Value>,sqlx::Error>{
+    if crate::app_ownership::pending(app_data){return Err(io_error("native Community restore pending"));}
     fs::create_dir_all(request_dir(app_data)).map_err(|_|io_error("restore ledger directory create failed"))?;fs::create_dir_all(result_dir(app_data)).map_err(|_|io_error("restore result directory create failed"))?;
     let Some(req)=pending_request(app_data)? else{return Ok(None)};
     // Do not let an older queued restore discard an unfinished deletion intent.
     // Refusal is not corruption and must never trigger safety-copy replacement.
     let current=app_data.join("foundation.sqlite3");
+    let _owner=crate::app_ownership::drained_exclusive(&current).await?;
     if current.is_file(){reject_incomplete_community(&current).await?;}
     apply_one(app_data,&req).await.map(Some)
 }

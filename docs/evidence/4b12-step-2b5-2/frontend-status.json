@@ -1,0 +1,19 @@
+[
+  {
+    "name": "frontend",
+    "command": [
+      "npm",
+      "test"
+    ],
+    "exitCode": 0
+  },
+  {
+    "name": "build",
+    "command": [
+      "npm",
+      "run",
+      "build"
+    ],
+    "exitCode": 0
+  }
+]

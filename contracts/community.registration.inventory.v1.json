@@ -1,6 +1,6 @@
 {
   "format": "ai-home-community-registration-inventory/1",
-  "scope": "4B-12 step 2B-5.1 native app deletion orchestration; not frozen P2 or server DTO schema",
+  "scope": "4B-12 step 2B-5.2 native offline two-store backup/restore; not frozen P2 or server DTO schema",
   "identityPrimitiveInventory": "community.identity.v1.json (historical 2A primitive scope)",
   "registrySchema": 4,
   "appStoreSchema": 16,
@@ -23,7 +23,7 @@
   "profileLifecycleWired": true,
   "liveForumAccepted": false,
   "realOsVaultAccepted": false,
-  "next": "2B-5.2 coordinated backup/restore and explicit restore reconciliation of host pin; then 2B-5.3 direction/capabilities and registration IPC before desktop enablement",
+  "next": "2B-5.3 host maintenance/recovery bootstrap and backup routing, direction/capabilities and registration IPC before desktop enablement",
   "nativeLifecycleImplemented": true,
   "nativeProfileDeletion": true,
   "nativeSnapshotsAndMergeRestore": true,
@@ -40,5 +40,16 @@
   "pendingDeletionIntentDurable": true,
   "mainReceiptAfterCommunityCleanup": true,
   "nativeHostPinnedToRegistryPath": true,
-  "storeOnlyBackupRefusedForNativeCommunityHost": true
+  "storeOnlyBackupRefusedForNativeCommunityHost": true,
+  "nativeOfflineTwoStoreBackupRestore": true,
+  "storePoolSharedOwner": true,
+  "registryRestoreFenceAcrossRestart": true,
+  "nativeBackupVaultReads": false,
+  "nativeBackupVaultExports": false,
+  "nativeBackupRegeneratesKeys": false,
+  "nativeBackupPostsHttp": false,
+  "nativeRestorePrunesLocalDeletedProfiles": true,
+  "nativeRestorePreservesLiveRegistryHistory": true,
+  "nativeRestoreFreshRelocationExplicit": true,
+  "nativeReceiptAvailableWithoutInput": true
 }
