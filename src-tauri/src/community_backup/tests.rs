@@ -1028,3 +1028,6 @@ async fn malformed_terminal_receipt_does_not_clear_pending_or_fence() {
         .await
         .unwrap();
 }
+
+#[path = "host_tests.rs"]
+mod host_tests;

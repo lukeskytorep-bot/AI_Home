@@ -1,11 +1,12 @@
-//! Native host seam for local Community deletion. No registration IPC or HTTP.
-//! The desktop host stays disconnected until coordinated backup/restore and
-//! direction/capability policy are implemented in later 2B-5 substeps.
+//! Native Community deletion and managed maintenance/recovery host.
+//! Production desktop and registration IPC remain gated on direction/capability
+//! policy and command/result integration in later 2B-5.3 substeps.
 use crate::community_identity::{
     registry::{lifecycle, RegistrationRegistry},
     tokens::CommunityTokenStore,
     CommunityKeyStore,
 };
+pub mod maintenance;
 
 #[derive(Clone)]
 pub struct CommunityLifecycle {

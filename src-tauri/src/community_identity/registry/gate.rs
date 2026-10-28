@@ -144,6 +144,9 @@ impl RegistrationRegistry {
     pub(crate) fn restore_fence(&self) -> std::path::PathBuf {
         self.gate.fence_path()
     }
+    pub(crate) fn storage_path(&self) -> &Path {
+        &self.gate.path
+    }
     /// Native host pin, not an authentication credential or a portable identity.
     pub(crate) fn host_binding(&self) -> String {
         let mut bytes = b"ai-home-community-registry-path/1\n".to_vec();

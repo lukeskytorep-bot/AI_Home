@@ -73,6 +73,27 @@ fn result_by_request(root:&Path,request_id:&str)->Result<Option<Value>,sqlx::Err
 fn request_by_id(root:&Path,request_id:&str)->Result<Option<Value>,sqlx::Error>{let p=request_path(root,request_id);if p.is_file(){Ok(Some(read_json(&p)?))}else{Ok(None)}}
 fn pending_request(root:&Path)->Result<Option<Value>,sqlx::Error>{let mut pending=vec![];for r in request_records(root)?{let req=r["requestId"].as_str().ok_or_else(||io_error("restore request invalid"))?;if result_by_request(root,req)?.is_none(){pending.push(r)}}if pending.len()>1{return Err(io_error("multiple pending restores"))}Ok(pending.pop())}
 pub fn restore_pending_for_store(store:&Store)->bool{root(store).ok().and_then(|r|pending_request(&r).ok().flatten()).is_some()}
+/// Read-only native host guard. Unlike legacy listing, malformed ledger JSON
+/// must not disappear from consideration when opening coordinated Community.
+pub(crate) fn host_restore_pending(root:&Path)->Result<bool,sqlx::Error>{
+    let dir=request_dir(root);
+    let metadata=match fs::symlink_metadata(&dir){
+        Ok(m)=>m,
+        Err(e) if e.kind()==std::io::ErrorKind::NotFound=>return Ok(false),
+        Err(_)=>return Err(io_error("restore ledger unavailable")),
+    };
+    if !metadata.is_dir()||metadata.file_type().is_symlink(){return Err(io_error("restore ledger directory invalid"))}
+    for entry in fs::read_dir(dir).map_err(|_|io_error("restore ledger unavailable"))?{
+        let p=entry.map_err(|_|io_error("restore ledger entry invalid"))?.path();
+        if p.extension().and_then(|x|x.to_str())!=Some("json"){continue}
+        let metadata=fs::symlink_metadata(&p).map_err(|_|io_error("restore ledger entry unavailable"))?;
+        if !metadata.is_file()||metadata.file_type().is_symlink(){return Err(io_error("restore ledger entry invalid"))}
+        let r=read_json(&p)?;
+        let id=r["requestId"].as_str().filter(|id|!id.is_empty()).ok_or_else(||io_error("restore request invalid"))?;
+        if result_by_request(root,id)?.is_none(){return Ok(true)}
+    }
+    Ok(false)
+}
 
 async fn freeze_operations(store:&Store)->Result<(),sqlx::Error>{
     let mut tx=store.pool.begin().await?;let rows=sqlx::query("SELECT profile_id,id,revision,body FROM operations WHERE json_extract(body,'$.status') IN ('queued','running')").fetch_all(&mut *tx).await?;

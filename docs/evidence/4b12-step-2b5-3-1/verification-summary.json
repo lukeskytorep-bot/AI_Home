@@ -1,0 +1,39 @@
+{
+  "stage": "4B-12/2B-5.3.1",
+  "status": "IMPLEMENTED_AWAITING_CI_AND_AUDIT",
+  "baseFile": "AI_HOME_4B12_STEP_2B5_2_SOURCE.zip",
+  "baseSha256": "6933017891c23ab924e4fb912f377fb8dc3a32728c63974d63e8ba341d6e3030",
+  "rust": {
+    "passed": 602,
+    "failed": 0,
+    "suites": 23,
+    "newHostTests": 17,
+    "command": "cargo test --manifest-path src-tauri/Cargo.toml --all-targets --no-default-features --locked --offline",
+    "exitCode": 0
+  },
+  "frontend": {
+    "passed": 219,
+    "files": 21
+  },
+  "build": "PASS",
+  "P2": 193,
+  "verificationScripts": 12,
+  "schemas": {
+    "Store": 16,
+    "Community": 4
+  },
+  "CI": {
+    "baseSuccess": "user confirmation",
+    "currentRun": "NOT_RUN",
+    "independentlyVerified": false
+  },
+  "notCovered": [
+    "production desktop",
+    "Windows",
+    "real OS vault",
+    "live forum/TLS",
+    "physical power loss",
+    "force-kill",
+    "IPC authorization/routing"
+  ]
+}

@@ -27,6 +27,13 @@ impl Application {
         self.connections=self.connections.clone().with_community_lifecycle(service);self
     }
     pub fn stop(&mut self){self.kernel.stop();}
+    /// Consumed only by the native host after its dispatch gate has drained.
+    /// Closing the pool also closes connection clones; OS ownership is released
+    /// only after every clone has actually been dropped.
+    pub(crate) async fn close_for_maintenance(mut self){
+        self.stop();
+        self.store.pool.close().await;
+    }
     pub async fn dispatch(&self,r:Value)->Dispatch{
         let _guard=self.gate.lock().await;
         match self.execute(&r).await{Ok(d)=>d,Err(_)=>Dispatch{response:error(&r,"STORAGE_ERROR"),event:None}}

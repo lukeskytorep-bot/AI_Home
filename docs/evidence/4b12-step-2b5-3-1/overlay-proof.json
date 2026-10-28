@@ -1,0 +1,32 @@
+{
+  "baseFile": "AI_HOME_4B12_STEP_2B5_2_SOURCE.zip",
+  "baseSha256": "6933017891c23ab924e4fb912f377fb8dc3a32728c63974d63e8ba341d6e3030",
+  "changedPaths": [
+    "SHA256SUMS.txt",
+    "docs/AI_HOME_4B12_STEP_2B5_3_1_HOST_MAINTENANCE_PL.md",
+    "docs/AI_HOME_4B_ETAPY_PRACY_v1.0_PL.md",
+    "docs/COMMUNITY_IDENTITY_DEVELOPER.md",
+    "docs/evidence/4b12-step-2b5-3-1/build.log",
+    "docs/evidence/4b12-step-2b5-3-1/frontend.log",
+    "docs/evidence/4b12-step-2b5-3-1/overlay-proof.json",
+    "docs/evidence/4b12-step-2b5-3-1/p2.log",
+    "docs/evidence/4b12-step-2b5-3-1/preservation-proof.json",
+    "docs/evidence/4b12-step-2b5-3-1/rust-all.log",
+    "docs/evidence/4b12-step-2b5-3-1/static-checks.log",
+    "docs/evidence/4b12-step-2b5-3-1/tested-source-hashes.json",
+    "docs/evidence/4b12-step-2b5-3-1/verification-summary.json",
+    "docs/evidence/4b12-step-2b5-3-1/versions.json",
+    "docs/evidence/manifest.sha256.json",
+    "src-tauri/src/application.rs",
+    "src-tauri/src/backup.rs",
+    "src-tauri/src/community_backup/host_tests.rs",
+    "src-tauri/src/community_backup/tests.rs",
+    "src-tauri/src/community_host.rs",
+    "src-tauri/src/community_host/maintenance.rs",
+    "src-tauri/src/community_identity/registry/gate.rs"
+  ],
+  "changedPathCount": 22,
+  "removedPaths": [],
+  "application": "Replace paths from overlay in exact base source root; no deletion.",
+  "verified": "Applying overlay reproduced full SOURCE byte-for-byte before delivery."
+}

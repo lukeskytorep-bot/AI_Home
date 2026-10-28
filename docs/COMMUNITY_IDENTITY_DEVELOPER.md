@@ -1,3 +1,25 @@
+# Native managed Community host (4B-12 / 2B-5.3.1)
+
+`community_host::maintenance::CommunityHost` now owns the Application lifecycle around the two-store offline coordinator. This is a trusted native integration seam. The production Tauri entry point, UI and existing IPC contract are unchanged. Direction/capability authorization, command/result adapters and desktop activation remain subsequent 2B-5.3 work.
+
+Construct with an existing protected absolute app directory, the exact `community.sqlite3` registry owner, `CommunityLifecycle`, the model Vault and an optional FilePicker. Construction opens no Store and reads no secrets. It returns Offline or RecoveryRequired. It does not initialize a fresh installation. A missing Main never becomes an empty replacement database.
+
+Call `open_application()` explicitly. It refuses native pending/fence markers, unresolved or malformed legacy restore ledgers, missing Main and a mismatched durable registry pin. It waits at most five seconds for Main ownership to drain before opening Store. It never automatically applies a restore, reissues tokens, generates keys or posts registration HTTP. The legacy Standard desktop startup continues to use its existing entry point.
+
+All native application requests must go through `host.dispatch(request)`. All host clones share one admission gate and Application; no Application/Store/pool is returned. A second ordinary request while one dispatch holds the gate receives native Busy. These host errors are not additions to frozen IPC enums. The caller remains responsible for authenticated local authorization and eventual IPC error mapping. Do not route arbitrary UI-supplied filesystem paths to this API.
+
+`create_backup(destination, id)`, `restore(bundle, id, policy)` and `finish_cleanup(id)` immediately mark Maintenance, reject new dispatch and other maintenance attempts, wait for earlier dispatch, consume/stop Application, close its pool and verify actual OS ownership drain. Closing is bounded to five seconds; a separate ownership drain also waits at most five seconds. Neither timeout releases another owner's lock. The offline coordinator then reacquires Main and registry ownership for the entire operation; losing that race fails safely. An external cooperating pool or registry credential lease can still block maintenance. A pool held outside the managed host is unsupported integration, never a reason to force its owner closed.
+
+Once admitted, the local worker retains its gate even if the waiting caller is cancelled. A previously admitted dispatch is retained too, allowing local deletion work to settle before maintenance. Requests already queued/running in other privileged raw services are outside this dispatch gate; their pool ownership and registry leases still fence actual maintenance. No background AI restart is introduced.
+
+The terminal phase is published once while holding the admission gate, so an older worker cannot reset the phase of a newly admitted action. After maintenance the host stays Offline, or RecoveryRequired when durable guards or missing Main remain. Reopen is explicit and constructs a fresh Application with the same vault, file picker and Community lifecycle. Reopen also requires ownership drain, including after a failed close. Ordinary dispatch never implicitly reopens.
+
+Use the same bundle/request/policy to resume an interrupted restore. `receipt(id)` reads an already committed result; `finish_cleanup(id)` can release the remaining guards without original input only when the existing coordinator validates that receipt. The underlying merge-only registry semantics, tombstones, token generation rules and original-key reconciliation remain those of 2B-5.2. Recovery does not imply credential readiness.
+
+This substep adds no registration IPC, production desktop setup, new frontend, schema migration, dependency change, permission, release workflow or custom scheduler. Test evidence uses real SQLite and deterministic fake secrets. Linux host orchestration is covered locally; real OS keyring, Windows/Tauri/WebView, live forum and physical power loss are not covered. The older offline API and historical notes follow.
+
+---
+
 # Community offline backup/restore integration (4B-12 / 2B-5.2)
 
 The native offline coordinator is implemented; production host/UI/IPC enablement remains next in 2B-5.3. Keep the current app command guards until the host can close every Store pool and enter a recovery bootstrap. Store is 16; Community registry is 4. No schema migration or dependency update is introduced here.

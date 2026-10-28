@@ -1,3 +1,21 @@
+# Bieżący stan — treść 1.83 — 28 października 2026 — 4B-12 / 2B-5.3.1: natywny host maintenance/recovery
+
+Edward potwierdził zielony wynik 2B-5.2. Dodano CommunityHost, który posiada Application i wspólną bramkę dispatch/maintenance, zamyka pulę i sprawdza rzeczywisty OS drain przed backupem/restore obu baz. Status **IMPLEMENTED / AWAITING CI AND AUDIT**. Całe 2B-5.3, 2B-5, 2B i 4B-12 pozostają OPEN.
+
+- Fazy Offline / Ready / Maintenance / RecoveryRequired są natywne, bez nowego IPC. Przyjęte maintenance blokuje nowe dispatch, czeka na wcześniejszy dispatch i utrzymuje workera po anulowaniu oczekiwania. Końcowa faza jest publikowana raz pod bramką. Wiele klonów współdzieli jednego właściciela.
+- Host konsumuje Application i zamyka SQLx; nie usuwa ani nie wygasza blokad. Close i OS drain mają osobne limity po 5 s. Obcy lub opóźniony właściciel powoduje Busy. Po maintenance aplikacja pozostaje offline do jawnego reopen; reopen także wymaga drain i zachowuje vault/picker/lifecycle.
+- Startup odmawia Store przy pending native/fence, brakującym Main, błędnym registry pin i nierozstrzygniętym lub wadliwym legacy ledger. Nie powstaje pusta baza i nie wykonuje się automatycznego restore/HTTP/provision/token recovery. Wznowienie jest jawne przez istniejący journal; committed receipt pozwala dokończyć housekeeping bez utraconego bundle.
+- Zachowano merge-only/tombstone/token-generation/original-key semantics 2B-5.2. Bez nowej migracji, zależności, frontend, workflow, uprawnień i zmiany frozen P2. Store v16, registry v4.
+- **To przygotowany natywny host, nie aktywacja produkcyjnego desktopu.** Domyślny Tauri setup, istniejący app backup guard i registration UI pozostają niezmienione. Całe 2B-5.3 wymaga jeszcze direction/capability checks, command/result adapters, registration IPC i jawnego desktop enablement.
+
+Lokalnie **Rust 602/602 (17 nowych testów hosta), frontend 219/219, build PASS, P2 193/193, granice 34/34, parity 54/54**. Rust/Linux headless, bez odbioru default desktop.
+
+Raport: docs/AI_HOME_4B12_STEP_2B5_3_1_HOST_MAINTENANCE_PL.md. Guide: docs/COMMUNITY_IDENTITY_DEVELOPER.md. Dowody: docs/evidence/4b12-step-2b5-3-1/. Zwykły push CI i audyt; bez nowego release/instalatorów. Realny vault, Windows/WebView, live forum oraz power-loss nadal wymagają osobnego odbioru.
+
+Poniżej historia 1.82 i wcześniejsze decyzje.
+
+---
+
 # Bieżący stan — treść 1.82 — 28 października 2026 — 4B-12 / 2B-5.2: wspólny offline backup/restore
 
 Edward potwierdził zielony wynik po CI fix 1. Wykonano natywny OfflineCommunityBackup: spójny bundle Store + Community, safety copy, journal i roll-forward po przerwaniu. Status **IMPLEMENTED / AWAITING CI AND AUDIT**. Store **v16**, registry **v4**, bez migracji i nowych dependencies. Całe 2B-5, 2B i 4B-12 pozostają OPEN.

@@ -1,0 +1,9 @@
+{
+  "src-tauri/src/application.rs": "6f7543b8655fa7a58dc98df60c9ca4978aa7b99138a9a4b3150a1529b2f36c38",
+  "src-tauri/src/backup.rs": "33865be04ccc3b27fa1b0d10ffdc2e1645f023f88f144bb178948d9a900d0462",
+  "src-tauri/src/community_host.rs": "5aa9d69a5a5ae70dbb6030d175972f81b93fae3d2d363be82025220b22286d89",
+  "src-tauri/src/community_host/maintenance.rs": "3153db8c4d62799ffa0fe25f98c835209ce331e725dc60ca00eb6bddd0291a40",
+  "src-tauri/src/community_identity/registry/gate.rs": "00b6e18551b50cc83dcfc3a7e819512d91289c85411ffe085c916070a579b303",
+  "src-tauri/src/community_backup/tests.rs": "2a12c88643443dda1d4133c92008b7c891c86c2ab40c7babdf4a6580b8185fad",
+  "src-tauri/src/community_backup/host_tests.rs": "de5d01fdf8114afaac79a352c6515f55a841a8e05ac2c1b3d11b9c13e194c20a"
+}
