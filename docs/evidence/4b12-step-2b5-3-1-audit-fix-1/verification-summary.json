@@ -1,0 +1,44 @@
+{
+  "stage": "4B-12/2B-5.3.1 Audit Fix 1",
+  "status": "IMPLEMENTED_AWAITING_CI_AND_AUDIT",
+  "baseFile": "AI_HOME_4B12_STEP_2B5_3_1_SOURCE.zip",
+  "baseSha256": "17051b868cfbdc47305e7cfd23db395f5c487ce5f9ddae70c9b5f8bf8ba020c9",
+  "rust": {
+    "passed": 612,
+    "failed": 0,
+    "suites": 23,
+    "newHostTests": 10,
+    "hostTests": 27,
+    "redOldGuard": {
+      "expectedFailures": 8,
+      "passedPositiveTests": 2
+    },
+    "command": "cargo test --manifest-path src-tauri/Cargo.toml --all-targets --no-default-features --locked --offline",
+    "exitCode": 0
+  },
+  "frontend": {
+    "passed": 219,
+    "files": 21
+  },
+  "build": "PASS",
+  "P2": 193,
+  "verificationScripts": 12,
+  "schemas": {
+    "Store": 16,
+    "Community": 4
+  },
+  "CI": {
+    "baseSuccess": "not declared accepted: main audit F1/P2 requires correction",
+    "currentRun": "NOT_RUN",
+    "independentlyVerified": false
+  },
+  "notCovered": [
+    "production desktop",
+    "Windows",
+    "real OS vault",
+    "live forum/TLS",
+    "physical power loss",
+    "force-kill",
+    "IPC authorization/routing"
+  ]
+}

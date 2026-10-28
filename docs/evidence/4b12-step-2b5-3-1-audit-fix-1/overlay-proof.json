@@ -1,0 +1,31 @@
+{
+  "baseFile": "AI_HOME_4B12_STEP_2B5_3_1_SOURCE.zip",
+  "baseSha256": "17051b868cfbdc47305e7cfd23db395f5c487ce5f9ddae70c9b5f8bf8ba020c9",
+  "changedPaths": [
+    "SHA256SUMS.txt",
+    "docs/AI_HOME_4B12_STEP_2B5_3_1_AUDIT_FIX_1_PL.md",
+    "docs/AI_HOME_4B_ETAPY_PRACY_v1.0_PL.md",
+    "docs/COMMUNITY_IDENTITY_DEVELOPER.md",
+    "docs/evidence/4b12-step-2b5-3-1-audit-fix-1/build.log",
+    "docs/evidence/4b12-step-2b5-3-1-audit-fix-1/frontend.log",
+    "docs/evidence/4b12-step-2b5-3-1-audit-fix-1/green-host.log",
+    "docs/evidence/4b12-step-2b5-3-1-audit-fix-1/guard-diff.patch",
+    "docs/evidence/4b12-step-2b5-3-1-audit-fix-1/overlay-proof.json",
+    "docs/evidence/4b12-step-2b5-3-1-audit-fix-1/p2.log",
+    "docs/evidence/4b12-step-2b5-3-1-audit-fix-1/preservation-proof.json",
+    "docs/evidence/4b12-step-2b5-3-1-audit-fix-1/red-old-guard.log",
+    "docs/evidence/4b12-step-2b5-3-1-audit-fix-1/red-reproduction.json",
+    "docs/evidence/4b12-step-2b5-3-1-audit-fix-1/rust-all.log",
+    "docs/evidence/4b12-step-2b5-3-1-audit-fix-1/static-checks.log",
+    "docs/evidence/4b12-step-2b5-3-1-audit-fix-1/tested-source-hashes.json",
+    "docs/evidence/4b12-step-2b5-3-1-audit-fix-1/verification-summary.json",
+    "docs/evidence/4b12-step-2b5-3-1-audit-fix-1/versions.json",
+    "docs/evidence/manifest.sha256.json",
+    "src-tauri/src/backup.rs",
+    "src-tauri/src/community_backup/host_tests.rs"
+  ],
+  "changedPathCount": 21,
+  "removedPaths": [],
+  "application": "Replace paths from overlay in exact base source root; no deletion.",
+  "verified": "Applying overlay reproduced full SOURCE byte-for-byte before delivery."
+}

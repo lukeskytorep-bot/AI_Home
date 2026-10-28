@@ -1,0 +1,89 @@
+   Compiling ai-home v0.0.1 (/workspace/scratch/8e3755d5c581/step2b53_fix1/AI_Home/src-tauri)
+    Finished `test` profile [unoptimized] target(s) in 18.95s
+     Running unittests src/lib.rs (/workspace/scratch/8e3755d5c581/step2b53/AI_Home/src-tauri/target/debug/deps/ai_home-25e02228d6537dcd)
+
+running 10 tests
+test community_backup::tests::host_tests::legacy_request_shape_is_checked_even_with_existing_terminal_result ... FAILED
+test community_backup::tests::host_tests::legacy_terminal_other_request_never_unlocks_host ... FAILED
+test community_backup::tests::host_tests::legacy_terminal_other_safety_backup_never_unlocks_host ... FAILED
+test community_backup::tests::host_tests::legacy_terminal_missing_or_mistyped_fields_never_unlock_host ... FAILED
+test community_backup::tests::host_tests::legacy_terminal_other_backup_never_unlocks_host ... FAILED
+test community_backup::tests::host_tests::legacy_terminal_null_empty_or_nonobject_result_never_unlocks_host ... FAILED
+test community_backup::tests::host_tests::legacy_terminal_false_or_nonboolean_applied_never_unlocks_host ... FAILED
+test community_backup::tests::host_tests::legacy_unknown_fields_are_not_silently_treated_as_current_format ... FAILED
+test community_backup::tests::host_tests::legacy_actual_writer_receipt_stays_valid_after_later_main_changes ... ok
+test community_backup::tests::host_tests::legacy_valid_historical_pair_allows_open_and_both_native_operations ... ok
+
+failures:
+
+---- community_backup::tests::host_tests::legacy_request_shape_is_checked_even_with_existing_terminal_result stdout ----
+
+thread 'community_backup::tests::host_tests::legacy_request_shape_is_checked_even_with_existing_terminal_result' (329) panicked at src/community_backup/host_tests.rs:543:5:
+assertion `left == right` failed: request={"backupId":"manual-original","backupSha256":"abababababababababababababababababababababababababababababababab","requestId":"legacy-R","requestedAt":"2026-10-27T12:00:00+00:00","safetyBackupId":"safety-original"}, result={"applied":true,"appliedAt":"2026-10-27T12:01:00+00:00","backupId":"manual-original","requestId":"legacy-R","restoredSchemaVersion":16,"safetyBackupId":"safety-original","sourceSchemaVersion":16}
+  left: Offline
+ right: RecoveryRequired
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- community_backup::tests::host_tests::legacy_terminal_other_request_never_unlocks_host stdout ----
+
+thread 'community_backup::tests::host_tests::legacy_terminal_other_request_never_unlocks_host' (334) panicked at src/community_backup/host_tests.rs:543:5:
+assertion `left == right` failed: request={"backupId":"manual-original","backupSha256":"abababababababababababababababababababababababababababababababab","manifestVersion":2,"requestId":"legacy-R","requestedAt":"2026-10-27T12:00:00+00:00","safetyBackupId":"safety-original"}, result={"applied":true,"appliedAt":"2026-10-27T12:01:00+00:00","backupId":"manual-original","requestId":"another-request","restoredSchemaVersion":16,"safetyBackupId":"safety-original","sourceSchemaVersion":16}
+  left: Offline
+ right: RecoveryRequired
+
+---- community_backup::tests::host_tests::legacy_terminal_other_safety_backup_never_unlocks_host stdout ----
+
+thread 'community_backup::tests::host_tests::legacy_terminal_other_safety_backup_never_unlocks_host' (335) panicked at src/community_backup/host_tests.rs:543:5:
+assertion `left == right` failed: request={"backupId":"manual-original","backupSha256":"abababababababababababababababababababababababababababababababab","manifestVersion":2,"requestId":"legacy-R","requestedAt":"2026-10-27T12:00:00+00:00","safetyBackupId":"safety-original"}, result={"applied":true,"appliedAt":"2026-10-27T12:01:00+00:00","backupId":"manual-original","requestId":"legacy-R","restoredSchemaVersion":16,"safetyBackupId":"safety-other","sourceSchemaVersion":16}
+  left: Offline
+ right: RecoveryRequired
+
+---- community_backup::tests::host_tests::legacy_terminal_missing_or_mistyped_fields_never_unlock_host stdout ----
+
+thread 'community_backup::tests::host_tests::legacy_terminal_missing_or_mistyped_fields_never_unlock_host' (331) panicked at src/community_backup/host_tests.rs:543:5:
+assertion `left == right` failed: request={"backupId":"manual-original","backupSha256":"abababababababababababababababababababababababababababababababab","manifestVersion":2,"requestId":"legacy-R","requestedAt":"2026-10-27T12:00:00+00:00","safetyBackupId":"safety-original"}, result={"appliedAt":"2026-10-27T12:01:00+00:00","backupId":"manual-original","requestId":"legacy-R","restoredSchemaVersion":16,"safetyBackupId":"safety-original","sourceSchemaVersion":16}
+  left: Offline
+ right: RecoveryRequired
+
+---- community_backup::tests::host_tests::legacy_terminal_other_backup_never_unlocks_host stdout ----
+
+thread 'community_backup::tests::host_tests::legacy_terminal_other_backup_never_unlocks_host' (333) panicked at src/community_backup/host_tests.rs:543:5:
+assertion `left == right` failed: request={"backupId":"manual-original","backupSha256":"abababababababababababababababababababababababababababababababab","manifestVersion":2,"requestId":"legacy-R","requestedAt":"2026-10-27T12:00:00+00:00","safetyBackupId":"safety-original"}, result={"applied":true,"appliedAt":"2026-10-27T12:01:00+00:00","backupId":"manual-other","requestId":"legacy-R","restoredSchemaVersion":16,"safetyBackupId":"safety-original","sourceSchemaVersion":16}
+  left: Offline
+ right: RecoveryRequired
+
+---- community_backup::tests::host_tests::legacy_terminal_null_empty_or_nonobject_result_never_unlocks_host stdout ----
+
+thread 'community_backup::tests::host_tests::legacy_terminal_null_empty_or_nonobject_result_never_unlocks_host' (332) panicked at src/community_backup/host_tests.rs:543:5:
+assertion `left == right` failed: request={"backupId":"manual-original","backupSha256":"abababababababababababababababababababababababababababababababab","manifestVersion":2,"requestId":"legacy-R","requestedAt":"2026-10-27T12:00:00+00:00","safetyBackupId":"safety-original"}, result=null
+  left: Offline
+ right: RecoveryRequired
+
+---- community_backup::tests::host_tests::legacy_terminal_false_or_nonboolean_applied_never_unlocks_host stdout ----
+
+thread 'community_backup::tests::host_tests::legacy_terminal_false_or_nonboolean_applied_never_unlocks_host' (330) panicked at src/community_backup/host_tests.rs:543:5:
+assertion `left == right` failed: request={"backupId":"manual-original","backupSha256":"abababababababababababababababababababababababababababababababab","manifestVersion":2,"requestId":"legacy-R","requestedAt":"2026-10-27T12:00:00+00:00","safetyBackupId":"safety-original"}, result={"applied":false,"appliedAt":"2026-10-27T12:01:00+00:00","backupId":"manual-original","requestId":"legacy-R","restoredSchemaVersion":16,"safetyBackupId":"safety-original","sourceSchemaVersion":16}
+  left: Offline
+ right: RecoveryRequired
+
+---- community_backup::tests::host_tests::legacy_unknown_fields_are_not_silently_treated_as_current_format stdout ----
+
+thread 'community_backup::tests::host_tests::legacy_unknown_fields_are_not_silently_treated_as_current_format' (434) panicked at src/community_backup/host_tests.rs:543:5:
+assertion `left == right` failed: request={"backupId":"manual-original","backupSha256":"abababababababababababababababababababababababababababababababab","futureField":true,"manifestVersion":2,"requestId":"legacy-R","requestedAt":"2026-10-27T12:00:00+00:00","safetyBackupId":"safety-original"}, result={"applied":true,"appliedAt":"2026-10-27T12:01:00+00:00","backupId":"manual-original","requestId":"legacy-R","restoredSchemaVersion":16,"safetyBackupId":"safety-original","sourceSchemaVersion":16}
+  left: Offline
+ right: RecoveryRequired
+
+
+failures:
+    community_backup::tests::host_tests::legacy_request_shape_is_checked_even_with_existing_terminal_result
+    community_backup::tests::host_tests::legacy_terminal_false_or_nonboolean_applied_never_unlocks_host
+    community_backup::tests::host_tests::legacy_terminal_missing_or_mistyped_fields_never_unlock_host
+    community_backup::tests::host_tests::legacy_terminal_null_empty_or_nonobject_result_never_unlocks_host
+    community_backup::tests::host_tests::legacy_terminal_other_backup_never_unlocks_host
+    community_backup::tests::host_tests::legacy_terminal_other_request_never_unlocks_host
+    community_backup::tests::host_tests::legacy_terminal_other_safety_backup_never_unlocks_host
+    community_backup::tests::host_tests::legacy_unknown_fields_are_not_silently_treated_as_current_format
+
+test result: FAILED. 2 passed; 8 failed; 0 ignored; 0 measured; 259 filtered out; finished in 1.23s
+
+error: test failed, to rerun pass `--lib`

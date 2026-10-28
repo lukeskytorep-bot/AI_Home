@@ -1,3 +1,19 @@
+# Bieżący stan — treść 1.84 — 28 października 2026 — 2B-5.3.1 Audit Fix 1, F1/P2
+
+Audyt główny 2B-5.3.1 zwrócił DO POPRAWY: dowolny parsowalny JSON terminalnego wyniku legacy restore mógł zwolnić nowy guard hosta. Poprawiono wyłącznie rozpoznawanie starego ledgeru w natywnym guardzie hosta. Status **IMPLEMENTED / AWAITING NEW CI AND RE-AUDIT**. Całe 2B-5.3, 2B-5, 2B i 4B-12 pozostają OPEN.
+
+- Guard waliduje dokładny request v2 i istniejący terminal result: applied=true, zgodne requestId/backupId/safetyBackupId, wymagane typy, RFC3339, checksum request i znane zgodne wersje schematu. Nazwa żądania odpowiada request_key. Null, {}, false, obce ID, niepełne lub obce formaty pozostawiają recovery i odmowę maintenance.
+- Bieżący Main nie jest porównywany z historycznym backupem/wynikiem: późniejsze legalne zmiany danych pozostają dozwolone. Ledger nie jest kasowany ani przepisywany. Nie zmieniono legacy writera/Standard startup, frozen IPC, native host lifecycle, dependencies, workflow ani UI.
+- 10 nowych regresji odtwarza błąd na bazowym guardzie: 8 FAIL / 2 PASS, oczekiwany RED. Poprawiony moduł hosta: 27/27 PASS. Testy obejmują rzeczywisty legacy writer/result, późniejszą zmianę Main, odmowę native backup/restore i zachowanie plików.
+
+Lokalnie **Rust 612/612 (10 nowych regresji, host 27/27), frontend 219/219, build PASS, P2 193/193, granice 34/34, parity 54/54**. Rust/Linux headless, bez odbioru default desktop.
+
+Baza: dokładny SOURCE 2B-5.3.1, SHA-256 17051b868cfbdc47305e7cfd23db395f5c487ce5f9ddae70c9b5f8bf8ba020c9. Raport: docs/AI_HOME_4B12_STEP_2B5_3_1_AUDIT_FIX_1_PL.md; dowody docs/evidence/4b12-step-2b5-3-1-audit-fix-1/. Nałożyć na audytowaną bazę, zwykły commit/push. Najpierw nowe CI i ponowny audyt F1; bez release i bez desktop enablement. Direction/capability checks, IPC i pozostałe części 2B-5.3 nadal później.
+
+Poniżej historia 1.83 i wcześniejsze decyzje.
+
+---
+
 # Bieżący stan — treść 1.83 — 28 października 2026 — 4B-12 / 2B-5.3.1: natywny host maintenance/recovery
 
 Edward potwierdził zielony wynik 2B-5.2. Dodano CommunityHost, który posiada Application i wspólną bramkę dispatch/maintenance, zamyka pulę i sprawdza rzeczywisty OS drain przed backupem/restore obu baz. Status **IMPLEMENTED / AWAITING CI AND AUDIT**. Całe 2B-5.3, 2B-5, 2B i 4B-12 pozostają OPEN.

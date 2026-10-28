@@ -1,0 +1,14 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> ai-home@0.0.1 test
+> vitest run
+
+
+ RUN  v4.1.10 /workspace/scratch/8e3755d5c581/step2b53_fix1/AI_Home
+
+
+ Test Files  21 passed (21)
+      Tests  219 passed (219)
+   Start at  17:39:54
+   Duration  4.24s (transform 3.06s, setup 0ms, import 5.20s, tests 6.77s, environment 9.72s)
+

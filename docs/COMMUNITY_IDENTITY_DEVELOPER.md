@@ -1,3 +1,13 @@
+# Audit correction: legacy restore completion recognition (2B-5.3.1 Fix 1)
+
+The managed host read-only guard now validates the exact legacy request-v2 and terminal-result formats before treating a request as completed. A parseable JSON file alone is insufficient. Request fields, safe backup IDs, checksum, RFC3339 timestamp and canonical request-key filename are checked. Completion requires boolean applied=true, requestId/backupId/safetyBackupId bound to that request, a valid appliedAt, and matching known positive integer source/restored schema versions. Missing results remain pending; malformed, incomplete, mistyped, mismatched or unknown formats remain recovery errors. Direct result-file symlinks are refused.
+
+The check does not compare the present Main hash to the historical backup/result: normal app writes after a completed restore are valid. It neither requires old backup files for historical recognition nor rewrites/deletes ledger records. Legacy Standard writers and restore execution are unchanged; the correction is confined to the native Community host guard. No IPC contract, migration, dependency or production desktop activation is added.
+
+Ten regressions reproduce 8 failing negative groups and 2 passing positive cases on the old guard. The corrected host suite has 27 passing tests, including an actual legacy-writer receipt followed by a later Main change. Keep the rest of the integration gates below. New CI and re-audit are required before accepting this substep.
+
+---
+
 # Native managed Community host (4B-12 / 2B-5.3.1)
 
 `community_host::maintenance::CommunityHost` now owns the Application lifecycle around the two-store offline coordinator. This is a trusted native integration seam. The production Tauri entry point, UI and existing IPC contract are unchanged. Direction/capability authorization, command/result adapters and desktop activation remain subsequent 2B-5.3 work.

@@ -1,0 +1,55 @@
+--- BASE/src-tauri/src/backup.rs
++++ FIX/src-tauri/src/backup.rs
+@@ -73,6 +73,31 @@
+ fn request_by_id(root:&Path,request_id:&str)->Result<Option<Value>,sqlx::Error>{let p=request_path(root,request_id);if p.is_file(){Ok(Some(read_json(&p)?))}else{Ok(None)}}
+ fn pending_request(root:&Path)->Result<Option<Value>,sqlx::Error>{let mut pending=vec![];for r in request_records(root)?{let req=r["requestId"].as_str().ok_or_else(||io_error("restore request invalid"))?;if result_by_request(root,req)?.is_none(){pending.push(r)}}if pending.len()>1{return Err(io_error("multiple pending restores"))}Ok(pending.pop())}
+ pub fn restore_pending_for_store(store:&Store)->bool{root(store).ok().and_then(|r|pending_request(&r).ok().flatten()).is_some()}
++// Recognize only the request v2 / terminal-result format emitted by this
++// legacy writer. Presence of parseable JSON is not evidence of completion.
++fn host_legacy_fields(v:&Value,fields:&[&str])->bool{
++    v.as_object().is_some_and(|o|o.len()==fields.len()&&fields.iter().all(|k|o.contains_key(*k)))
++}
++fn host_legacy_time(v:&Value)->bool{
++    v.as_str().is_some_and(|s|chrono::DateTime::parse_from_rfc3339(s).is_ok())
++}
++fn host_legacy_request(r:&Value)->bool{
++    host_legacy_fields(r,&["manifestVersion","requestId","backupId","backupSha256","safetyBackupId","requestedAt"])
++        && r["manifestVersion"].as_i64()==Some(2)
++        && r["requestId"].as_str().is_some_and(|s|(1..=128).contains(&s.chars().count()))
++        && r["backupId"].as_str().is_some_and(safe_id)
++        && r["safetyBackupId"].as_str().is_some_and(safe_id)
++        && r["backupSha256"].as_str().is_some_and(|s|s.len()==64&&s.bytes().all(|b|b.is_ascii_digit()||(b'a'..=b'f').contains(&b)))
++        && host_legacy_time(&r["requestedAt"])
++}
++fn host_legacy_result(r:&Value,done:&Value)->bool{
++    host_legacy_fields(done,&["applied","requestId","backupId","safetyBackupId","appliedAt","sourceSchemaVersion","restoredSchemaVersion"])
++        && done["applied"].as_bool()==Some(true)
++        && ["requestId","backupId","safetyBackupId"].iter().all(|k|done[*k]==r[*k])
++        && host_legacy_time(&done["appliedAt"])
++        && done["sourceSchemaVersion"].as_i64().is_some_and(|v|(1..=CURRENT_SCHEMA).contains(&v))
++        && done["restoredSchemaVersion"].as_i64()==done["sourceSchemaVersion"].as_i64()
++}
+ /// Read-only native host guard. Unlike legacy listing, malformed ledger JSON
+ /// must not disappear from consideration when opening coordinated Community.
+ pub(crate) fn host_restore_pending(root:&Path)->Result<bool,sqlx::Error>{
+@@ -89,8 +114,18 @@
+         let metadata=fs::symlink_metadata(&p).map_err(|_|io_error("restore ledger entry unavailable"))?;
+         if !metadata.is_file()||metadata.file_type().is_symlink(){return Err(io_error("restore ledger entry invalid"))}
+         let r=read_json(&p)?;
+-        let id=r["requestId"].as_str().filter(|id|!id.is_empty()).ok_or_else(||io_error("restore request invalid"))?;
+-        if result_by_request(root,id)?.is_none(){return Ok(true)}
++        if !host_legacy_request(&r){return Err(io_error("restore request format invalid"))}
++        let id=r["requestId"].as_str().ok_or_else(||io_error("restore request invalid"))?;
++        if p!=request_path(root,id){return Err(io_error("restore request path mismatch"))}
++        let result=result_for(root,id);
++        let metadata=match fs::symlink_metadata(&result){
++            Ok(m)=>m,
++            Err(e) if e.kind()==std::io::ErrorKind::NotFound=>return Ok(true),
++            Err(_)=>return Err(io_error("restore result unavailable")),
++        };
++        if !metadata.is_file()||metadata.file_type().is_symlink(){return Err(io_error("restore result entry invalid"))}
++        let done=read_json(&result)?;
++        if !host_legacy_result(&r,&done){return Err(io_error("restore terminal result invalid"))}
+     }
+     Ok(false)
+ }

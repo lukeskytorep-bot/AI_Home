@@ -507,3 +507,241 @@ async fn host_preserves_offline_cores_symlink_root_rejection() {
         Err(HostError::Backup(BackupError::InvalidBundle))
     ));
 }
+
+fn legacy_request() -> Value {
+    json!({"manifestVersion":2,"requestId":"legacy-R","backupId":"manual-original","backupSha256":"ab".repeat(32),"safetyBackupId":"safety-original","requestedAt":"2026-10-27T12:00:00+00:00"})
+}
+fn legacy_result() -> Value {
+    json!({"applied":true,"requestId":"legacy-R","backupId":"manual-original","safetyBackupId":"safety-original","appliedAt":"2026-10-27T12:01:00+00:00","sourceSchemaVersion":16,"restoredSchemaVersion":16})
+}
+fn write_legacy_pair(f: &Fixture, req: &Value, result: &Value) -> (PathBuf, PathBuf) {
+    let key = format!("{:x}", Sha256::digest(b"ai-home:restore-request:legacy-R"));
+    let request = f
+        .root
+        .join("restore-ledger/requests")
+        .join(format!("{key}.json"));
+    let result_path = f
+        .root
+        .join("restore-ledger/results")
+        .join(format!("{key}.json"));
+    for p in [&request, &result_path] {
+        std::fs::create_dir_all(p.parent().unwrap()).unwrap();
+    }
+    std::fs::write(&request, req.to_string()).unwrap();
+    std::fs::write(&result_path, result.to_string()).unwrap();
+    (request, result_path)
+}
+async fn assert_legacy_pair_blocked(req: Value, result: Value) {
+    let f = Fixture::new().await;
+    let input = f.temp.0.join("valid-native-source");
+    f.core().create(&input, "before-legacy").await.unwrap();
+    let before = hash(&f.root.join("foundation.sqlite3")).unwrap();
+    let (request_path, result_path) = write_legacy_pair(&f, &req, &result);
+    let request_bytes = std::fs::read(&request_path).unwrap();
+    let result_bytes = std::fs::read(&result_path).unwrap();
+    let h = host(&f);
+    assert_eq!(
+        h.status(),
+        HostStatus::RecoveryRequired,
+        "request={req}, result={result}"
+    );
+    assert_eq!(h.open_application().await, Err(HostError::Unavailable));
+    assert!(matches!(
+        h.dispatch(request_cmd("profile.list", None, None, json!({"limit":50})))
+            .await,
+        Err(HostError::Unavailable)
+    ));
+    let output = f.temp.0.join("must-not-publish");
+    assert_eq!(
+        h.create_backup(&output, "denied-capture").await,
+        Err(HostError::Unavailable)
+    );
+    assert_eq!(
+        h.restore(&input, "denied-restore", RestorePolicy::SameInstallation)
+            .await,
+        Err(HostError::Unavailable)
+    );
+    assert!(h.receipt("denied-restore").unwrap().is_none());
+    assert_eq!(h.status(), HostStatus::RecoveryRequired);
+    assert!(!output.exists());
+    assert!(!crate::app_ownership::pending(&f.root));
+    assert!(!f.registry.restore_fence().exists());
+    assert_eq!(hash(&f.root.join("foundation.sqlite3")).unwrap(), before);
+    assert_eq!(std::fs::read(request_path).unwrap(), request_bytes);
+    assert_eq!(std::fs::read(result_path).unwrap(), result_bytes);
+}
+
+#[tokio::test]
+async fn legacy_terminal_null_empty_or_nonobject_result_never_unlocks_host() {
+    for result in [Value::Null, json!({}), json!([]), json!("completed")] {
+        assert_legacy_pair_blocked(legacy_request(), result).await;
+    }
+}
+#[tokio::test]
+async fn legacy_terminal_false_or_nonboolean_applied_never_unlocks_host() {
+    for applied in [json!(false), json!("true"), json!(1)] {
+        let mut r = legacy_result();
+        r["applied"] = applied;
+        assert_legacy_pair_blocked(legacy_request(), r).await;
+    }
+}
+#[tokio::test]
+async fn legacy_terminal_other_request_never_unlocks_host() {
+    let mut r = legacy_result();
+    r["requestId"] = json!("another-request");
+    assert_legacy_pair_blocked(legacy_request(), r).await;
+}
+#[tokio::test]
+async fn legacy_terminal_other_backup_never_unlocks_host() {
+    let mut r = legacy_result();
+    r["backupId"] = json!("manual-other");
+    assert_legacy_pair_blocked(legacy_request(), r).await;
+}
+#[tokio::test]
+async fn legacy_terminal_other_safety_backup_never_unlocks_host() {
+    let mut r = legacy_result();
+    r["safetyBackupId"] = json!("safety-other");
+    assert_legacy_pair_blocked(legacy_request(), r).await;
+}
+#[tokio::test]
+async fn legacy_terminal_missing_or_mistyped_fields_never_unlock_host() {
+    for field in [
+        "applied",
+        "requestId",
+        "backupId",
+        "safetyBackupId",
+        "appliedAt",
+        "sourceSchemaVersion",
+        "restoredSchemaVersion",
+    ] {
+        let mut r = legacy_result();
+        r.as_object_mut().unwrap().remove(field);
+        assert_legacy_pair_blocked(legacy_request(), r).await;
+        let mut r = legacy_result();
+        r[field] = Value::Null;
+        assert_legacy_pair_blocked(legacy_request(), r).await;
+    }
+    for (field, value) in [
+        ("appliedAt", json!("not-a-date")),
+        ("sourceSchemaVersion", json!(0)),
+        ("restoredSchemaVersion", json!(17)),
+        ("restoredSchemaVersion", json!(15)),
+        ("sourceSchemaVersion", json!("16")),
+    ] {
+        let mut r = legacy_result();
+        r[field] = value;
+        assert_legacy_pair_blocked(legacy_request(), r).await;
+    }
+}
+#[tokio::test]
+async fn legacy_request_shape_is_checked_even_with_existing_terminal_result() {
+    for field in [
+        "manifestVersion",
+        "requestId",
+        "backupId",
+        "backupSha256",
+        "safetyBackupId",
+        "requestedAt",
+    ] {
+        let mut req = legacy_request();
+        req.as_object_mut().unwrap().remove(field);
+        assert_legacy_pair_blocked(req, legacy_result()).await;
+        let mut req = legacy_request();
+        req[field] = Value::Null;
+        assert_legacy_pair_blocked(req, legacy_result()).await;
+    }
+    for (field, value) in [
+        ("manifestVersion", json!(1)),
+        ("backupSha256", json!("bad")),
+        ("backupId", json!("../outside")),
+        ("requestedAt", json!("invalid-time")),
+        ("requestId", json!("x".repeat(129))),
+    ] {
+        let mut req = legacy_request();
+        req[field] = value;
+        assert_legacy_pair_blocked(req, legacy_result()).await;
+    }
+}
+#[tokio::test]
+async fn legacy_unknown_fields_are_not_silently_treated_as_current_format() {
+    let mut req = legacy_request();
+    req["futureField"] = json!(true);
+    assert_legacy_pair_blocked(req, legacy_result()).await;
+    let mut result = legacy_result();
+    result["futureField"] = json!(true);
+    assert_legacy_pair_blocked(legacy_request(), result).await;
+}
+#[tokio::test]
+async fn legacy_valid_historical_pair_allows_open_and_both_native_operations() {
+    let f = Fixture::new().await;
+    let (request_path, result_path) = write_legacy_pair(&f, &legacy_request(), &legacy_result());
+    let request_bytes = std::fs::read(&request_path).unwrap();
+    let result_bytes = std::fs::read(&result_path).unwrap();
+    let h = host(&f);
+    assert_eq!(h.status(), HostStatus::Offline);
+    h.open_application().await.unwrap();
+    dispatched(
+        &h,
+        request_cmd("profile.list", None, None, json!({"limit":50})),
+    )
+    .await;
+    h.create_backup(&f.bundle(), "valid-history-capture")
+        .await
+        .unwrap();
+    h.restore(
+        &f.bundle(),
+        "valid-history-restore",
+        RestorePolicy::SameInstallation,
+    )
+    .await
+    .unwrap();
+    h.open_application().await.unwrap();
+    h.close_application().await.unwrap();
+    assert_eq!(std::fs::read(request_path).unwrap(), request_bytes);
+    assert_eq!(std::fs::read(result_path).unwrap(), result_bytes);
+}
+#[tokio::test]
+async fn legacy_actual_writer_receipt_stays_valid_after_later_main_changes() {
+    let f = Fixture::new().await;
+    let store = Store::open(&f.root.join("foundation.sqlite3"))
+        .await
+        .unwrap();
+    let app = Application::with_vault(store, Vault::with_backend(Arc::new(NoModels)));
+    let backup = ok(&app, request_cmd("backup.create", None, None, json!({}))).await;
+    ok(
+        &app,
+        request_cmd(
+            "backup.restore.request",
+            None,
+            None,
+            json!({"backupId":backup["id"]}),
+        ),
+    )
+    .await;
+    app.close_for_maintenance().await;
+    crate::backup::apply_pending_restore(&f.root)
+        .await
+        .unwrap()
+        .unwrap();
+    let old_hash = hash(&f.root.join("foundation.sqlite3")).unwrap();
+    let h = host(&f);
+    h.open_application().await.unwrap();
+    dispatched(
+        &h,
+        request_cmd(
+            "app.preferences.set",
+            None,
+            Some(1),
+            json!({"locale":"pl","themeId":"orbital","themeVariant":"system"}),
+        ),
+    )
+    .await;
+    h.close_application().await.unwrap();
+    assert_ne!(hash(&f.root.join("foundation.sqlite3")).unwrap(), old_hash);
+    let next = host(&f);
+    assert_eq!(next.status(), HostStatus::Offline);
+    next.open_application().await.unwrap();
+    next.create_backup(&f.bundle(), "after-legacy-change")
+        .await
+        .unwrap();
+}

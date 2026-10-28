@@ -1,0 +1,10 @@
+{
+  "baseGuardSha256": "33865be04ccc3b27fa1b0d10ffdc2e1645f023f88f144bb178948d9a900d0462",
+  "newTestsSha256": "5564f9f5213610eaa075a79f9dbb361356efb425126182a289c061f4b89004ef",
+  "baseFile": "AI_HOME_4B12_STEP_2B5_3_1_SOURCE.zip",
+  "applyOnly": "src-tauri/src/community_backup/host_tests.rs",
+  "filter": "community_backup::tests::host_tests::legacy_",
+  "expectedPassed": 2,
+  "expectedFailed": 8,
+  "correctedFilterPassed": 10
+}
