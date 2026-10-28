@@ -1,3 +1,20 @@
+# Bieżący stan — treść 1.85 — 28 października 2026 — 4B-12 / 2B-5.3.2: lokalny adapter rejestracji
+
+Edward potwierdził zielony wynik 2B-5.3.1 Audit Fix 1. Dodano uzupełniający natywny adapter `status`, `prepare`, `provision`, `recover` z bramkami kierunku Standard i capability. Status **IMPLEMENTED / AWAITING CI AND AUDIT**. Całe 2B-5.3, 2B-5, 2B i 4B-12 pozostają OPEN.
+
+- Capability jest osobnym, niedeserializowalnym grantem natywnego hosta. JSON nie może go sobie nadać. Scope, profil, rewizja, Standard, archived, autorytatywne Experimental binding, pending deletion, registry lifecycle/fence i host binding są sprawdzane przed skutkiem oraz ponownie przy replay.
+- Mutacje najpierw trwale claimują request ID/fingerprint w Main. Main write lock i wspólna bramka hosta są utrzymywane przez operację registry/vault także po anulowaniu oczekującego klienta. `prepare` może bezpiecznie wznowić identyczny claim; niedokończone `provision/recover` wymagają jawnego reconciliation i nigdy automatycznie nie powtarzają tworzenia kluczy.
+- `recover` wyłącznie ładuje istniejące klucze. Wyniki nie ujawniają key refs, kluczy ani tokenów. `ready` jest tylko stanem lokalnym; `onlineStatusKnown=false` nie udaje potwierdzenia serwera.
+- To supplemental native contract, nie produkcyjny Tauri IPC. Bez HTTP, token trust, UI, permissions, desktop enablement, migracji, dependencies i zmian CI. Store v16, registry v4, frozen P2 bez zmian.
+
+Lokalnie **Rust 630/630 (18 nowych), frontend 219/219, build PASS, P2 193/193, granice 34/34, migracje 14, parity 58/58**. Rust/Linux headless, realne SQLite i testowy vault; bez odbioru default desktop, live forum i realnego OS keyringu.
+
+Baza: `AI_HOME_4B12_STEP_2B5_3_1_AUDIT_FIX_1_SOURCE.zip`, SHA-256 `803202e1d4acec12f927ef0dd9a5b19ce641fe868d033b4b10148293aeb589f1`. Raport: `docs/AI_HOME_4B12_STEP_2B5_3_2_LOCAL_REGISTRATION_PL.md`; dowody: `docs/evidence/4b12-step-2b5-3-2/`. Zwykły commit/push, CI i audyt; bez release/instalatorów. Dalej hostowy adapter HTTP/start/complete/recovery i jawna polityka tokenów, później świadome desktop enablement.
+
+Poniżej historia 1.84 i wcześniejsze decyzje.
+
+---
+
 # Bieżący stan — treść 1.84 — 28 października 2026 — 2B-5.3.1 Audit Fix 1, F1/P2
 
 Audyt główny 2B-5.3.1 zwrócił DO POPRAWY: dowolny parsowalny JSON terminalnego wyniku legacy restore mógł zwolnić nowy guard hosta. Poprawiono wyłącznie rozpoznawanie starego ledgeru w natywnym guardzie hosta. Status **IMPLEMENTED / AWAITING NEW CI AND RE-AUDIT**. Całe 2B-5.3, 2B-5, 2B i 4B-12 pozostają OPEN.

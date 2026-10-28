@@ -1,0 +1,34 @@
+{
+  "stage": "4B-12/2B-5.3.2 local registration adapter",
+  "status": "IMPLEMENTED_AWAITING_CI_AND_AUDIT",
+  "baseFile": "AI_HOME_4B12_STEP_2B5_3_1_AUDIT_FIX_1_SOURCE.zip",
+  "baseSha256": "803202e1d4acec12f927ef0dd9a5b19ce641fe868d033b4b10148293aeb589f1",
+  "rust": {
+    "passed": 630,
+    "failed": 0,
+    "suites": 23,
+    "newLocalAdapterTests": 18,
+    "command": "cargo test --manifest-path src-tauri/Cargo.toml --all-targets --no-default-features --locked --offline",
+    "exitCode": 0
+  },
+  "frontend": {"passed": 219, "files": 21},
+  "build": "PASS",
+  "P2": 193,
+  "boundaries": 34,
+  "migrationAssertions": 14,
+  "commandParity": 58,
+  "schemas": {"Store": 16, "Community": 4},
+  "CI": {
+    "baseSuccess": "reported green by Edward; not independently fetched",
+    "currentRun": "NOT_RUN",
+    "independentlyVerified": false
+  },
+  "notCovered": [
+    "production desktop activation",
+    "Windows/WebView",
+    "real OS vault",
+    "live forum/PHP/TLS",
+    "HTTP registration and token authorization",
+    "physical power loss, force-kill or fsync failure"
+  ]
+}

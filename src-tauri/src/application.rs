@@ -18,6 +18,8 @@ fn pack(kind:&str,value:&Value)->Result<Vec<String>,&'static str>{
     Ok(vec![])
 }
 impl Application {
+    /// Native Community adapter only; caller must retain the managed host gate.
+    pub(crate) fn community_pool(&self)->&sqlx::SqlitePool { &self.store.pool }
     pub fn new(store:Store)->Self{Self::with_vault(store,crate::vault::Vault::os())}
     pub fn with_vault(store:Store,vault:crate::vault::Vault)->Self{let mut kernel=Kernel::new();kernel.ready();let connections=crate::connections::Connections::new(store.pool.clone(),vault);Self{store,kernel,gate:Mutex::new(()),connections}}
     pub fn with_file_picker(store:Store,vault:crate::vault::Vault,picker:std::sync::Arc<dyn crate::imports::FilePicker>)->Self{let mut kernel=Kernel::new();kernel.ready();let connections=crate::connections::Connections::with_picker(store.pool.clone(),vault,picker);Self{store,kernel,gate:Mutex::new(()),connections}}

@@ -1,0 +1,11 @@
+{
+  "contracts/community.local.ipc.json": "004b1a5bfea9715372464919fc8c44dfd6d13b53ec30453b75df0a8d792606a3",
+  "scripts/verify-command-parity.py": "854214d882c927a4827aa83c41500c9b3d54bb5512b29a112a6e7e07d2db82c8",
+  "src-tauri/src/application.rs": "e7bf865cacd03be5758ce03e595b92919147afdda53d79111884d287f2990cac",
+  "src-tauri/src/community_backup/local_tests.rs": "c72f1f9ada8cab71891bafcfb8265209039efb17bdf220c6b1f489ed2e674ce8",
+  "src-tauri/src/community_backup/tests.rs": "59aa3b08980a97a5b1c5016af5b954a6fa9ade1f2f02f1b7c379ca959531e791",
+  "src-tauri/src/community_host.rs": "64b1729f45d324fbb7dbcda84de42e42224e9e2ac523a99f7c64a3fba5d26022",
+  "src-tauri/src/community_host/local.rs": "240b857c4113d64eb81fe2395f86f22bf3ba0eb3a3884fda054e49dc0b176dd6",
+  "src-tauri/src/community_host/maintenance.rs": "bbf943040870664230887ce3da5a9227fe0b72619b6d0cb931eb79a3312c5509",
+  "src-tauri/src/community_identity/mod.rs": "a1c66d1cd260a751b1774a587a5bd083ebece3d08768b4944c12a0ad830d0338"
+}

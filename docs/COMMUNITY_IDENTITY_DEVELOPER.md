@@ -1,3 +1,19 @@
+# Local registration adapter and native authorization (4B-12 / 2B-5.3.2)
+
+`community_host::local` adds a supplemental native-only adapter for `community.registration.status`, `prepare`, `provision`, and `recover`. It is not exposed by the production Tauri setup or `home_dispatch`. HTTP start/complete, token handling, UI, permissions and desktop activation remain later gates.
+
+The caller passes `LocalAccess` separately from JSON. It binds one `CommunityScope` and an explicit list of `LocalCapability` values; it is not deserializable and must be constructed by a trusted native integration. Never derive it from a remote capability advertisement or an untrusted request field. The adapter is intentionally Standard-only: a live `experimental_instances` binding denies access even if the Profile DTO says `standard`. There is no owner override.
+
+Every call checks the live Profile DTO and SQL revision, expected profile revision, scope profile, active/non-archived Standard direction, pending profile deletion, durable host binding, registry restore fence and profile lifecycle. Replay re-runs these checks and requires a fresh native grant. A stored success is a historical result snapshot; use a fresh status request for current state.
+
+Mutations reserve the request ID and fingerprint in Main `receipts` before registry or vault effects. The fingerprint covers the command, profile, profile revision, payload and exact scope binding. A second Main write transaction reauthorizes and holds a profile write reservation while the registry/vault operation runs. `CommunityHost::dispatch_local` retains the owned application gate in a spawned worker, so cancellation of the waiting future cannot release the policy lock or allow maintenance to overtake a still-running key operation.
+
+An unfinished prepare receipt may resume only with its exact original request; registry prepare is idempotent for the scope, public profile and client start ID. Unfinished provision/recover receipts return `REGISTRATION_RECONCILIATION_REQUIRED` and never automatically repeat vault work. Recovery loads existing keys only; it never creates a replacement identity. Terminal receipts are validated as exact bounded response shapes before replay.
+
+The result is deliberately minimal: prepared, registrationRevision, preparationState, and `onlineStatusKnown: false`. `ready` means local key material is ready, not that a remote registration or authentication exists. No key reference, key, token or remote payload crosses this adapter.
+
+Store remains v16 and Community registry remains v4. The supplemental contract is `contracts/community.local.ipc.json`; it is outside frozen P2 and is included in command parity as a separate native surface. Do not expose it to Tauri until the later host HTTP/token authorization and explicit desktop-enablement work is complete and audited.
+
 # Audit correction: legacy restore completion recognition (2B-5.3.1 Fix 1)
 
 The managed host read-only guard now validates the exact legacy request-v2 and terminal-result formats before treating a request as completed. A parseable JSON file alone is insufficient. Request fields, safe backup IDs, checksum, RFC3339 timestamp and canonical request-key filename are checked. Completion requires boolean applied=true, requestId/backupId/safetyBackupId bound to that request, a valid appliedAt, and matching known positive integer source/restored schema versions. Missing results remain pending; malformed, incomplete, mistyped, mismatched or unknown formats remain recovery errors. Direct result-file symlinks are refused.

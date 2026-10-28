@@ -33,6 +33,7 @@ pub struct CommunityScope {
     instance: String,
 }
 impl CommunityScope {
+    pub fn profile_id(&self) -> &str { &self.profile_id }
     pub fn new(
         profile_id: &str,
         api_root: &str,

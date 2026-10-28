@@ -7,6 +7,7 @@ use crate::community_identity::{
     CommunityKeyStore,
 };
 pub mod maintenance;
+pub mod local;
 
 #[derive(Clone)]
 pub struct CommunityLifecycle {

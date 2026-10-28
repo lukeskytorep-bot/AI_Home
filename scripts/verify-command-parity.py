@@ -7,7 +7,10 @@ contracts=[
 source='\n'.join((Path('src-tauri/src/connections.rs').read_text(),Path('src-tauri/src/application.rs').read_text()))
 # Frozen catalog commands that are part of the current Standard runtime.
 catalog_runtime={'activity.list'}
-missing=[];count=0
+local=json.loads(Path('contracts/community.local.ipc.json').read_text())
+local_source=Path('src-tauri/src/community_host/local.rs').read_text()
+local_missing=[f'community.local.ipc.json: {cmd}' for cmd in local['commands'] if f'"{cmd}"' not in local_source]
+missing=list(local_missing);count=len(local['commands'])
 catalog=json.loads((Path('contracts')/'ipc.catalog.json').read_text())
 for cmd in sorted(catalog_runtime):
     count+=1

@@ -1,0 +1,208 @@
+{
+  "schemaVersion": 1,
+  "note": "Native host adapter only. Profile expectedRevision, pinned native scope and native capabilities required; no production Tauri activation, HTTP, tokens or Experimental authorization. Ready means local preparation only.",
+  "commands": {
+    "community.registration.status": {
+      "scope": "profile",
+      "requiresExpectedRevision": true,
+      "mutates": false,
+      "payload": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "prepared": {
+            "type": "boolean"
+          },
+          "registrationRevision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "preparationState": {
+            "type": "string",
+            "enum": [
+              "absent",
+              "reserved",
+              "provisioning",
+              "ready"
+            ]
+          },
+          "onlineStatusKnown": {
+            "const": false
+          }
+        },
+        "required": [
+          "prepared",
+          "registrationRevision",
+          "preparationState",
+          "onlineStatusKnown"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "community.registration.prepare": {
+      "scope": "profile",
+      "requiresExpectedRevision": true,
+      "mutates": true,
+      "payload": {
+        "type": "object",
+        "properties": {
+          "clientStartId": {
+            "type": "string",
+            "minLength": 16,
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9._:-]+$"
+          },
+          "displayName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "about": {
+            "type": "string",
+            "maxLength": 2048
+          }
+        },
+        "required": [
+          "clientStartId",
+          "displayName",
+          "about"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "prepared": {
+            "type": "boolean"
+          },
+          "registrationRevision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "preparationState": {
+            "type": "string",
+            "enum": [
+              "absent",
+              "reserved",
+              "provisioning",
+              "ready"
+            ]
+          },
+          "onlineStatusKnown": {
+            "const": false
+          }
+        },
+        "required": [
+          "prepared",
+          "registrationRevision",
+          "preparationState",
+          "onlineStatusKnown"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "community.registration.provision": {
+      "scope": "profile",
+      "requiresExpectedRevision": true,
+      "mutates": true,
+      "payload": {
+        "type": "object",
+        "properties": {
+          "registrationRevision": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "registrationRevision"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "prepared": {
+            "type": "boolean"
+          },
+          "registrationRevision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "preparationState": {
+            "type": "string",
+            "enum": [
+              "absent",
+              "reserved",
+              "provisioning",
+              "ready"
+            ]
+          },
+          "onlineStatusKnown": {
+            "const": false
+          }
+        },
+        "required": [
+          "prepared",
+          "registrationRevision",
+          "preparationState",
+          "onlineStatusKnown"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "community.registration.recover": {
+      "scope": "profile",
+      "requiresExpectedRevision": true,
+      "mutates": true,
+      "payload": {
+        "type": "object",
+        "properties": {
+          "registrationRevision": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "registrationRevision"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "prepared": {
+            "type": "boolean"
+          },
+          "registrationRevision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "preparationState": {
+            "type": "string",
+            "enum": [
+              "absent",
+              "reserved",
+              "provisioning",
+              "ready"
+            ]
+          },
+          "onlineStatusKnown": {
+            "const": false
+          }
+        },
+        "required": [
+          "prepared",
+          "registrationRevision",
+          "preparationState",
+          "onlineStatusKnown"
+        ],
+        "additionalProperties": false
+      }
+    }
+  }
+}

@@ -1,0 +1,577 @@
+use super::*;
+use crate::community_host::{
+    local::{LocalAccess, LocalCapability},
+    maintenance::{CommunityHost, HostError, HostStatus},
+};
+fn all(scope: &CommunityScope) -> LocalAccess {
+    LocalAccess::new(
+        scope.clone(),
+        vec![
+            LocalCapability::Status,
+            LocalCapability::Prepare,
+            LocalCapability::Provision,
+            LocalCapability::Recover,
+        ],
+    )
+}
+fn host(f: &Fixture) -> CommunityHost {
+    CommunityHost::new(
+        &f.root,
+        CommunityLifecycle::new(
+            f.registry.clone(),
+            f.keys.clone(),
+            CommunityTokenStore::with_backend(f.secret.clone()),
+        ),
+        Vault::with_backend(Arc::new(NoModels)),
+        None,
+    )
+    .unwrap()
+}
+async fn setup() -> (Fixture, CommunityHost, Value, CommunityScope) {
+    let f = Fixture::new().await;
+    let h = host(&f);
+    h.open_application().await.unwrap();
+    let response = h
+        .dispatch(request_cmd(
+            "profile.create",
+            None,
+            None,
+            json!({"displayName":"Local profile"}),
+        ))
+        .await
+        .unwrap()
+        .response;
+    assert_eq!(response["ok"], true);
+    let p = response["result"].clone();
+    let scope = CommunityScope::new(
+        p["id"].as_str().unwrap(),
+        "https://example.invalid/api/v1/",
+        "https://example.invalid",
+        "stable-community",
+    )
+    .unwrap();
+    (f, h, p, scope)
+}
+fn request(p: &Value, action: &str, payload: Value) -> Value {
+    request_cmd(
+        &format!("community.registration.{action}"),
+        p["id"].as_str(),
+        p["revision"].as_i64(),
+        payload,
+    )
+}
+fn prepare(p: &Value) -> Value {
+    request(
+        p,
+        "prepare",
+        json!({"clientStartId":"local-start-0123456789","displayName":"Public agent","about":"Public description"}),
+    )
+}
+async fn call(h: &CommunityHost, r: Value, s: &CommunityScope) -> Value {
+    h.dispatch_local(r, all(s)).await.unwrap()
+}
+async fn raw(f: &Fixture, sql: &str) {
+    let mut c = connection(&f.root.join("foundation.sqlite3"), false, false)
+        .await
+        .unwrap();
+    sqlx::query(sql).execute(&mut c).await.unwrap();
+    c.close().await.unwrap();
+}
+async fn count(f: &Fixture, table: &str) -> i64 {
+    let mut c = connection(&f.root.join("foundation.sqlite3"), true, false)
+        .await
+        .unwrap();
+    let n = sqlx::query_scalar(&format!("SELECT count(*) FROM {table}"))
+        .fetch_one(&mut c)
+        .await
+        .unwrap();
+    c.close().await.unwrap();
+    n
+}
+
+#[tokio::test]
+async fn local_prepare_provision_recover_status_and_exact_replay_use_real_registry() {
+    let (f, h, p, s) = setup().await;
+    let absent = call(&h, request(&p, "status", json!({})), &s).await;
+    assert_eq!(absent["result"]["preparationState"], "absent");
+    assert_eq!(absent["result"]["onlineStatusKnown"], false);
+    let req = prepare(&p);
+    let reserved = call(&h, req.clone(), &s).await;
+    assert_eq!(reserved["result"]["preparationState"], "reserved");
+    assert_eq!(call(&h, req.clone(), &s).await, reserved);
+    assert_eq!(f.secret.creates.load(Ordering::SeqCst), 0);
+    let provision = request(&p, "provision", json!({"registrationRevision":1}));
+    let ready = call(&h, provision.clone(), &s).await;
+    assert_eq!(ready["result"]["preparationState"], "ready");
+    let created = f.secret.creates.load(Ordering::SeqCst);
+    assert_eq!(created, 1);
+    assert_eq!(call(&h, provision, &s).await, ready);
+    assert_eq!(f.secret.creates.load(Ordering::SeqCst), created);
+    let recovered = call(
+        &h,
+        request(&p, "recover", json!({"registrationRevision":3})),
+        &s,
+    )
+    .await;
+    assert_eq!(recovered["result"]["preparationState"], "ready");
+    assert_eq!(f.secret.creates.load(Ordering::SeqCst), created);
+    let bytes = serde_json::to_string(&ready).unwrap();
+    for forbidden in [
+        "key_reference",
+        "ai-home-community-keyset",
+        "PRIVATE KEY",
+        "identityPublicKey",
+        "token",
+    ] {
+        assert!(!bytes.contains(forbidden));
+    }
+    assert!(count(&f, "receipts").await >= 4);
+    h.close_application().await.unwrap();
+}
+#[tokio::test]
+async fn local_capabilities_default_deny_and_json_cannot_grant_them() {
+    let (f, h, p, s) = setup().await;
+    let before = count(&f, "receipts").await;
+    let denied = h
+        .dispatch_local(prepare(&p), LocalAccess::new(s.clone(), vec![]))
+        .await
+        .unwrap();
+    assert_eq!(denied["error"]["code"], "POLICY_DENIED");
+    let read_only = LocalAccess::new(s.clone(), vec![LocalCapability::Status]);
+    assert_eq!(
+        h.dispatch_local(request(&p, "status", json!({})), read_only.clone())
+            .await
+            .unwrap()["ok"],
+        true
+    );
+    assert_eq!(
+        h.dispatch_local(prepare(&p), read_only).await.unwrap()["error"]["code"],
+        "POLICY_DENIED"
+    );
+    let mut forged = prepare(&p);
+    forged["capabilities"] = json!(["prepare"]);
+    assert_eq!(
+        call(&h, forged, &s).await["error"]["code"],
+        "VALIDATION_ERROR"
+    );
+    assert_eq!(count(&f, "receipts").await, before);
+    assert!(matches!(
+        f.registry.get(&s).await,
+        Err(RegistryError::NotFound)
+    ));
+    assert_eq!(f.secret.creates.load(Ordering::SeqCst), 0);
+    h.close_application().await.unwrap();
+}
+#[tokio::test]
+async fn local_grant_cannot_cross_profile_or_community_scope() {
+    let (f, h, p, s) = setup().await;
+    let req = prepare(&p);
+    assert_eq!(call(&h, req.clone(), &s).await["ok"], true);
+    let other = CommunityScope::new(
+        "other-profile",
+        "https://example.invalid/api/v1/",
+        "https://example.invalid",
+        "stable-community",
+    )
+    .unwrap();
+    assert_eq!(
+        call(&h, request(&p, "status", json!({})), &other).await["error"]["code"],
+        "POLICY_DENIED"
+    );
+    let alternate = CommunityScope::new(
+        s.profile_id(),
+        "https://example.invalid/other/api/v1/",
+        "https://example.invalid",
+        "other-community",
+    )
+    .unwrap();
+    assert_eq!(
+        call(&h, req, &alternate).await["error"]["code"],
+        "IDEMPOTENCY_CONFLICT"
+    );
+    h.close_application().await.unwrap();
+    drop(f);
+}
+#[tokio::test]
+async fn local_stale_profile_revision_fails_before_registration_reservation() {
+    let (f, h, p, s) = setup().await;
+    let mut r = prepare(&p);
+    r["expectedRevision"] = json!(2);
+    let before = count(&f, "receipts").await;
+    assert_eq!(call(&h, r, &s).await["error"]["code"], "REVISION_CONFLICT");
+    assert_eq!(count(&f, "receipts").await, before);
+    assert_eq!(f.secret.creates.load(Ordering::SeqCst), 0);
+    h.close_application().await.unwrap();
+}
+#[tokio::test]
+async fn local_archived_and_nonstandard_profiles_are_denied_even_with_all_grants() {
+    for update in [
+        "UPDATE profiles SET body=json_set(body,'$.status','archived')",
+        "UPDATE profiles SET body=json_set(body,'$.mode','conscious')",
+    ] {
+        let (f, h, p, s) = setup().await;
+        raw(&f, update).await;
+        assert_eq!(
+            call(&h, prepare(&p), &s).await["error"]["code"],
+            "POLICY_DENIED"
+        );
+        assert!(matches!(
+            f.registry.get(&s).await,
+            Err(RegistryError::NotFound)
+        ));
+        assert_eq!(f.secret.creates.load(Ordering::SeqCst), 0);
+        h.close_application().await.unwrap();
+    }
+}
+#[tokio::test]
+async fn local_authoritative_experimental_binding_cannot_be_masked_by_standard_mode() {
+    let (f, h, p, s) = setup().await;
+    let mut c = connection(&f.root.join("foundation.sqlite3"), false, false)
+        .await
+        .unwrap();
+    sqlx::query("INSERT INTO experimental_instances(profile_id,id,revision,body) VALUES(?, 'experimental-id',1,'{}')").bind(s.profile_id()).execute(&mut c).await.unwrap();
+    c.close().await.unwrap();
+    assert_eq!(
+        call(&h, prepare(&p), &s).await["error"]["code"],
+        "POLICY_DENIED"
+    );
+    assert_eq!(f.secret.creates.load(Ordering::SeqCst), 0);
+    h.close_application().await.unwrap();
+}
+#[tokio::test]
+async fn local_pending_deletion_blocks_every_command_and_reserved_request_id() {
+    let (f, h, p, s) = setup().await;
+    let mut c = connection(&f.root.join("foundation.sqlite3"), false, false)
+        .await
+        .unwrap();
+    sqlx::query("INSERT INTO profile_deletion_jobs(profile_id,request_id,fingerprint,expected_revision) VALUES(?,'delete-id',?,1)").bind(s.profile_id()).bind("a".repeat(64)).execute(&mut c).await.unwrap();
+    c.close().await.unwrap();
+    assert_eq!(
+        call(&h, prepare(&p), &s).await["error"]["code"],
+        "POLICY_DENIED"
+    );
+    assert_eq!(
+        call(&h, request(&p, "status", json!({})), &s).await["error"]["code"],
+        "POLICY_DENIED"
+    );
+    h.close_application().await.unwrap();
+}
+#[tokio::test]
+async fn local_invalid_payload_cannot_pin_or_claim_a_request() {
+    let (f, h, p, s) = setup().await;
+    let before = count(&f, "receipts").await;
+    for payload in [
+        json!({"clientStartId":"short","displayName":"x","about":""}),
+        json!({"clientStartId":"local-start-0123456789","displayName":" ","about":""}),
+        json!({"clientStartId":"local-start-0123456789","displayName":"x","about":"","apiRoot":"https://evil.invalid"}),
+    ] {
+        assert_eq!(
+            call(&h, request(&p, "prepare", payload), &s).await["error"]["code"],
+            "VALIDATION_ERROR"
+        );
+    }
+    assert_eq!(count(&f, "receipts").await, before);
+    assert!(matches!(
+        f.registry.get(&s).await,
+        Err(RegistryError::NotFound)
+    ));
+    h.close_application().await.unwrap();
+}
+#[tokio::test]
+async fn local_request_ids_conflict_with_ordinary_dispatch_and_other_local_commands() {
+    let (_f, h, p, s) = setup().await;
+    let r = prepare(&p);
+    assert_eq!(call(&h, r.clone(), &s).await["ok"], true);
+    let mut other = request(&p, "provision", json!({"registrationRevision":1}));
+    other["requestId"] = r["requestId"].clone();
+    assert_eq!(
+        call(&h, other, &s).await["error"]["code"],
+        "IDEMPOTENCY_CONFLICT"
+    );
+    let mut ordinary = request_cmd(
+        "profile.create",
+        None,
+        None,
+        json!({"displayName":"Cannot steal ID"}),
+    );
+    ordinary["requestId"] = r["requestId"].clone();
+    assert_eq!(
+        h.dispatch(ordinary).await.unwrap().response["error"]["code"],
+        "IDEMPOTENCY_CONFLICT"
+    );
+    h.close_application().await.unwrap();
+}
+#[tokio::test]
+async fn local_replay_rechecks_current_capability_and_profile_direction() {
+    let (f, h, p, s) = setup().await;
+    let r = prepare(&p);
+    assert_eq!(call(&h, r.clone(), &s).await["ok"], true);
+    assert_eq!(
+        h.dispatch_local(r.clone(), LocalAccess::new(s.clone(), vec![]))
+            .await
+            .unwrap()["error"]["code"],
+        "POLICY_DENIED"
+    );
+    raw(
+        &f,
+        "UPDATE profiles SET body=json_set(body,'$.mode','conscious')",
+    )
+    .await;
+    assert_eq!(call(&h, r, &s).await["error"]["code"], "POLICY_DENIED");
+    h.close_application().await.unwrap();
+}
+#[tokio::test]
+async fn local_corrupt_receipt_is_not_returned_as_a_valid_success() {
+    let (f, h, p, s) = setup().await;
+    let r = prepare(&p);
+    call(&h, r.clone(), &s).await;
+    for body in [
+        "null",
+        "{}",
+        "{\"communityLocalPending\":true,\"foreign\":true}",
+    ] {
+        let mut c = connection(&f.root.join("foundation.sqlite3"), false, false)
+            .await
+            .unwrap();
+        sqlx::query("UPDATE receipts SET response=? WHERE request_id=?")
+            .bind(body)
+            .bind(r["requestId"].as_str().unwrap())
+            .execute(&mut c)
+            .await
+            .unwrap();
+        c.close().await.unwrap();
+        assert_eq!(
+            call(&h, r.clone(), &s).await["error"]["code"],
+            "STORAGE_ERROR"
+        );
+    }
+    h.close_application().await.unwrap();
+}
+#[tokio::test]
+async fn local_unfinished_provision_claim_never_repeats_key_creation() {
+    let (f, h, p, s) = setup().await;
+    call(&h, prepare(&p), &s).await;
+    let r = request(&p, "provision", json!({"registrationRevision":1}));
+    assert_eq!(call(&h, r.clone(), &s).await["ok"], true);
+    let creates = f.secret.creates.load(Ordering::SeqCst);
+    let mut c = connection(&f.root.join("foundation.sqlite3"), false, false)
+        .await
+        .unwrap();
+    sqlx::query("UPDATE receipts SET response=? WHERE request_id=?")
+        .bind("{\"communityLocalPending\":true}")
+        .bind(r["requestId"].as_str().unwrap())
+        .execute(&mut c)
+        .await
+        .unwrap();
+    c.close().await.unwrap();
+    assert_eq!(
+        call(&h, r, &s).await["error"]["code"],
+        "REGISTRATION_RECONCILIATION_REQUIRED"
+    );
+    assert_eq!(f.secret.creates.load(Ordering::SeqCst), creates);
+    assert_eq!(
+        call(
+            &h,
+            request(&p, "recover", json!({"registrationRevision":3})),
+            &s
+        )
+        .await["ok"],
+        true
+    );
+    h.close_application().await.unwrap();
+}
+#[tokio::test]
+async fn local_adapter_refuses_offline_or_restore_recovery_host() {
+    let (f, h, p, s) = setup().await;
+    h.close_application().await.unwrap();
+    assert_eq!(h.status(), HostStatus::Offline);
+    assert_eq!(
+        h.dispatch_local(prepare(&p), all(&s)).await,
+        Err(HostError::Unavailable)
+    );
+    std::fs::write(f.root.join(crate::app_ownership::PENDING), b"broken").unwrap();
+    let next = host(&f);
+    assert_eq!(next.status(), HostStatus::RecoveryRequired);
+    assert_eq!(
+        next.dispatch_local(prepare(&p), all(&s)).await,
+        Err(HostError::Unavailable)
+    );
+}
+#[tokio::test]
+async fn local_failed_final_receipt_claim_is_durable_and_prepare_can_resume_after_restart() {
+    let (f, h, p, s) = setup().await;
+    let r = prepare(&p);
+    let first = call(&h, r.clone(), &s).await;
+    assert_eq!(first["ok"], true);
+    let mut c = connection(&f.root.join("foundation.sqlite3"), false, false)
+        .await
+        .unwrap();
+    sqlx::query("UPDATE receipts SET response=? WHERE request_id=?")
+        .bind("{\"communityLocalPending\":true}")
+        .bind(r["requestId"].as_str().unwrap())
+        .execute(&mut c)
+        .await
+        .unwrap();
+    c.close().await.unwrap();
+    h.close_application().await.unwrap();
+    drop(h);
+    let next = host(&f);
+    next.open_application().await.unwrap();
+    assert_eq!(call(&next, r, &s).await["ok"], true);
+    assert_eq!(f.secret.creates.load(Ordering::SeqCst), 0);
+    next.close_application().await.unwrap();
+}
+
+#[tokio::test]
+async fn local_missing_keys_never_regenerate_during_recover() {
+    let (f, h, p, s) = setup().await;
+    call(&h, prepare(&p), &s).await;
+    assert_eq!(
+        call(
+            &h,
+            request(&p, "provision", json!({"registrationRevision":1})),
+            &s
+        )
+        .await["ok"],
+        true
+    );
+    f.secret.data.lock().unwrap().clear();
+    let creates = f.secret.creates.load(Ordering::SeqCst);
+    assert_eq!(
+        call(
+            &h,
+            request(&p, "recover", json!({"registrationRevision":3})),
+            &s
+        )
+        .await["error"]["code"],
+        "CREDENTIAL_UNAVAILABLE"
+    );
+    assert_eq!(f.secret.creates.load(Ordering::SeqCst), creates);
+    h.close_application().await.unwrap();
+}
+#[tokio::test]
+async fn local_missing_profile_never_creates_a_registration() {
+    let (f, h, mut p, _) = setup().await;
+    p["id"] = json!("missing-profile");
+    let scope = CommunityScope::new(
+        "missing-profile",
+        "https://example.invalid/api/v1/",
+        "https://example.invalid",
+        "stable-community",
+    )
+    .unwrap();
+    assert_eq!(
+        call(&h, prepare(&p), &scope).await["error"]["code"],
+        "NOT_FOUND"
+    );
+    assert_eq!(f.secret.creates.load(Ordering::SeqCst), 0);
+    h.close_application().await.unwrap();
+}
+#[tokio::test]
+async fn local_imported_reconcile_state_blocks_even_successful_old_receipt_replay() {
+    let (f, h, p, s) = setup().await;
+    let r = prepare(&p);
+    assert_eq!(call(&h, r.clone(), &s).await["ok"], true);
+    let mut c = f.reg_conn().await;
+    sqlx::query("UPDATE community_profile_lifecycle SET state='reconcile',revision=revision+1")
+        .execute(&mut c)
+        .await
+        .unwrap();
+    c.close().await.unwrap();
+    assert_eq!(call(&h, r, &s).await["error"]["code"], "POLICY_DENIED");
+    h.close_application().await.unwrap();
+}
+struct PausedSecrets {
+    inner: Secrets,
+    entered: tokio::sync::Notify,
+    release: (Mutex<bool>, std::sync::Condvar),
+}
+impl CommunitySecretStore for PausedSecrets {
+    fn read(&self, r: &str) -> Result<Option<Zeroizing<String>>, IdentityError> {
+        self.inner.read(r)
+    }
+    fn create(&self, r: &str, v: &str) -> Result<(), IdentityError> {
+        self.entered.notify_one();
+        let (lock, cv) = &self.release;
+        let (guard, timer) = cv
+            .wait_timeout_while(lock.lock().unwrap(), Duration::from_secs(15), |released| {
+                !*released
+            })
+            .unwrap();
+        if timer.timed_out() && !*guard {
+            return Err(IdentityError::VaultUnavailable);
+        }
+        self.inner.create(r, v)
+    }
+    fn remove(&self, r: &str) -> Result<(), IdentityError> {
+        self.inner.remove(r)
+    }
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn local_cancelled_waiter_retains_main_policy_lock_and_host_maintenance_gate() {
+    let (mut f, h, p, s) = setup().await;
+    assert_eq!(call(&h, prepare(&p), &s).await["ok"], true);
+    h.close_application().await.unwrap();
+    drop(h);
+    let secrets = Arc::new(PausedSecrets {
+        inner: Secrets::default(),
+        entered: tokio::sync::Notify::new(),
+        release: (Mutex::new(false), std::sync::Condvar::new()),
+    });
+    f.keys = CommunityKeyStore::with_backend(secrets.clone());
+    let h = host(&f);
+    h.open_application().await.unwrap();
+    let worker = tokio::spawn({
+        let h = h.clone();
+        let s = s.clone();
+        let r = request(&p, "provision", json!({"registrationRevision":1}));
+        async move { call(&h, r, &s).await }
+    });
+    tokio::time::timeout(Duration::from_secs(10), secrets.entered.notified())
+        .await
+        .unwrap();
+    worker.abort();
+    let _ = worker.await;
+    let options = sqlx::sqlite::SqliteConnectOptions::new()
+        .filename(f.root.join("foundation.sqlite3"))
+        .create_if_missing(false)
+        .busy_timeout(Duration::from_millis(50));
+    let mut c = sqlx::SqliteConnection::connect_with(&options)
+        .await
+        .unwrap();
+    assert!(
+        sqlx::query("UPDATE profiles SET body=json_set(body,'$.status','archived')")
+            .execute(&mut c)
+            .await
+            .is_err()
+    );
+    c.close().await.unwrap();
+    let capture = tokio::spawn({
+        let h = h.clone();
+        let path = f.bundle();
+        async move { h.create_backup(&path, "after-local-write").await }
+    });
+    tokio::time::timeout(Duration::from_secs(10), async {
+        while h.status() != HostStatus::Maintenance {
+            tokio::task::yield_now().await;
+        }
+    })
+    .await
+    .unwrap();
+    assert_eq!(
+        h.dispatch_local(request(&p, "status", json!({})), all(&s))
+            .await,
+        Err(HostError::Busy)
+    );
+    assert!(!capture.is_finished());
+    *secrets.release.0.lock().unwrap() = true;
+    secrets.release.1.notify_all();
+    capture.await.unwrap().unwrap();
+    assert_eq!(secrets.inner.creates.load(Ordering::SeqCst), 1);
+    h.open_application().await.unwrap();
+    assert_eq!(
+        call(&h, request(&p, "status", json!({})), &s).await["result"]["preparationState"],
+        "ready"
+    );
+    h.close_application().await.unwrap();
+}

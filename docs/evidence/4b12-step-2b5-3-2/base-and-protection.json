@@ -1,0 +1,15 @@
+{
+  "baseFile": "AI_HOME_4B12_STEP_2B5_3_1_AUDIT_FIX_1_SOURCE.zip",
+  "baseSha256": "803202e1d4acec12f927ef0dd9a5b19ce641fe868d033b4b10148293aeb589f1",
+  "baseFiles": 957,
+  "noDeletions": true,
+  "unchangedByDesign": [
+    "Cargo.toml and Cargo.lock",
+    "Store schema v16 and Community registry schema v4",
+    "frozen P2 contracts and reference snapshots",
+    "frontend and Tauri production setup",
+    "permissions and CI workflows",
+    "HTTP providers, token store and live-server adapters"
+  ],
+  "activation": "supplemental native adapter only; production desktop disabled"
+}
