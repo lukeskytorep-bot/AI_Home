@@ -1,3 +1,29 @@
+# Bieżący stan — treść 1.94 — 29 października 2026 — 2B-5.3.7 dokumentacyjna korekta D1
+
+Wykonano wyłącznie korektę D1/P3 z niezależnego audytu 2B-5.3.7. Developer guide otrzymał aktualny angielski wstęp opisujący istniejący CommunityPanel, rozdzielony routing, jawne operacje i autoryzowany progress. Historyczny opis 2B-5.3.6 nie twierdzi już, że aktualna aplikacja nie ma ekranu rejestracji. Ogólny plik docs/AI_HOME_4B_ETAPY_PRACY_v1.0_PL.md i wersjonowany 1.94 zawierają ten sam aktualny stan oraz całą niezmienioną historię 1.93 i wcześniejszych decyzji.
+
+Audyt UI zakończono warunkowo: brak stwierdzonego blokera kodu w sprawdzonym zakresie; nowe natywne CI dokładnego drzewa pozostaje wymagane. Własne kontrole audytu: frontend 235/235, trzy dodatkowe próby 3/3, 51 różnych testów Rust, build i kontrakty PASS. Są to wyniki wcześniejszego audytu, nie nowe wykonanie testów w tej korekcie dokumentów. D1 zamknięte w dokumentacji; nie zmieniono kodu, testów, kontraktów, dependencies/lock, migracji, uprawnień ani CI.
+
+Nie wykonano rzeczywistego odbioru Windows/WebView/OS vault/forum/PHP/TLS ani power-loss. Procedura docs/COMMUNITY_DESKTOP_ACCEPTANCE_PL.md pozostaje NOT EXECUTED. Skoordynowany UI maintenance, dalsze signed writes/feed oraz całe 2B-5.3, 2B i 4B-12 pozostają OPEN. MCP po obowiązkowym przeglądzie OSS, przeglądarka odłożona. Kolejno: CI i odbiór kodu, następnie rzeczywiste próby i przegląd ich dowodów; bez release.
+
+Baza korekty: dokładny SOURCE 2B-5.3.7, SHA-256 58ccefae8b4512016aa23b2a4373f540a9c1bb93da5746ed50ef2593adcb62c0. Raport: docs/AI_HOME_4B12_STEP_2B5_3_7_DOC_FIX_D1_PL.md. Archiwalne paczki, ich hashe i wersjonowany plik 1.93 pozostają niezmienione. Historia poniżej.
+
+---
+
+# Bieżący stan — treść 1.93 — 29 października 2026 — 2B-5.3.7 UI rejestracji Community
+
+Edward potwierdził zielone CI 2B-5.3.6 po warunkowym audycie głównym. Warunek kompilacji desktopu zamknięty na podstawie jego potwierdzenia, bez niezależnego ponowienia CI w tym środowisku. Wykonano następny podkrok: UI rejestracji/statusu/recovery wykorzystujący zaakceptowane community_dispatch i autoryzowany progress.
+
+Panel Community obsługuje wyłącznie Standard; profil wybierany jawnie, native policy pozostaje źródłem scope/capabilities/destination. Odczyt aktualizuje snapshot profilu, status przygotowania, progress i lokalną dostępność poświadczenia. Nie deklaruje sprawdzenia konta online. Prepare, provision, recover keys, start, complete, retry uncertain complete i recover access są osobnymi działaniami użytkownika. Zaproszenie poza envelope, wyłącznie dla start, czyszczone po wysłaniu/zmianie profilu. Brak browser storage, automatycznych POST/retry/provision/recovery. Niepewny wynik lub konflikt unieważnia stan i wymaga jawnego odczytu przed kolejnym działaniem. Kolejny request otrzymuje nowy identyfikator; natywny protokół uzgodnienia jest autorytetem, bez powtórki starego HTTP z frontendu.
+
+Status IMPLEMENTED / AWAITING NEW CI AND INDEPENDENT AUDIT. Frontend 235/235 (16 nowych), build/typecheck, frozen P2 193/193, parity 64/64, boundaries 35 plus 14 sprawdzeń migracji, statyczne guards Community identity/reader 14/14 każde PASS. Kod Rust, uprawnienia, kontrakty i zależności bez zmian; testy Rust nie zostały ponownie uruchomione dla tej nakładki UI. Próba wizualna Playwright zablokowana przez brak Chromium; testy DOM nie zastępują odbioru WebView.
+
+Następnie: nowe CI i niezależny audyt tej dokładnej paczki, potem jawny odbiór Windows/WebView/OS vault/forum/PHP/TLS według docs/COMMUNITY_DESKTOP_ACCEPTANCE_PL.md. Rzeczywisty odbiór i skoordynowany UI maintenance pozostają OPEN. 2B-5.3, 2B i 4B-12 nadal OPEN. Dalej signed writes/feed i pozostałe 4B-13/14. MCP po obowiązkowym przeglądzie OSS, przeglądarka odłożona. Zwykły push/CI/audyt, bez release.
+
+Raport docs/AI_HOME_4B12_STEP_2B5_3_7_REGISTRATION_UI_PL.md; dowody docs/evidence/4b12-step-2b5-3-7/. Poprzednia historia zachowana poniżej.
+
+---
+
 # Bieżący stan — treść 1.92 — 29 października 2026 — 2B-5.3.6 routing i autoryzacja desktopu
 
 Edward potwierdził zielone CI 2B-5.3.5. Audyt główny zamknął O1 na poziomie natywnego hosta; nie wymagał poprawki. Wykonano kolejny osobny podkrok: jawny opt-in produkcyjnego routingu i natywnej polityki Community w desktopie.

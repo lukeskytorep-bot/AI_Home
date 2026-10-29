@@ -1,8 +1,18 @@
+# Current registration UI and desktop integration (2B-5.3.7)
+
+The main AI Home window now includes CommunityPanel for explicit Standard registration, local status and recovery. The native transport uses community_dispatch for supplemental Community commands and home_dispatch for ordinary application commands. Native startup policy remains the sole source of scope, capabilities and destination; the UI cannot grant access or enable Experimental. Browser preview does not perform Community operations.
+
+Selecting a profile does not register or automatically read its Community state. An explicit read obtains a fresh Main profile revision, preparation status, finish progress and local credential status. Prepare, create keys, load existing keys, start, complete, retry uncertain completion and recover access each require a separate action. The invitation is passed outside the envelope only for start and cleared after submission, profile changes and profile-list refresh. It is not stored in browser storage; JavaScript does not guarantee complete memory zeroization. After an error the UI discards its snapshot and requires an explicit fresh read before another operation. It does not automatically retry POSTs.
+
+ready_metadata is local protocol metadata, not evidence of usable credentials or online acceptance. The independent 2B-5.3.7 audit found no code blocker in the checked paths; new native CI of the delivered source remains required. Actual Windows/WebView, system vault and forum/PHP/TLS acceptance has not been performed. Follow COMMUNITY_DESKTOP_ACCEPTANCE_PL.md and record real results separately. Coordinated desktop maintenance/recovery UI and the full 2B-5.3/4B-12 acceptance remain open; existing Store-only backup guards remain active.
+
+The sections below record the implementation stages. Their earlier scope statements are historical; this current-status section and the current work plan describe the latest state. Documentation correction D1 synchronizes these statements without changing implementation or rewriting archived deliveries.
+
 # Opt-in desktop routing and authorization (2B-5.3.6)
 
 The desktop now manages one DesktopRuntime. Without Community configuration it retains Standard startup; with an explicit native policy it routes all ordinary home_dispatch calls through CommunityHost, sharing registration's cancellation-safe ownership gate. No second Application or Store is retained. Community calls use the separate community_dispatch command and the same host. Its Tauri permission is restricted to the local main window; the injected native webview label and URL are checked again for both commands. Accepted packaged origins are tauri://localhost and http://tauri.localhost. Only debug builds also accept the exact configured http://127.0.0.1:1420 dev server. No remote origins or other windows are accepted.
 
-This step deliberately activates routing only. There is no registration screen yet. Do not call it a completed desktop/vault/forum acceptance. Experimental remains denied by the native host regardless of policy grants.
+Step 2B-5.3.6 activated routing only; the registration screen was added in 2B-5.3.7 as described above. Neither step is a completed desktop/vault/forum acceptance. Experimental remains denied by the native host regardless of policy grants.
 
 ## Explicit native policy
 
