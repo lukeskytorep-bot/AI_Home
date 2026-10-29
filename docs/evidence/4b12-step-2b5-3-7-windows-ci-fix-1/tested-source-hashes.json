@@ -1,0 +1,10 @@
+{
+  "src-tauri/src/backup.rs": "f5dd72b0bccbb1940b242e4593032622d6b9d32b033ce716690c2364d6e84380",
+  "src-tauri/src/community_identity/mod.rs": "5065b052541cbfd7135a59550a5a19d41c23d6986b3ed4ad1389c737670b1462",
+  "src-tauri/src/community_identity/test_storage.rs": "15197b4c09ec5d5c5278f229a9369e84549294f8f696920764a42b95cff609ef",
+  "src-tauri/src/community_identity/registry/tests.rs": "24e0fd4c025107cf4cda89db9a22191de49a32756cd16b2c41be0999a02e9883",
+  "src-tauri/src/community_identity/registry/start/tests.rs": "25597e7b8efb62b205456e5fa27ea2bc57a5d313fbe2dabaa0ab025257cdce6a",
+  "src-tauri/src/community_identity/registry/finish/tests.rs": "3717615cab47d23bb90fab5c89b9d4db2c0a73a981fe6b68ae0c5cd870168333",
+  ".gitattributes": "5433332039a4294333f26b5539bdc71027edd1bfaa4d5fc84dd3de5254c183b9",
+  "README.md": "b8706940d6057e233550569be51e01814d2f94f689516e4643d8c9a63a692e79"
+}

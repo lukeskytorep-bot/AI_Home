@@ -1,0 +1,7 @@
+{
+  "core.autocrlf": true,
+  "withoutAttributesChangedFiles": 21,
+  "withAttributesExactFiles": 21,
+  "existingCRLFTreeNormalizesToOriginalIndex": true,
+  "canonicalFixtureBytesAndSignaturesUnchanged": true
+}

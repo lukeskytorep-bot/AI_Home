@@ -1,0 +1,22 @@
+{
+  "stage": "2B-5.3.7 Windows CI Fix 1",
+  "status": "IMPLEMENTED_AWAITING_WINDOWS_CI_AND_AUDIT",
+  "baseFile": "AI_HOME_4B12_STEP_2B5_3_7_DOC_FIX_D1_SOURCE.zip",
+  "baseSha256": "ae6c306583893dbc1c1dc0f69bacd1b7df1ee36668f23dcc6b931ae70d5cf176",
+  "inputWindowsLib": {
+    "passed": 306,
+    "failed": 8
+  },
+  "rustLinuxHeadlessPassed": 662,
+  "rustSuites": 23,
+  "newTest": "live WAL and complete post-close physical storage inspection",
+  "frontendPassed": 235,
+  "P2": 193,
+  "parity": 64,
+  "boundaries": 35,
+  "migrationAssertions": 14,
+  "Store": 16,
+  "registry": 4,
+  "Windows": "NOT RUN HERE; new MSVC/default-feature CI mandatory",
+  "publicReadme": "English public overview; current features versus pending acceptance; not a publication of the repository"
+}

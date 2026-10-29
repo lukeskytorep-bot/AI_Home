@@ -1,0 +1,4 @@
+# Signed protocol fixtures are canonical LF bytes on every checkout, including
+# Windows with core.autocrlf=true. Never normalize signed bytes at runtime.
+/src-tauri/tests/fixtures/community-identity/** text eol=lf
+/src-tauri/tests/fixtures/community-completion/** text eol=lf

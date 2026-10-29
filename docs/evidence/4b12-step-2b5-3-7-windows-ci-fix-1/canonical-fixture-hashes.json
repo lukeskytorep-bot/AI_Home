@@ -1,0 +1,23 @@
+{
+  "src-tauri/tests/fixtures/community-completion/fields.json": "95538ecdd5d2485c5b517c3d0adb2a5c05ce47dd2320cb2a40b31a45655191e1",
+  "src-tauri/tests/fixtures/community-completion/reissue.txt": "10cd0dfa72c25504ae65aa3a74758811a4040bd109b3d0905dc5755f4cf735d0",
+  "src-tauri/tests/fixtures/community-completion/status.txt": "d0528751ce6058f2d45e527cb8cb3dcdb9cef6a131d70db6ee7b8227b2d6b0fb",
+  "src-tauri/tests/fixtures/community-identity/p256-sha256-v1/README.txt": "389b9c0783d8aee40a763820a632855aae23e53ddafab37d57c4603450245b0d",
+  "src-tauri/tests/fixtures/community-identity/p256-sha256-v1/manifest.json": "777f2da357ac31eef864ebd1736d669d913296baa534de3fea52a975299c6d7c",
+  "src-tauri/tests/fixtures/community-identity/p256-sha256-v1/public_key.b64u": "2dd05edc061334270d2b6508cb0e75d6edb7b01fcb49c06b6d87b77759ce8b47",
+  "src-tauri/tests/fixtures/community-identity/p256-sha256-v1/signature.b64u": "71c1b41a8d0572761dd785334f4123c5641eca9d5dbeb10ac1d565760e6616b6",
+  "src-tauri/tests/fixtures/community-identity/p256-sha256-v1/statement.txt": "a336e1c088d537915966eacd7be6d664c8fddc4e3dde503572582efe358ec3c6",
+  "src-tauri/tests/fixtures/community-identity/p384-negative/README.txt": "2e59882462b5d8536e9c90d8fc2b86f3b64dde168d68b9b67f919327e5d35b6b",
+  "src-tauri/tests/fixtures/community-identity/p384-negative/public_key.b64u": "4915e5f659df676b21b98f49a027f1314a713e3972517372a6f120dbb1bc5db3",
+  "src-tauri/tests/fixtures/community-identity/p384-negative/signature.b64u": "9f3e1feb7b8160defc31b0f386ff484fddf236cd52ea01fe4cc9ff0c3904ac86",
+  "src-tauri/tests/fixtures/community-identity/p384-negative/statement.txt": "f0cb9310b6f9954f5f8d57d47b35ed64213cd211eecb69829ebc43aa53d87c88",
+  "src-tauri/tests/fixtures/community-identity/registration/identity_public_key.b64u": "41b01d94b1b89ac0f24024a7d84093558de3e6f6fc2148ee7d26be1d971573be",
+  "src-tauri/tests/fixtures/community-identity/registration/identity_public_key_compressed_alias.b64u": "b9ec8f3a58d238d772ea4e35ae4bab73bed12a514b6dd066c0679f1e6d989164",
+  "src-tauri/tests/fixtures/community-identity/registration/identity_public_key_trailing_alias.b64u": "ad0b475fa6a1be7c422c8e17324e08610bab8b694355d983f1391c370de907c5",
+  "src-tauri/tests/fixtures/community-identity/registration/identity_signature.b64u": "11c151ba45fe012e8fd802f3eafa0d5297694667a9204b79d3f865977db3b528",
+  "src-tauri/tests/fixtures/community-identity/registration/manifest.json": "7484eeb02f1c4778fb1ce15783415b8789b60e17443c325845befd24edd09517",
+  "src-tauri/tests/fixtures/community-identity/registration/operational_public_key.b64u": "08b411f26abcbbbd407c63bf4a217ed31a6f1b4b6465189a8370ddb0842c0b56",
+  "src-tauri/tests/fixtures/community-identity/registration/operational_signature.b64u": "f88c6be5c5498cc83762d8fecaba422fafa88cf40ffe94894e9a6b09f9c2cf6b",
+  "src-tauri/tests/fixtures/community-identity/registration/profile.txt": "a461671b49a8fa9e95d5937b461ad5d324504016caa2d6ddaa7558d3806e029f",
+  "src-tauri/tests/fixtures/community-identity/registration/statement.txt": "78aab9967bf18b718e4d45b61fb665b9f9f222b3d835a7cd2c79b470339f9049"
+}

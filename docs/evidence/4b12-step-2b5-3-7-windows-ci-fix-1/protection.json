@@ -1,0 +1,28 @@
+{
+  "productionLogicChange": [
+    "backup.rs staging open read+write for mandatory sync"
+  ],
+  "testChanges": [
+    "src-tauri/src/community_identity/mod.rs",
+    "src-tauri/src/community_identity/test_storage.rs",
+    "src-tauri/src/community_identity/registry/tests.rs",
+    "src-tauri/src/community_identity/registry/start/tests.rs",
+    "src-tauri/src/community_identity/registry/finish/tests.rs"
+  ],
+  "unchanged": [
+    "all 21 canonical fixtures and signatures",
+    "production signature/proof/token algorithms",
+    "Cargo.toml",
+    "Cargo.lock",
+    "all contracts",
+    "migrations",
+    "frontend",
+    "Tauri ACL",
+    "CI workflows",
+    "LICENSE"
+  ],
+  "skippedTests": [],
+  "forcedUnlock": false,
+  "ignoredSyncErrors": false,
+  "ignoredStorageReadErrors": false
+}

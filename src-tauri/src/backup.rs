@@ -169,7 +169,10 @@ async fn checkpoint_current(path:&Path)->Result<(),sqlx::Error>{
     let options=sqlx::sqlite::SqliteConnectOptions::new().filename(path).create_if_missing(false);
     let mut c=SqliteConnection::connect_with(&options).await?;let _:Vec<sqlx::sqlite::SqliteRow>=sqlx::query("PRAGMA wal_checkpoint(TRUNCATE)").fetch_all(&mut c).await?;c.close().await?;Ok(())
 }
-fn copy_verified_source(source:&Path,dest:&Path)->Result<(),sqlx::Error>{if dest.exists(){fs::remove_file(dest).map_err(|_|io_error("restore stale staging remove failed"))?}fs::copy(source,dest).map_err(|_|io_error("restore staging copy failed"))?;fs::File::open(dest).and_then(|f|f.sync_all()).map_err(|_|io_error("restore staging sync failed"))?;Ok(())}
+fn copy_verified_source(source:&Path,dest:&Path)->Result<(),sqlx::Error>{if dest.exists(){fs::remove_file(dest).map_err(|_|io_error("restore stale staging remove failed"))?}fs::copy(source,dest).map_err(|_|io_error("restore staging copy failed"))?;
+    // Windows FlushFileBuffers requires write access. Keep sync mandatory and
+    // propagate errors before publishing the staged database.
+    OpenOptions::new().read(true).write(true).open(dest).and_then(|f|f.sync_all()).map_err(|_|io_error("restore staging sync failed"))?;Ok(())}
 
 async fn recover_current_from_safety(app_data:&Path,req:&Value)->Result<(),sqlx::Error>{
     let target=app_data.join("foundation.sqlite3");if target.is_file()&&inspect(&target).await.is_ok(){return Ok(())}

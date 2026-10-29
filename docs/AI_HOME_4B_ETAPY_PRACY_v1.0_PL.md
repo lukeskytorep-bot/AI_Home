@@ -1,3 +1,21 @@
+# Bieżący stan — treść 1.95 — 29 października 2026 — 2B-5.3.7 Windows CI Fix 1 i publiczny README
+
+Nowy run Windows ujawnił 8 FAIL przy 306 PASS w bibliotece. Wcześniejsze ogólne potwierdzenie zielonego CI nie zamyka więc odbioru Windows. Bramka Windows/desktop pozostaje OPEN do nowego pełnego runu; native-check-evidence zawiera metadata/ACL, nie aplikację do uruchomienia.
+
+Przygotowano poprawkę na dokładnym SOURCE 2B-5.3.7 DOC FIX D1 (SHA-256 ae6c306583893dbc1c1dc0f69bacd1b7df1ee36668f23dcc6b931ae70d5cf176). Dodano reguły LF dla niezależnych fixtures podpisów; nie zmieniono kanonicznych bajtów ani podpisów i nie dodano normalizacji w protokole. Testy poufności pobierają live WAL, zamykają właściciela SQLite/registry i następnie czytają wszystkie pozostałe pliki bez wymuszania unlock lub połykania błędów. Nowa regresja potwierdza zachowanie bajtów WAL oraz pełny skan. Restore synchronizuje staging przez uchwyt z prawem zapisu, zachowując obowiązkowy sync i odmowę przy błędzie.
+
+README zastąpiono publicznym opisem po angielsku: cel AI Home, Standard/Experimental, działające komponenty i ograniczenia, uruchomienie i testy, konfiguracja Community, dane/poświadczenia, roadmap i licencja MIT. Rozróżnia artefakty desktop-candidate od native-check-evidence i wyraźnie nie deklaruje odebranego Windows/live forum. README jest opisem projektu, a nie starszym raportem kroku 2B-5.2.
+
+Status IMPLEMENTED / AWAITING WINDOWS CI AND AUDIT. Lokalnie Linux headless: Rust 662/662 (23 zestawy; nowa regresja storage scan), frontend 235/235, build, 12 verify, P2 193/193, parity 64/64, granice 35 i 14 asercji migracji PASS. Git z core.autocrlf=true odtwarza problem dla 21 fixtures przed regułami i zachowuje wszystkie 21 bajtowo po regułach. To nie jest własne wykonanie Windows/MSVC/WebView/OS vault ani live forum.
+
+Kod runtime zmieniony wyłącznie w otwieraniu uchwytu sync staging restore; pozostałe zmiany dotyczą testów, atrybutów checkout i dokumentacji. Bez zmian dependencies/lock, migracji, kontraktów, Tauri ACL, workflow lub UI. Store v16, registry v4. Nie pominięto żadnego z ośmiu testów i nie zniesiono Windows CI.
+
+Dalej: nałożyć poprawkę, commit/push i uruchomić AI Home checks z build_desktop=true. Dopiero po frontend/native PASS pobrać desktop-candidate-windows-2022 do rzeczywistych prób. Szczegóły: docs/AI_HOME_4B12_STEP_2B5_3_7_WINDOWS_CI_FIX_1_PL.md. Nie wykonano realnego odbioru desktop/Windows/WebView/OS vault/forum/TLS; procedura acceptance pozostaje NOT EXECUTED. Skoordynowany UI maintenance, signed writes/feed i całe 2B-5.3/2B/4B-12 OPEN. MCP po obowiązkowym przeglądzie OSS, przeglądarka odłożona. Bez release.
+
+Historia 1.94 i wcześniejszych decyzji pozostaje poniżej bez zmian.
+
+---
+
 # Bieżący stan — treść 1.94 — 29 października 2026 — 2B-5.3.7 dokumentacyjna korekta D1
 
 Wykonano wyłącznie korektę D1/P3 z niezależnego audytu 2B-5.3.7. Developer guide otrzymał aktualny angielski wstęp opisujący istniejący CommunityPanel, rozdzielony routing, jawne operacje i autoryzowany progress. Historyczny opis 2B-5.3.6 nie twierdzi już, że aktualna aplikacja nie ma ekranu rejestracji. Ogólny plik docs/AI_HOME_4B_ETAPY_PRACY_v1.0_PL.md i wersjonowany 1.94 zawierają ten sam aktualny stan oraz całą niezmienioną historię 1.93 i wcześniejszych decyzji.

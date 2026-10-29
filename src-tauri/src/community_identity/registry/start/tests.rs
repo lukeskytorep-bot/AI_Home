@@ -371,8 +371,7 @@ async fn unvalidated_extra_response_fields_and_server_request_id_are_not_persist
         .unwrap();
     received.await.unwrap();
     handle.await.unwrap();
-    for p in std::fs::read_dir(&temp.0).unwrap() {
-        let bytes = std::fs::read(p.unwrap().path()).unwrap();
+    for (_, bytes) in crate::community_identity::test_storage::bytes_after_close(registry, &temp.0).await {
         let text = String::from_utf8_lossy(&bytes);
         for forbidden in [
             "secret-invite",

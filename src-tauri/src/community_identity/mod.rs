@@ -6,6 +6,8 @@ mod proof;
 pub mod registry;
 pub mod tokens;
 mod vault;
+#[cfg(test)]
+mod test_storage;
 use chrono::{DateTime, SecondsFormat, Utc};
 pub use crypto::{
     public_key_fingerprint, verify_signature, ALGORITHM, PUBLIC_FORMAT, SIGNATURE_FORMAT,
