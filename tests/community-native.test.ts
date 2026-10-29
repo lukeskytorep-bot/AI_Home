@@ -1,0 +1,5 @@
+import {it,expect,vi} from 'vitest';
+vi.mock('@tauri-apps/api/core',()=>({invoke:vi.fn(async()=>({ok:true}))}));
+vi.mock('@tauri-apps/api/event',()=>({listen:vi.fn()}));
+import {invoke} from '@tauri-apps/api/core';import {nativeTransport} from '../src/ipc/native';
+it('routes supplemental requests separately with invitation out of envelope; ordinary requests retain home routing',async()=>{const request={contractVersion:1 as const,requestId:'explicit',command:'community.registration.start',profileId:'p1',expectedRevision:4,payload:{registrationRevision:3}};await nativeTransport.communityDispatch!(request,'PRIVATE');expect(invoke).toHaveBeenLastCalledWith('community_dispatch',{request,invite:'PRIVATE'});await nativeTransport.communityDispatch!(request);expect(invoke).toHaveBeenLastCalledWith('community_dispatch',{request,invite:null});await nativeTransport.dispatch(request);expect(invoke).toHaveBeenLastCalledWith('home_dispatch',{request});expect(request.payload).toEqual({registrationRevision:3});});
