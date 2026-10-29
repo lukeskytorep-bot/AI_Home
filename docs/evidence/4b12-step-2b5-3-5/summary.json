@@ -1,0 +1,28 @@
+{
+  "stage": "2B-5.3.5",
+  "status": "IMPLEMENTED_AWAITING_CI_AND_AUDIT",
+  "baseFile": "AI_HOME_4B12_STEP_2B5_3_4_SOURCE.zip",
+  "baseSha256": "8f11ccba75968b738620015379df4f783706827d503350e8cbb63d8ce8fbc4c2",
+  "rustPassed": 650,
+  "rustSuites": 23,
+  "hostPassed": 40,
+  "registrationHostPassed": 13,
+  "newTests": 4,
+  "frontendPassed": 219,
+  "P2": 193,
+  "parity": 64,
+  "boundaries": 34,
+  "migrationAssertions": 14,
+  "Store": 16,
+  "registry": 4,
+  "planContent": "1.91 with full unchanged 1.90 history",
+  "priorCI": "green reported by Edward; external run not independently fetched",
+  "currentCI": "awaiting push and audit",
+  "limitations": [
+    "headless no-default-features",
+    "test key/token stores",
+    "loopback HTTP without TLS",
+    "production desktop and Experimental routing not enabled",
+    "real Windows/WebView, OS vault, live forum and power-loss acceptance pending"
+  ]
+}

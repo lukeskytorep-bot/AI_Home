@@ -1,0 +1,48 @@
+   Compiling ai-home v0.0.1 (/workspace/scratch/8e3755d5c581/work/AI_Home/src-tauri)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 13.27s
+     Running unittests src/lib.rs (src-tauri/target/debug/deps/ai_home-a9e4b14669a38d75)
+
+running 40 tests
+test community_backup::tests::host_tests::absent_main_is_never_replaced_by_empty_store_at_bootstrap ... ok
+test community_backup::tests::host_tests::construction_is_offline_and_never_reads_or_creates_secrets ... ok
+test community_backup::tests::host_tests::competing_host_clones_preserve_admission_and_terminal_phase ... ok
+test community_backup::tests::host_tests::bootstrap_keeps_malformed_native_marker_and_registry_fence_closed ... ok
+test community_backup::tests::host_tests::bad_bundle_closes_admission_but_preserves_current_database ... ok
+test community_backup::tests::host_tests::host_preserves_offline_cores_symlink_root_rejection ... ok
+test community_backup::tests::host_tests::host_does_not_apply_or_bypass_legacy_restore_ledger ... ok
+test community_backup::tests::host_tests::host_opens_dispatches_closes_and_reopens_without_lending_a_pool ... ok
+test community_backup::tests::host_tests::host_rejects_another_installations_registry_owner ... ok
+test community_backup::tests::host_tests::cancelled_host_waiter_retains_gate_until_two_store_backup_finishes ... ok
+test community_backup::tests::host_tests::backup_drains_live_application_and_keeps_it_offline_until_explicit_open ... ok
+test community_backup::tests::host_tests::legacy_actual_writer_receipt_stays_valid_after_later_main_changes ... ok
+test community_backup::tests::host_tests::host_cleanup_uses_committed_receipt_when_original_input_is_lost ... ok
+test community_backup::tests::host_tests::legacy_terminal_false_or_nonboolean_applied_never_unlocks_host ... ok
+test community_backup::tests::host_tests::host_restore_applies_snapshot_and_reopens_only_on_explicit_request ... ok
+test community_backup::tests::host_tests::legacy_terminal_other_backup_never_unlocks_host ... ok
+test community_backup::tests::host_tests::legacy_terminal_other_request_never_unlocks_host ... ok
+test community_backup::tests::host_tests::legacy_terminal_other_safety_backup_never_unlocks_host ... ok
+test community_backup::tests::host_tests::legacy_unknown_fields_are_not_silently_treated_as_current_format ... ok
+test community_backup::tests::host_tests::wrong_durable_pin_does_not_open_ready_application ... ok
+test community_backup::tests::host_tests::maintenance_stops_new_dispatch_and_drains_cancelled_existing_dispatch ... ok
+test community_backup::tests::host_tests::legacy_terminal_null_empty_or_nonobject_result_never_unlocks_host ... ok
+test community_backup::tests::host_tests::legacy_valid_historical_pair_allows_open_and_both_native_operations ... ok
+test community_identity::registry::finish::tests::host_tests::host_cancelled_http_retains_main_lock_and_maintenance_gate ... ok
+test community_identity::registry::finish::tests::host_tests::host_complete_replay_and_explicit_recovery_use_original_keys_without_token_projection ... ok
+test community_identity::registry::finish::tests::host_tests::host_failed_terminal_commit_keeps_claim_and_never_redispatches ... ok
+test community_identity::registry::finish::tests::host_tests::host_invalid_invite_stale_preparation_and_local_entry_cannot_send_http ... ok
+test community_identity::registry::finish::tests::host_tests::host_progress_corrupt_finish_fails_without_repair_or_http ... ok
+test community_identity::registry::finish::tests::host_tests::host_progress_is_fresh_without_receipts_http_or_token_trust ... ok
+test community_identity::registry::finish::tests::host_tests::host_progress_rejects_self_grants_wrong_scope_revision_and_remote_entry ... ok
+test community_identity::registry::finish::tests::host_tests::host_progress_rechecks_current_policy_and_registry_fence ... ok
+test community_identity::registry::finish::tests::host_tests::host_lost_complete_requires_fresh_explicit_retry_and_then_recovery ... ok
+test community_identity::registry::finish::tests::host_tests::host_registry_reconcile_and_deletion_intent_block_http_and_success_replay ... ok
+test community_identity::registry::finish::tests::host_tests::host_start_invite_is_out_of_band_and_cached_replay_never_posts_twice ... ok
+test community_identity::registry::finish::tests::host_tests::host_wrong_grant_direction_revision_and_json_self_grant_deny_before_http ... ok
+test community_identity::registry::finish::tests::host_tests::host_receipt_replay_rechecks_policy_and_rejects_corruption ... ok
+test community_backup::tests::host_tests::busy_foreign_store_is_not_forced_closed_and_host_can_retry_after_drain ... ok
+test community_backup::tests::host_tests::host_bootstrap_resumes_each_real_native_restore_interruption ... ok
+test community_backup::tests::host_tests::legacy_request_shape_is_checked_even_with_existing_terminal_result ... ok
+test community_backup::tests::host_tests::legacy_terminal_missing_or_mistyped_fields_never_unlock_host ... ok
+
+test result: ok. 40 passed; 0 failed; 0 ignored; 0 measured; 267 filtered out; finished in 6.48s
+

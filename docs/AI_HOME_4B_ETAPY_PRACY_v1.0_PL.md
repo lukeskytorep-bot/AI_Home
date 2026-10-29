@@ -1,3 +1,19 @@
+# Bieżący stan — treść 1.91 — 29 października 2026 — 2B-5.3.5 bieżący progress rejestracji
+
+Edward potwierdził zielone CI 2B-5.3.4. Audyt główny nie wymagał poprawki kodu, ale O1 wymagał autoryzowanego odczytu bieżącej rewizji recovery przed integracją UI. Wykonano ten warunek jako osobny podkrok 2B-5.3.5.
+
+Nowa lokalna komenda community.registration.progress wymaga osobnego LocalCapability::Progress oraz istniejących kontroli profilu/scope/revision/Standard, archiwizacji, autorytatywnego Experimental binding, deletion intent, trwałego host bindingu, restore fence i lifecycle. Pusty payload; expectedRevision oznacza rewizję profilu Main. Wynik to wyłącznie finishRevision, finishState (absent/uncertain/ready_metadata) i onlineStatusKnown=false. Zero oznacza brak finish; nie wolno używać go do retry/recovery. ready_metadata nie oznacza sprawnego tokena ani dostępu online.
+
+Odczyt nie tworzy receipt, nie odtwarza historycznego receipt, nie czyta vault, nie wykonuje HTTP, nie naprawia registry ani nie generuje kluczy. Po niejednoznacznym POST i ponownym otwarciu aplikacji test pobiera rewizję wyłącznie przez host, a następnie wykonuje jawny retry/recovery nowym requestem. Nie zgaduje rewizji i nie odczytuje jej testowo bezpośrednio z registry. Błędne metadane odmawiają. Konflikt rewizji wymaga świeżego odczytu i jawnej decyzji, bez automatycznej pętli POST.
+
+Status IMPLEMENTED / AWAITING NEW CI AND AUDIT. Lokalnie Rust 650/650, w tym 40 testów hosta (13 rejestracji, 27 maintenance), frontend 219/219, P2 193/193, parity 64/64, build i 12 verify PASS. Raport: docs/AI_HOME_4B12_STEP_2B5_3_5_PROGRESS_PL.md; dowody: docs/evidence/4b12-step-2b5-3-5/.
+
+Dalej produkcyjny desktop routing/authorization i UI rejestracji, następnie odbiór rzeczywistego desktopu, OS vault i forum/TLS. Ten podkrok usuwa przeszkodę O1, ale nie aktywuje produkcyjnego Tauri ani Experimental i nie zamyka 2B-5.3, 2B lub 4B-12. Później signed writes/feed, 4B-13 A2A/Messenger i 4B-14 UI. Obowiązkowy przegląd gotowych rozwiązań przed MCP pozostaje aktualny; przeglądarka odłożona. Zwykły push/CI/audyt, bez release.
+
+Historia 1.90 i wcześniejszych decyzji pozostaje poniżej bez przepisywania dawnych wyników.
+
+---
+
 # Bieżący stan — treść 1.90 — 29 października 2026 — 2B-5.3.4 adapter HTTP hosta
 
 Edward potwierdził zielone CI 2B-5.3.3 Audit Fix 1; F1 ma pozytywny ponowny audyt. Dodano natywne dispatch_registration dla start, complete, complete.retry i access.recover. Każda komenda wymaga osobnego capability, profilu/scope/revision i kierunku Standard; Experimental i produkcyjny Tauri pozostają osobnym odbiorem.

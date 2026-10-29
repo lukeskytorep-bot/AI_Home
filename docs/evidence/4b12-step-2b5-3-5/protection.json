@@ -1,0 +1,20 @@
+{
+  "runtimeChanged": [
+    "contracts/community.local.ipc.json",
+    "src-tauri/src/community_host/local.rs",
+    "src-tauri/src/community_identity/registry/finish/tests/host_tests.rs"
+  ],
+  "unchanged": [
+    "Cargo.toml",
+    "Cargo.lock",
+    "dependencies",
+    "frontend",
+    "production Tauri setup",
+    "permissions",
+    "CI workflows",
+    "frozen P2",
+    "Store v16",
+    "registry v4"
+  ],
+  "noDeletions": true
+}

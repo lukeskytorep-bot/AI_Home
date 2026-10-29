@@ -1,0 +1,5 @@
+{
+  "contracts/community.local.ipc.json": "554be2d10423095f95742a06431b02d81b2c1e7605a838cf8c32a010a5cdd15c",
+  "src-tauri/src/community_host/local.rs": "60e09977a7dd3ff40b44c858454c5bb9a1b5c0058c14c37f9056cd7f8d3ab4c4",
+  "src-tauri/src/community_identity/registry/finish/tests/host_tests.rs": "48a50656b1a9fef872ff3a0bdf0b10087ff9b33f0f7000f82e9370cac638a6bb"
+}

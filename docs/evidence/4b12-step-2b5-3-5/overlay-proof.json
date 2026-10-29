@@ -1,0 +1,6 @@
+{
+  "baseFiles": 1006,
+  "rule": "exact original base dictionary plus changed/new paths equals final source dictionary",
+  "noDeletions": true,
+  "verification": "independent byte comparison in package_next.py, before writing final ZIP"
+}

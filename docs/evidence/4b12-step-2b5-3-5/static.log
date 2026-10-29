@@ -1,0 +1,113 @@
+
+COMMAND verify:boundaries
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> ai-home@0.0.1 verify:boundaries
+> node scripts/verify-boundaries.mjs
+
+SQLite target v16: 14 migration assertions checked
+34 boundary checks PASS
+
+COMMAND verify:rust-source-text
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> ai-home@0.0.1 verify:rust-source-text
+> python3 scripts/verify-rust-source-text.py
+
+PASS: Rust source-text normalization sweep.
+
+COMMAND verify:command-parity
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> ai-home@0.0.1 verify:command-parity
+> python3 scripts/verify-command-parity.py
+
+PASS: contract/handler/router parity 64/64.
+
+COMMAND verify:standard
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> ai-home@0.0.1 verify:standard
+> python3 scripts/verify-standard-closure.py
+
+PASS activity.list native route
+PASS ActivityPanel visible in Standard UI
+PASS Activity skips permanent-deletion tombstones
+PASS Activity refresh reloads profiles
+PASS Standard uses NullState
+PASS no periodic frontend interval
+PASS no periodic native interval
+PASS no forum/community runtime package dependency
+RESULT: 8/8 Standard closure static checks PASS.
+
+COMMAND verify:standard-release
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> ai-home@0.0.1 verify:standard-release
+> python3 scripts/verify-standard-release.py
+
+PASS: locale key parity
+PASS: diagnostics localized
+PASS: both themes have light/dark
+PASS: diagnostics contract has snapshot/export
+PASS: diagnostics excludes content by construction
+PASS: diagnostics navigation visible
+PASS: privacy default remains content-free
+PASS: stage label updated
+PASS: Standard release checks 8/8.
+
+COMMAND verify:experimental-foundation
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> ai-home@0.0.1 verify:experimental-foundation
+> python3 scripts/verify-experimental-foundation.py
+
+PASS: 12/12 Experimental foundation invariants.
+
+COMMAND verify:experimental-runtime
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> ai-home@0.0.1 verify:experimental-runtime
+> python3 scripts/verify-experimental-runtime.py
+
+PASS: 24/24 Experimental runtime invariants.
+
+COMMAND verify:experimental-continuity
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> ai-home@0.0.1 verify:experimental-continuity
+> python3 scripts/verify-experimental-continuity.py
+
+PASS: 23/23 Experimental continuity invariants.
+
+COMMAND verify:experimental-internal-state
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> ai-home@0.0.1 verify:experimental-internal-state
+> python3 scripts/verify-experimental-internal-state.py
+
+PASS: 23/23 Experimental internal-state invariants.
+
+COMMAND verify:experimental-reflection
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> ai-home@0.0.1 verify:experimental-reflection
+> python3 scripts/verify-experimental-reflection.py
+
+PASS: 16/16 Experimental reflection static scope checks (not runtime proof).
+
+COMMAND verify:community-reader
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> ai-home@0.0.1 verify:community-reader
+> python3 scripts/verify-community-reader.py
+
+PASS: 14/14 Community reader static guards (not live-server acceptance).
+
+COMMAND verify:community-identity
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> ai-home@0.0.1 verify:community-identity
+> python3 scripts/verify-community-identity.py
+
+PASS: 14/14 Community identity static guards; not registration/server acceptance.

@@ -1,3 +1,13 @@
+# Authorized fresh registration progress (2B-5.3.5)
+
+Before desktop integration, use CommunityHost::dispatch_local with community.registration.progress, an empty payload and a fresh LocalAccess granting LocalCapability::Progress. expectedRevision is the Main profile revision, not the finish revision. Scope, Standard/non-archived direction, authoritative Experimental binding, pending deletion, host binding, restore fence and registry lifecycle are checked just as for other local reads. dispatch_registration refuses this local command.
+
+Exact result: finishRevision (integer), finishState (absent / uncertain / ready_metadata), onlineStatusKnown=false. Absent means revision zero; other states have a positive revision. This is local protocol metadata only. ready_metadata does not prove key/token custody or server acceptance; use access.status for a fresh local credential check, and authorize/load again for later HTTP operations. No registration ID, agent ID, generation, key or token reference, signed packet, invite or server payload is projected. A malformed registry fails closed.
+
+The read creates no receipt and never replays a historical one. It reads neither key nor token vault, creates no identity, dispatches no HTTP and does not change registry state. After ambiguous complete/retry/recovery or restart, read progress again through the host, then deliberately send a new complete.retry/access.recover request using the returned positive finishRevision. Zero is not a retry/recovery revision. A concurrent change can still produce REVISION_CONFLICT; obtain fresh progress and make the next explicit decision. No automatic POST loop is introduced. Existing preparation status supplies registrationRevision separately.
+
+O1 acceptance test now closes and reopens the host after lost complete and after retry; each recovery revision comes only from the authorized host command. Production desktop routing/authorization and Windows/WebView, real OS vault and live forum/TLS acceptance remain separate steps. MCP review and browser deferral are unchanged.
+
 # Explicit native registration HTTP host adapter (2B-5.3.4)
 
 Use CommunityHost::dispatch_registration with a fresh RegistrationAccess for start, complete, complete.retry and access.recover. It shares the local adapter's profile/direction/capability checks, durable Main claim and cancellation-safe host gate. The invite is an out-of-band Zeroizing value, never a JSON field; only start permits it. Scope and destination come from the native grant. Existing local request fingerprints remain byte-compatible.

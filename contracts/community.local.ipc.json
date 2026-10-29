@@ -1,7 +1,19 @@
 {
   "schemaVersion": 1,
-  "note": "Supplemental native host adapters. dispatch_local handles local preparation and credential status; dispatch_registration explicitly handles HTTP start/complete/retry/recovery. Native profile scope and capabilities required. No production Tauri activation or Experimental authorization. Invites are out of band; results never expose credentials. onlineStatusKnown remains false.",
+  "note": "Supplemental native host adapters. dispatch_local handles local preparation, fresh finish progress and credential status; dispatch_registration explicitly handles HTTP start/complete/retry/recovery. Native profile scope and capabilities required. No production Tauri activation or Experimental authorization. Invites are out of band; results never expose credentials. onlineStatusKnown remains false. progress returns local metadata only: absent requires finishRevision=0; uncertain/ready_metadata require a positive finishRevision. ready_metadata does not prove usable credentials or server acceptance. Reads do not replay receipts.",
   "commands": {
+    "community.registration.progress": {
+      "scope": "profile",
+      "requiresExpectedRevision": true,
+      "mutates": false,
+      "payload": {"type":"object","properties":{},"required":[],"additionalProperties":false},
+      "result": {
+        "type":"object",
+        "properties":{"finishRevision":{"type":"integer","minimum":0},"finishState":{"enum":["absent","uncertain","ready_metadata"]},"onlineStatusKnown":{"const":false}},
+        "required":["finishRevision","finishState","onlineStatusKnown"],
+        "additionalProperties":false
+      }
+    },
     "community.registration.start": {"scope":"profile","requiresExpectedRevision":true,"mutates":true,"payload":{"type":"object","properties":{"registrationRevision":{"type":"integer","minimum":1}},"required":["registrationRevision"],"additionalProperties":false},"result":{"type":"object","properties":{"phase":{"enum":["awaiting_complete","recovery_required"]},"finishRevision":{"type":"integer","minimum":0},"onlineStatusKnown":{"const":false}},"required":["phase","finishRevision","onlineStatusKnown"],"additionalProperties":false}},
     "community.registration.complete": {"scope":"profile","requiresExpectedRevision":true,"mutates":true,"payload":{"type":"object","properties":{"registrationRevision":{"type":"integer","minimum":1}},"required":["registrationRevision"],"additionalProperties":false},"result":{"type":"object","properties":{"phase":{"enum":["credential_available"]},"finishRevision":{"type":"integer","minimum":1},"onlineStatusKnown":{"const":false}},"required":["phase","finishRevision","onlineStatusKnown"],"additionalProperties":false}},
     "community.registration.complete.retry": {"scope":"profile","requiresExpectedRevision":true,"mutates":true,"payload":{"type":"object","properties":{"finishRevision":{"type":"integer","minimum":1}},"required":["finishRevision"],"additionalProperties":false},"result":{"type":"object","properties":{"phase":{"enum":["credential_available"]},"finishRevision":{"type":"integer","minimum":1},"onlineStatusKnown":{"const":false}},"required":["phase","finishRevision","onlineStatusKnown"],"additionalProperties":false}},

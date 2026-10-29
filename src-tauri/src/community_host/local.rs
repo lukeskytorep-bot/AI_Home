@@ -20,6 +20,7 @@ pub enum LocalCapability {
     Provision,
     Recover,
     AccessStatus,
+    Progress,
     Start,
     Complete,
     RetryComplete,
@@ -198,6 +199,7 @@ async fn execute(
         "community.registration.provision" => LocalCapability::Provision,
         "community.registration.recover" => LocalCapability::Recover,
         "community.registration.access.status" => LocalCapability::AccessStatus,
+        "community.registration.progress" => LocalCapability::Progress,
         "community.registration.start" => LocalCapability::Start,
         "community.registration.complete" => LocalCapability::Complete,
         "community.registration.complete.retry" => LocalCapability::RetryComplete,
@@ -244,7 +246,10 @@ async fn execute(
         .await
         .map_err(|_| "STORAGE_ERROR")?;
     authorize(&mut tx, r, a).await?;
-    let mutates = !matches!(cap, LocalCapability::Status | LocalCapability::AccessStatus);
+    let mutates = !matches!(
+        cap,
+        LocalCapability::Status | LocalCapability::AccessStatus | LocalCapability::Progress
+    );
     crate::connections::profile_deletion::bind_host(&mut tx, Some(service), command, false).await?;
     if service.registry.restore_fence().exists() {
         return Err("POLICY_DENIED");
@@ -258,7 +263,10 @@ async fn execute(
         }
     }
     if !mutates {
-        if cap == LocalCapability::AccessStatus {
+        if matches!(
+            cap,
+            LocalCapability::AccessStatus | LocalCapability::Progress
+        ) {
             // Read-only: validate keys and token custody, never dispatch HTTP or
             // infer current server acceptance from local metadata.
             let finish = crate::community_identity::registry::finish::RegistrationFinish::new(
@@ -273,6 +281,26 @@ async fn execute(
                 )) => None,
                 Err(_) => return Err("STORAGE_ERROR"),
             };
+            if cap == LocalCapability::Progress {
+                // Fresh local protocol metadata only. No credential/vault read,
+                // HTTP, receipt replay or inference of current server acceptance.
+                let (revision, state) = match progress {
+                    None => (0, "absent"),
+                    Some(p) => (
+                        p.revision,
+                        if p.ready_metadata {
+                            "ready_metadata"
+                        } else {
+                            "uncertain"
+                        },
+                    ),
+                };
+                let result = json!({"finishRevision":revision,"finishState":state,"onlineStatusKnown":false});
+                if !schema::valid(&result, &contract["result"]) {
+                    return Err("STORAGE_ERROR");
+                }
+                return Ok(success(r, result));
+            }
             let usable = if progress.as_ref().is_some_and(|p| p.ready_metadata) {
                 match finish
                     .current(&service.registry, &service.keys, &a.scope)
