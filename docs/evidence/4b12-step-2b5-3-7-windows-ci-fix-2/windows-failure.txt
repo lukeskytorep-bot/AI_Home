@@ -1,0 +1,4 @@
+User-supplied Windows CI result: 314 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 62.21s
+Failure: community_identity::test_storage::inspection_keeps_live_wal_bytes_and_reads_every_file_after_close
+assertion failed: files.iter().any(|(p, b)| p == &wal && b == &before)
+Location: src/community_identity/test_storage.rs:60:5

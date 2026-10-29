@@ -35,8 +35,12 @@ async fn inspection_keeps_live_wal_bytes_and_reads_every_file_after_close() {
     use super::{CommunityScope, RegistrationProfile};
     let root = std::env::temp_dir().join(format!("ai-home-storage-scan-{}", uuid::Uuid::new_v4()));
     std::fs::create_dir_all(&root).unwrap();
+    // Gate canonicalizes the registry path. On Windows this also introduces
+    // the extended-length prefix, so use that same namespace for assertions.
+    let root = std::fs::canonicalize(&root).unwrap();
     let path = root.join("registry.sqlite");
     let registry = RegistrationRegistry::open(&path).await.unwrap();
+    assert_eq!(registry.storage_path(), path.as_path());
     let scope = CommunityScope::new(
         "scan",
         "https://example.test/api/v1/",

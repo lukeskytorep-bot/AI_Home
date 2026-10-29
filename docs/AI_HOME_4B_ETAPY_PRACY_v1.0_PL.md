@@ -1,3 +1,15 @@
+# Bieżący stan — treść 1.96 — 29 października 2026 — 2B-5.3.7 Windows CI Fix 2
+
+Windows po Fix 1: przesłany log biblioteki 314 PASS / 1 FAIL. Pozostała regresja skanera storage: test porównywał kanoniczną ścieżkę registry (na Windows z prefiksem extended-length) ze zwykłą ścieżką temp. Fix 2 kanonizuje katalog testu przed utworzeniem ścieżek i dodatkowo sprawdza zgodność registry.storage_path(). Wszystkie asercje dokładnych bajtów WAL i pełnego skanu pozostają wymagane. Skaner i kod runtime bez zmian; 4 dodane linie w jednym pliku testowym. README publiczny po angielsku z Fix 1 pozostaje bez zmian.
+
+Własna walidacja Fix 2: cargo test --manifest-path src-tauri/Cargo.toml --lib --no-default-features --locked: Linux Rust 1.99.1, 319/319 PASS, 0 ignored; poprawiony test WAL PASS. To 319 testów biblioteki Linux, nie pełne all-targets ani Windows. Kontrola bajtowa 197 chronionych plików względem Fix 1 PASS; pakiety i rekonstrukcja overlay sprawdzone osobno.
+
+Status IMPLEMENTED / AWAITING WINDOWS CI AND AUDIT. Wymagany nowy pełny run z build_desktop=true; native-check-evidence nie jest aplikacją ani dowodem pełnego PASS. Windows/MSVC/WebView/OS vault/live forum/TLS nie wykonano tutaj. Następnie rzeczywisty odbiór według COMMUNITY_DESKTOP_ACCEPTANCE_PL.md. Skoordynowany UI maintenance, signed writes/feed, 2B-5.3/2B/4B-12 OPEN. MCP po obowiązkowym przeglądzie OSS, przeglądarka odłożona. Bez release. Szczegóły: docs/AI_HOME_4B12_STEP_2B5_3_7_WINDOWS_CI_FIX_2_PL.md.
+
+Historia 1.95 i wcześniejszych decyzji pozostaje poniżej bez zmian.
+
+---
+
 # Bieżący stan — treść 1.95 — 29 października 2026 — 2B-5.3.7 Windows CI Fix 1 i publiczny README
 
 Nowy run Windows ujawnił 8 FAIL przy 306 PASS w bibliotece. Wcześniejsze ogólne potwierdzenie zielonego CI nie zamyka więc odbioru Windows. Bramka Windows/desktop pozostaje OPEN do nowego pełnego runu; native-check-evidence zawiera metadata/ACL, nie aplikację do uruchomienia.
