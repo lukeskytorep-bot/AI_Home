@@ -1,3 +1,7 @@
+# Local credential status (2B-5.3.3)
+
+The supplemental native command community.registration.access.status requires LocalCapability::AccessStatus in addition to the existing profile/scope/direction gates. Empty payload; exact result: localCredentialUsable and onlineStatusKnown=false. For ready metadata it calls RegistrationFinish::current, validating original keys, archived registration context and scope/generation-bound token custody. Missing credentials return false; corrupt registry metadata fails closed. No receipts or secret writes, no HTTP. A true result is a local snapshot, never authorization for a later network call or proof of server acceptance. The eventual HTTP adapter must authorize and load credentials again. Production Tauri remains gated.
+
 # Local registration adapter and native authorization (4B-12 / 2B-5.3.2)
 
 `community_host::local` adds a supplemental native-only adapter for `community.registration.status`, `prepare`, `provision`, and `recover`. It is not exposed by the production Tauri setup or `home_dispatch`. HTTP start/complete, token handling, UI, permissions and desktop activation remain later gates.

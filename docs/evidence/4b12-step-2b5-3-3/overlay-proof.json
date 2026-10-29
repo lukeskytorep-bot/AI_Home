@@ -1,0 +1,23 @@
+{
+  "baseSha256": "214eca73cc3d2e37f782918bcc7e9af1c86c9859f9aab76f964bfbac334a02f6",
+  "changedPaths": [
+    "SHA256SUMS.txt",
+    "contracts/community.local.ipc.json",
+    "docs/AI_HOME_4B12_STEP_2B5_3_3_ACCESS_STATUS_PL.md",
+    "docs/AI_HOME_4B_ETAPY_PRACY_v1.0_PL.md",
+    "docs/COMMUNITY_IDENTITY_DEVELOPER.md",
+    "docs/evidence/4b12-step-2b5-3-3/build.log",
+    "docs/evidence/4b12-step-2b5-3-3/contracts.log",
+    "docs/evidence/4b12-step-2b5-3-3/frontend.log",
+    "docs/evidence/4b12-step-2b5-3-3/overlay-proof.json",
+    "docs/evidence/4b12-step-2b5-3-3/rust-all.log",
+    "docs/evidence/4b12-step-2b5-3-3/static.log",
+    "docs/evidence/4b12-step-2b5-3-3/summary.json",
+    "docs/evidence/4b12-step-2b5-3-3/tested-source-hashes.json",
+    "docs/evidence/manifest.sha256.json",
+    "src-tauri/src/community_backup/local_tests.rs",
+    "src-tauri/src/community_host/local.rs"
+  ],
+  "noDeletions": true,
+  "proof": "BASE + overlay == SOURCE byte-for-byte"
+}

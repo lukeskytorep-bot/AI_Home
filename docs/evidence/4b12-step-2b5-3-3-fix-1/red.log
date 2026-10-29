@@ -1,0 +1,42 @@
+   Compiling ai-home v0.0.1 (/workspace/scratch/8e3755d5c581/audit_fix_work/AI_Home/src-tauri)
+    Finished `test` profile [unoptimized] target(s) in 17.90s
+     Running unittests src/lib.rs (/workspace/scratch/8e3755d5c581/next_work/AI_Home/src-tauri/target/debug/deps/ai_home-25e02228d6537dcd)
+
+running 3 tests
+test community_backup::tests::local_tests::audit_access_status_missing_original_keys ... FAILED
+test community_backup::tests::local_tests::audit_access_status_mismatched_original_keys ... FAILED
+test community_backup::tests::local_tests::audit_access_status_unavailable_original_keys ... FAILED
+
+failures:
+
+---- community_backup::tests::local_tests::audit_access_status_missing_original_keys stdout ----
+
+thread 'community_backup::tests::local_tests::audit_access_status_missing_original_keys' (319) panicked at src/community_backup/local_tests.rs:702:2:
+assertion `left == right` failed
+  left: Object {"contractVersion": Number(1), "error": Object {"code": String("STORAGE_ERROR"), "messageKey": String("error.storage_error"), "retryable": Bool(false)}, "ok": Bool(false), "requestId": String("f498b134-effb-430d-8c0c-af0bb0bb9f38")}
+ right: Object {"contractVersion": Number(1), "ok": Bool(true), "requestId": String("f498b134-effb-430d-8c0c-af0bb0bb9f38"), "result": Object {"localCredentialUsable": Bool(false), "onlineStatusKnown": Bool(false)}}
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- community_backup::tests::local_tests::audit_access_status_mismatched_original_keys stdout ----
+
+thread 'community_backup::tests::local_tests::audit_access_status_mismatched_original_keys' (318) panicked at src/community_backup/local_tests.rs:702:2:
+assertion `left == right` failed
+  left: Object {"contractVersion": Number(1), "error": Object {"code": String("STORAGE_ERROR"), "messageKey": String("error.storage_error"), "retryable": Bool(false)}, "ok": Bool(false), "requestId": String("502d5cf3-f0bc-4be4-9a7a-07158ae376e0")}
+ right: Object {"contractVersion": Number(1), "ok": Bool(true), "requestId": String("502d5cf3-f0bc-4be4-9a7a-07158ae376e0"), "result": Object {"localCredentialUsable": Bool(false), "onlineStatusKnown": Bool(false)}}
+
+---- community_backup::tests::local_tests::audit_access_status_unavailable_original_keys stdout ----
+
+thread 'community_backup::tests::local_tests::audit_access_status_unavailable_original_keys' (320) panicked at src/community_backup/local_tests.rs:702:2:
+assertion `left == right` failed
+  left: Object {"contractVersion": Number(1), "error": Object {"code": String("STORAGE_ERROR"), "messageKey": String("error.storage_error"), "retryable": Bool(false)}, "ok": Bool(false), "requestId": String("bffbe5a8-a467-413c-9056-81f592ed2410")}
+ right: Object {"contractVersion": Number(1), "ok": Bool(true), "requestId": String("bffbe5a8-a467-413c-9056-81f592ed2410"), "result": Object {"localCredentialUsable": Bool(false), "onlineStatusKnown": Bool(false)}}
+
+
+failures:
+    community_backup::tests::local_tests::audit_access_status_mismatched_original_keys
+    community_backup::tests::local_tests::audit_access_status_missing_original_keys
+    community_backup::tests::local_tests::audit_access_status_unavailable_original_keys
+
+test result: FAILED. 0 passed; 3 failed; 0 ignored; 0 measured; 291 filtered out; finished in 0.26s
+
+error: test failed, to rerun pass `--lib`

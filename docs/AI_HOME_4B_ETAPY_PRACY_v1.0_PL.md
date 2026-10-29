@@ -1,3 +1,19 @@
+# Bieżący stan — treść 1.87 — 28 października 2026 — 2B-5.3.3 Audit Fix 1
+
+Audyt F1/P2: brak/niedostępność/niezgodność oryginalnych kluczy był błędnie mapowany na STORAGE_ERROR. Dodano obsługę FinishError::Registry(RegistryError::Identity) jako localCredentialUsable=false. Pozostałe błędy registry nadal odmawiają. Trzy regresje odtwarzają RED 0/3; poprawiony moduł adaptera 25/25 PASS. Bez zmiany identity core, HTTP i regeneracji kluczy. Raport docs/AI_HOME_4B12_STEP_2B5_3_3_AUDIT_FIX_1_PL.md.
+
+IMPLEMENTED / AWAITING CI AND RE-AUDIT. Najpierw nowe CI i ponowny audyt F1. Całe 2B-5.3 i 4B-12 OPEN. Historia 1.86 poniżej.
+
+---
+
+# Bieżący stan — treść 1.86 — 28 października 2026 — 2B-5.3.3
+
+Po potwierdzonym przez Edwarda zielonym 2B-5.3.2 dodano native access.status z osobnym capability i kontrolą lokalnych kluczy/tokena przez RegistrationFinish::current. Ready metadata samo nie daje usable. Wynik jest chwilowym odczytem lokalnym; onlineStatusKnown=false. Cztery nowe regresje obejmują poprawny token, utratę, obcy scope, brak capability i uszkodzone metadane. Raport: docs/AI_HOME_4B12_STEP_2B5_3_3_ACCESS_STATUS_PL.md.
+
+Status IMPLEMENTED / AWAITING CI AND AUDIT. Całe 2B-5.3 i 4B-12 pozostają OPEN. Ten podkrok przygotowuje bezpieczną kontrolę dostępu; komendy HTTP i desktop enablement nadal następne. Zwykły push/CI, bez release. Historia 1.85 poniżej.
+
+---
+
 # Bieżący stan — treść 1.85 — 28 października 2026 — 4B-12 / 2B-5.3.2: lokalny adapter rejestracji
 
 Edward potwierdził zielony wynik 2B-5.3.1 Audit Fix 1. Dodano uzupełniający natywny adapter `status`, `prepare`, `provision`, `recover` z bramkami kierunku Standard i capability. Status **IMPLEMENTED / AWAITING CI AND AUDIT**. Całe 2B-5.3, 2B-5, 2B i 4B-12 pozostają OPEN.

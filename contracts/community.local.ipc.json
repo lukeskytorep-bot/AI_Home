@@ -2,6 +2,18 @@
   "schemaVersion": 1,
   "note": "Native host adapter only. Profile expectedRevision, pinned native scope and native capabilities required; no production Tauri activation, HTTP, tokens or Experimental authorization. Ready means local preparation only.",
   "commands": {
+    "community.registration.access.status": {
+      "scope": "profile",
+      "requiresExpectedRevision": true,
+      "mutates": false,
+      "payload": {"type":"object","properties":{},"required":[],"additionalProperties":false},
+      "result": {
+        "type":"object",
+        "properties":{"localCredentialUsable":{"type":"boolean"},"onlineStatusKnown":{"const":false}},
+        "required":["localCredentialUsable","onlineStatusKnown"],
+        "additionalProperties":false
+      }
+    },
     "community.registration.status": {
       "scope": "profile",
       "requiresExpectedRevision": true,

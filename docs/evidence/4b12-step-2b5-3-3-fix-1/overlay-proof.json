@@ -1,0 +1,21 @@
+{
+  "baseSha256": "42b388f1c3a92cd7c69b693a4263ecec8202172ec177e4a2cb8c02558378a611",
+  "changedPaths": [
+    "SHA256SUMS.txt",
+    "docs/AI_HOME_4B12_STEP_2B5_3_3_AUDIT_FIX_1_PL.md",
+    "docs/AI_HOME_4B_ETAPY_PRACY_v1.0_PL.md",
+    "docs/evidence/4b12-step-2b5-3-3-fix-1/contracts.log",
+    "docs/evidence/4b12-step-2b5-3-3-fix-1/input-audit.md",
+    "docs/evidence/4b12-step-2b5-3-3-fix-1/overlay-proof.json",
+    "docs/evidence/4b12-step-2b5-3-3-fix-1/red.log",
+    "docs/evidence/4b12-step-2b5-3-3-fix-1/rust-adapter.log",
+    "docs/evidence/4b12-step-2b5-3-3-fix-1/static.log",
+    "docs/evidence/4b12-step-2b5-3-3-fix-1/summary.json",
+    "docs/evidence/4b12-step-2b5-3-3-fix-1/tested-source-hashes.json",
+    "docs/evidence/manifest.sha256.json",
+    "src-tauri/src/community_backup/local_tests.rs",
+    "src-tauri/src/community_host/local.rs"
+  ],
+  "noDeletions": true,
+  "proof": "BASE + overlay == SOURCE byte-for-byte"
+}

@@ -19,6 +19,7 @@ pub enum LocalCapability {
     Prepare,
     Provision,
     Recover,
+    AccessStatus,
 }
 /// Supplied afresh by the trusted native caller, not deserializable. This is an
 /// explicit host grant; it is not inferred from remote capability advertisements.
@@ -191,6 +192,7 @@ async fn execute(
         "community.registration.prepare" => LocalCapability::Prepare,
         "community.registration.provision" => LocalCapability::Provision,
         "community.registration.recover" => LocalCapability::Recover,
+        "community.registration.access.status" => LocalCapability::AccessStatus,
         _ => return Err("UNKNOWN_COMMAND"),
     };
     let contracts: Value =
@@ -220,7 +222,7 @@ async fn execute(
         .await
         .map_err(|_| "STORAGE_ERROR")?;
     authorize(&mut tx, r, a).await?;
-    let mutates = cap != LocalCapability::Status;
+    let mutates = !matches!(cap, LocalCapability::Status | LocalCapability::AccessStatus);
     crate::connections::profile_deletion::bind_host(&mut tx, Some(service), command, false).await?;
     if service.registry.restore_fence().exists() {
         return Err("POLICY_DENIED");
@@ -234,6 +236,45 @@ async fn execute(
         }
     }
     if !mutates {
+        if cap == LocalCapability::AccessStatus {
+            // Read-only: validate keys and token custody, never dispatch HTTP or
+            // infer current server acceptance from local metadata.
+            let finish = crate::community_identity::registry::finish::RegistrationFinish::new(
+                std::time::Duration::from_secs(10),
+                service.tokens.clone(),
+            )
+            .map_err(|_| "STORAGE_ERROR")?;
+            let progress = match finish.progress(&service.registry, &a.scope).await {
+                Ok(p) => p,
+                Err(crate::community_identity::registry::finish::FinishError::Registry(
+                    RegistryError::NotFound,
+                )) => None,
+                Err(_) => return Err("STORAGE_ERROR"),
+            };
+            let usable = if progress.as_ref().is_some_and(|p| p.ready_metadata) {
+                match finish
+                    .current(&service.registry, &service.keys, &a.scope)
+                    .await
+                {
+                    Ok(_) => true,
+                    Err(crate::community_identity::registry::finish::FinishError::Identity(_))
+                    | Err(crate::community_identity::registry::finish::FinishError::Registry(
+                        RegistryError::Identity(_),
+                    ))
+                    | Err(
+                        crate::community_identity::registry::finish::FinishError::RecoveryRequired,
+                    ) => false,
+                    Err(_) => return Err("STORAGE_ERROR"),
+                }
+            } else {
+                false
+            };
+            let result = json!({"localCredentialUsable":usable,"onlineStatusKnown":false});
+            if !schema::valid(&result, &contract["result"]) {
+                return Err("STORAGE_ERROR");
+            }
+            return Ok(success(r, result));
+        }
         let record = match service.registry.get(&a.scope).await {
             Ok(p) => Some(p),
             Err(RegistryError::NotFound) => None,
@@ -341,7 +382,7 @@ async fn execute(
                 )
                 .await
         }
-        LocalCapability::Status => unreachable!(),
+        LocalCapability::Status | LocalCapability::AccessStatus => unreachable!(),
     };
     let response = match outcome {
         Ok(record) => {

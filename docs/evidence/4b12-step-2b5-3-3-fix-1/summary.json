@@ -1,0 +1,16 @@
+{
+  "stage": "2B-5.3.3",
+  "rustPassed": 25,
+  "rustSuites": 1,
+  "newTests": 3,
+  "fullRegression": "not repeated; targeted fix",
+  "P2": 193,
+  "parity": 59,
+  "baseSha256": "42b388f1c3a92cd7c69b693a4263ecec8202172ec177e4a2cb8c02558378a611",
+  "CI": "awaiting new CI and re-audit; base F1 DO POPRAWY",
+  "limitations": [
+    "headless no-default-features",
+    "mock vault; no live forum",
+    "HTTP adapter and desktop activation pending"
+  ]
+}

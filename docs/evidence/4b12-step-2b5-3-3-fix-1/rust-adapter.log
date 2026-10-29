@@ -1,0 +1,33 @@
+   Compiling ai-home v0.0.1 (/workspace/scratch/8e3755d5c581/audit_fix_work/AI_Home/src-tauri)
+    Finished `test` profile [unoptimized] target(s) in 4.75s
+     Running unittests src/lib.rs (/workspace/scratch/8e3755d5c581/next_work/AI_Home/src-tauri/target/debug/deps/ai_home-25e02228d6537dcd)
+
+running 25 tests
+test community_backup::tests::local_tests::local_adapter_refuses_offline_or_restore_recovery_host ... ok
+test community_backup::tests::local_tests::access_status_requires_separate_capability_and_rechecks_policy ... ok
+test community_backup::tests::local_tests::access_status_rejects_corrupt_finish_instead_of_reporting_usable ... ok
+test community_backup::tests::local_tests::local_authoritative_experimental_binding_cannot_be_masked_by_standard_mode ... ok
+test community_backup::tests::local_tests::audit_access_status_missing_original_keys ... ok
+test community_backup::tests::local_tests::access_status_does_not_promote_local_keys_to_credentials_or_write_receipts ... ok
+test community_backup::tests::local_tests::audit_access_status_mismatched_original_keys ... ok
+test community_backup::tests::local_tests::local_archived_and_nonstandard_profiles_are_denied_even_with_all_grants ... ok
+test community_backup::tests::local_tests::audit_access_status_unavailable_original_keys ... ok
+test community_backup::tests::local_tests::access_status_validates_actual_token_then_detects_loss_and_scope_tampering ... ok
+test community_backup::tests::local_tests::local_capabilities_default_deny_and_json_cannot_grant_them ... ok
+test community_backup::tests::local_tests::local_invalid_payload_cannot_pin_or_claim_a_request ... ok
+test community_backup::tests::local_tests::local_grant_cannot_cross_profile_or_community_scope ... ok
+test community_backup::tests::local_tests::local_failed_final_receipt_claim_is_durable_and_prepare_can_resume_after_restart ... ok
+test community_backup::tests::local_tests::local_missing_profile_never_creates_a_registration ... ok
+test community_backup::tests::local_tests::local_imported_reconcile_state_blocks_even_successful_old_receipt_replay ... ok
+test community_backup::tests::local_tests::local_corrupt_receipt_is_not_returned_as_a_valid_success ... ok
+test community_backup::tests::local_tests::local_missing_keys_never_regenerate_during_recover ... ok
+test community_backup::tests::local_tests::local_pending_deletion_blocks_every_command_and_reserved_request_id ... ok
+test community_backup::tests::local_tests::local_stale_profile_revision_fails_before_registration_reservation ... ok
+test community_backup::tests::local_tests::local_replay_rechecks_current_capability_and_profile_direction ... ok
+test community_backup::tests::local_tests::local_request_ids_conflict_with_ordinary_dispatch_and_other_local_commands ... ok
+test community_backup::tests::local_tests::local_cancelled_waiter_retains_main_policy_lock_and_host_maintenance_gate ... ok
+test community_backup::tests::local_tests::local_unfinished_provision_claim_never_repeats_key_creation ... ok
+test community_backup::tests::local_tests::local_prepare_provision_recover_status_and_exact_replay_use_real_registry ... ok
+
+test result: ok. 25 passed; 0 failed; 0 ignored; 0 measured; 269 filtered out; finished in 0.80s
+

@@ -1,0 +1,16 @@
+{
+  "stage": "2B-5.3.3",
+  "rustPassed": 634,
+  "rustSuites": 23,
+  "newTests": 4,
+  "frontendPassed": 219,
+  "P2": 193,
+  "parity": 59,
+  "baseSha256": "214eca73cc3d2e37f782918bcc7e9af1c86c9859f9aab76f964bfbac334a02f6",
+  "CI": "awaiting user run; prior base green reported by user",
+  "limitations": [
+    "headless no-default-features",
+    "mock vault; no live forum",
+    "HTTP adapter and desktop activation pending"
+  ]
+}
