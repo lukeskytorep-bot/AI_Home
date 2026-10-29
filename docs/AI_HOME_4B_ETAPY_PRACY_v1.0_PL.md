@@ -1,3 +1,21 @@
+# Bieżący stan — treść 1.92 — 29 października 2026 — 2B-5.3.6 routing i autoryzacja desktopu
+
+Edward potwierdził zielone CI 2B-5.3.5. Audyt główny zamknął O1 na poziomie natywnego hosta; nie wymagał poprawki. Wykonano kolejny osobny podkrok: jawny opt-in produkcyjnego routingu i natywnej polityki Community w desktopie.
+
+Desktop zarządza jednym DesktopRuntime. Bez Community zachowuje Standard; po jawnej konfiguracji community.desktop.json używa CommunityHost dla wszystkich zwykłych żądań oraz osobnego community_dispatch dla rejestracji. Nie pozostawia drugiego Application/Store. Uprawnienia i destination pochodzą wyłącznie z lokalnej polityki odczytanej przy starcie, a nie z JSON IPC, skilla czy serwera. Tauri ACL oraz natywna kontrola głównego lokalnego webview ograniczają oba entry. Native grant jest świeży i obejmuje tylko dozwoloną komendę wskazanego profilu.
+
+Polityka ma jawne allowlisty komend i po jednym celu same-origin na profil (do 32 profili). Nie jest to jeszcze przyszła wspólna warstwa wielu społeczności. Zaproszenie dla start jest poza request/payload, w Zeroizing po stronie natywnej. Dotychczasowe kontrole Standard/Experimental, rewizji, deletion, fence, host binding, receipts i recovery pozostają w hostach. Zwykłe równoległe żądania paneli są kolejkowane, z ponowną kontrolą maintenance po uzyskaniu bramki. Stary natywny dispatch zachowuje try-admission.
+
+Brak lub błąd polityki w instalacji Community nie przełącza jej po cichu na Standard. Brak Main, missing pinned registry i pending restore/fence odmawiają. Nie ma automatycznej rejestracji, odtwarzania, provision, retry lub recovery. Przykład konfiguracji w docs nigdy nie aktywuje się sam.
+
+Status IMPLEMENTED / AWAITING NEW NATIVE CI AND AUDIT. Rust headless 661/661, 11 nowych testów desktop bootstrap/policy/routing; frontend 219/219, build, 12 verify i P2 193/193 PASS. Lokalna próba default-feature cargo check zatrzymana przez brak systemowego pkg-config/GLib; nie jest wynikiem PASS desktopu. Niezmienione CI wykonuje cargo test --all-targets --locked z Tauri i zależnościami systemowymi. Ten run jest wymagany przed odbiorem.
+
+Następny podkrok: UI rejestracji/statusu/recovery oparte na tym routingu i autoryzowanym progress. Potem rzeczywisty desktop/Windows/WebView/OS vault/forum/PHP/TLS acceptance, skoordynowany UI maintenance, następnie signed writes/feed i dalsze 4B-13/14. Obecna nakładka nie zawiera ekranu rejestracji i nie zamyka 2B-5.3, 2B lub 4B-12. MCP nadal po obowiązkowym przeglądzie OSS; przeglądarka odłożona.
+
+Raport: docs/AI_HOME_4B12_STEP_2B5_3_6_DESKTOP_ROUTING_PL.md; dowody: docs/evidence/4b12-step-2b5-3-6/. Zwykły push/CI/audyt, bez release. Historia 1.91 i wcześniejsze decyzje poniżej.
+
+---
+
 # Bieżący stan — treść 1.91 — 29 października 2026 — 2B-5.3.5 bieżący progress rejestracji
 
 Edward potwierdził zielone CI 2B-5.3.4. Audyt główny nie wymagał poprawki kodu, ale O1 wymagał autoryzowanego odczytu bieżącej rewizji recovery przed integracją UI. Wykonano ten warunek jako osobny podkrok 2B-5.3.5.

@@ -1,0 +1,12 @@
+{
+  "scripts/verify-boundaries.mjs": "18e95fd8e7aea998d6c6f9fb25b07e7726f4e925b3825a2721afa6ea14f43d84",
+  "src-tauri/build.rs": "af41c6aa6bac1ccdb2de289e913b170e0a2b0807ae06cccd751a3f7d9f69f4d4",
+  "src-tauri/capabilities/main.json": "03558450dd433d2d6cc2a4e4919ec0743cfb6f3a87826a1aab240f2601ff8ba8",
+  "src-tauri/src/lib.rs": "de68fa16d369c4bcc777e932268a8095e3b66f140514d2bf6944f3412d793851",
+  "src-tauri/src/desktop.rs": "70c589d10d53b8b13ff790301eb607382f7f782f99a911c943a78ec93d000df1",
+  "src-tauri/src/community_host.rs": "1835f1bfb8edbe7147908c1348de67ce76e31f6641e57ecfb67c2ac6ab59889b",
+  "src-tauri/src/community_host/desktop.rs": "f1fa2c6a861f228bdaea8cba6320018d697131f18bed41e4d0684809a27eb774",
+  "src-tauri/src/community_host/desktop/tests.rs": "718c2a07bcc002d112cf17a9721aa6dba1c54fe7d18549e3f8d831f858303441",
+  "src-tauri/src/community_host/maintenance.rs": "f4c533815eb7cef47ea6b1b20eb6ed22f0888e959a5aba212e9d023e491699c4",
+  "src-tauri/src/community_identity/registry/finish/tests/host_tests.rs": "01d4236eaa1700eab522887436b94621d1a60afd730d7755d88445c15144f5b1"
+}

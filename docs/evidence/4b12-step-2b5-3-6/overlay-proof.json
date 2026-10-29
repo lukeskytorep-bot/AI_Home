@@ -1,0 +1,5 @@
+{
+  "baseFiles": 1019,
+  "rule": "exact original base plus overlay equals source byte-for-byte",
+  "noDeletions": true
+}

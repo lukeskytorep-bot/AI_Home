@@ -1,4 +1,205 @@
 use super::*;
+use crate::community_host::desktop::{DesktopPolicy, DesktopRuntime};
+fn desktop_route(s: &Setup, host: CommunityHost, commands: Vec<&str>) -> DesktopRuntime {
+    let v = json!({"schemaVersion":1,"targets":[{"profileId":"profile-a","apiRoot":"https://example.test/sub/api/v1/","communityOrigin":"https://example.test","communityInstance":"test-community","commands":commands}]});
+    let mut policy = DesktopPolicy::parse(v.to_string().as_bytes()).unwrap();
+    policy.set_loopback(s._server.url.clone());
+    DesktopRuntime::Community { host, policy }
+}
+async fn desktop_send(runtime: &DesktopRuntime, r: Value) -> Result<Value, &'static str> {
+    runtime
+        .registration("main", "tauri://localhost/", r, None)
+        .await
+}
+#[tokio::test]
+async fn desktop_concurrent_ordinary_panels_queue_without_losing_requests() {
+    let (s, h) = fixture().await;
+    let runtime = Arc::new(desktop_route(
+        &s,
+        h,
+        vec!["community.registration.progress"],
+    ));
+    let mut tasks = Vec::new();
+    for _ in 0..12 {
+        let runtime = runtime.clone();
+        tasks.push(tokio::spawn(async move {
+            runtime.dispatch(json!({"contractVersion":1,"requestId":uuid::Uuid::new_v4().to_string(),"command":"app.preferences.get","payload":{}})).await.unwrap().response
+        }));
+    }
+    for task in tasks {
+        assert_eq!(task.await.unwrap()["ok"], true);
+    }
+    assert!(s.mock.requests.lock().unwrap().is_empty());
+    let Ok(runtime) = Arc::try_unwrap(runtime) else {
+        panic!("unreleased caller")
+    };
+    let DesktopRuntime::Community { host, .. } = runtime else {
+        unreachable!()
+    };
+    host.close_application().await.unwrap();
+}
+#[tokio::test]
+async fn desktop_routes_current_progress_complete_and_local_status_without_exposing_secrets() {
+    let (s, h) = fixture().await;
+    let runtime = desktop_route(
+        &s,
+        h,
+        vec![
+            "community.registration.progress",
+            "community.registration.complete",
+            "community.registration.access.status",
+        ],
+    );
+    let p = desktop_send(&runtime, request("progress", json!({})))
+        .await
+        .unwrap();
+    assert_eq!(p["result"]["finishState"], "absent");
+    let r = request("complete", json!({"registrationRevision":3}));
+    let done = desktop_send(&runtime, r.clone()).await.unwrap();
+    assert_eq!(done["ok"], true, "{done}");
+    assert_eq!(desktop_send(&runtime, r).await.unwrap(), done);
+    assert_eq!(s.mock.count("complete/"), 1);
+    let p = desktop_send(&runtime, request("progress", json!({})))
+        .await
+        .unwrap();
+    assert_eq!(
+        p["result"]["finishRevision"],
+        done["result"]["finishRevision"]
+    );
+    assert_eq!(
+        desktop_send(&runtime, request("access.status", json!({})))
+            .await
+            .unwrap()["result"]["localCredentialUsable"],
+        true
+    );
+    assert!(!done.to_string().contains("eqai_"));
+    assert!(!p.to_string().contains("tokenRef"));
+    let DesktopRuntime::Community { host, .. } = runtime else {
+        unreachable!()
+    };
+    host.close_application().await.unwrap();
+}
+#[tokio::test]
+async fn desktop_lost_post_restarts_and_recovers_using_only_authorized_route() {
+    let (mut s, h) = fixture().await;
+    let runtime = desktop_route(
+        &s,
+        h,
+        vec![
+            "community.registration.complete",
+            "community.registration.progress",
+            "community.registration.access.recover",
+        ],
+    );
+    s.mock.fault("complete", Fault::Drop);
+    let r = request("complete", json!({"registrationRevision":3}));
+    assert_eq!(
+        desktop_send(&runtime, r.clone()).await.unwrap()["ok"],
+        false
+    );
+    assert_eq!(desktop_send(&runtime, r).await.unwrap()["ok"], false);
+    assert_eq!(s.mock.count("complete/"), 1);
+    let DesktopRuntime::Community { host, .. } = runtime else {
+        unreachable!()
+    };
+    let h = restart(&mut s, host).await;
+    let runtime = desktop_route(
+        &s,
+        h,
+        vec![
+            "community.registration.progress",
+            "community.registration.access.recover",
+        ],
+    );
+    let p = desktop_send(&runtime, request("progress", json!({})))
+        .await
+        .unwrap();
+    assert_eq!(p["result"]["finishState"], "uncertain");
+    let result = desktop_send(
+        &runtime,
+        request(
+            "access.recover",
+            json!({"finishRevision":p["result"]["finishRevision"]}),
+        ),
+    )
+    .await
+    .unwrap();
+    assert_eq!(result["ok"], true, "{result}");
+    assert_eq!(s.mock.count("complete/"), 1);
+    assert_eq!(s.key_backend.creates.load(Ordering::SeqCst), 1);
+    let DesktopRuntime::Community { host, .. } = runtime else {
+        unreachable!()
+    };
+    host.close_application().await.unwrap();
+}
+#[tokio::test]
+async fn desktop_denies_untrusted_callers_unpinned_profiles_and_revoked_replay() {
+    let (s, h) = fixture().await;
+    let runtime = desktop_route(
+        &s,
+        h,
+        vec![
+            "community.registration.complete",
+            "community.registration.progress",
+        ],
+    );
+    let r = request("complete", json!({"registrationRevision":3}));
+    for (label, url) in [
+        ("foreign", "tauri://localhost/"),
+        ("main", "https://example.test/"),
+        ("main", "http://tauri.localhost.evil/"),
+    ] {
+        assert_eq!(
+            runtime.registration(label, url, r.clone(), None).await,
+            Err("POLICY_DENIED")
+        );
+    }
+    let mut foreign = r.clone();
+    foreign["profileId"] = json!("other");
+    assert_eq!(desktop_send(&runtime, foreign).await, Err("POLICY_DENIED"));
+    let mut forged = r.clone();
+    forged["payload"]["apiRoot"] = json!("https://foreign.test/api/v1/");
+    assert_eq!(
+        desktop_send(&runtime, forged).await.unwrap()["error"]["code"],
+        "VALIDATION_ERROR"
+    );
+    assert_eq!(
+        runtime
+            .registration(
+                "main",
+                "tauri://localhost/",
+                request("progress", json!({})),
+                Some(Zeroizing::new("wrong-place".into()))
+            )
+            .await,
+        Err("VALIDATION_ERROR")
+    );
+    let bypass = runtime.dispatch(r.clone()).await.unwrap().response;
+    assert_eq!(bypass["ok"], false);
+    assert!(s.mock.requests.lock().unwrap().is_empty());
+    assert_eq!(desktop_send(&runtime, r.clone()).await.unwrap()["ok"], true);
+    let DesktopRuntime::Community { host, .. } = runtime else {
+        unreachable!()
+    };
+    let runtime = desktop_route(&s, host, vec!["community.registration.progress"]);
+    assert_eq!(desktop_send(&runtime, r).await, Err("POLICY_DENIED"));
+    main_sql(
+        &s,
+        "INSERT INTO experimental_instances VALUES('profile-a','exp',1,'{}')",
+    )
+    .await;
+    assert_eq!(
+        desktop_send(&runtime, request("progress", json!({})))
+            .await
+            .unwrap()["error"]["code"],
+        "POLICY_DENIED"
+    );
+    assert_eq!(s.mock.count("complete/"), 1);
+    let DesktopRuntime::Community { host, .. } = runtime else {
+        unreachable!()
+    };
+    host.close_application().await.unwrap();
+}
 async fn progress(h: &CommunityHost, r: Value, caps: Vec<Cap>) -> Value {
     h.dispatch_local(
         r,

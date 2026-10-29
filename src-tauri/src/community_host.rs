@@ -9,6 +9,8 @@ use crate::community_identity::{
 pub mod maintenance;
 pub mod local;
 pub mod registration;
+#[cfg(any(feature = "desktop", test))]
+pub(crate) mod desktop;
 
 #[derive(Clone)]
 pub struct CommunityLifecycle {

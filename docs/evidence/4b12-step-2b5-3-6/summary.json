@@ -1,0 +1,20 @@
+{
+  "stage": "2B-5.3.6",
+  "status": "IMPLEMENTED_AWAITING_NATIVE_CI_AND_AUDIT",
+  "baseFile": "AI_HOME_4B12_STEP_2B5_3_5_SOURCE.zip",
+  "baseSha256": "90b81cf092a32e9c7807125f4df4251d76ac8c339a373fee7fb495ce7953d3b3",
+  "rustHeadlessPassed": 661,
+  "rustSuites": 23,
+  "newDesktopTestsLinux": 11,
+  "frontendPassed": 219,
+  "P2": 193,
+  "parity": 64,
+  "boundaries": 34,
+  "migrationAssertions": 14,
+  "Store": 16,
+  "registry": 4,
+  "desktopDefaultCheck": "BLOCKED before app compilation: pkg-config/GLib unavailable; NOT PASS",
+  "UI": "registration screen not implemented in this step",
+  "priorCI": "green reported by Edward; external run not independently fetched",
+  "next": "native default-feature CI and audit, then registration UI and actual desktop/vault/forum acceptance"
+}

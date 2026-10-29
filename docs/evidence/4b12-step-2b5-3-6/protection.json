@@ -1,0 +1,26 @@
+{
+  "changedRuntimeAndGuards": [
+    "scripts/verify-boundaries.mjs",
+    "src-tauri/build.rs",
+    "src-tauri/capabilities/main.json",
+    "src-tauri/src/lib.rs",
+    "src-tauri/src/desktop.rs",
+    "src-tauri/src/community_host.rs",
+    "src-tauri/src/community_host/desktop.rs",
+    "src-tauri/src/community_host/desktop/tests.rs",
+    "src-tauri/src/community_host/maintenance.rs",
+    "src-tauri/src/community_identity/registry/finish/tests/host_tests.rs"
+  ],
+  "unchanged": [
+    "Cargo.toml",
+    "Cargo.lock",
+    "dependencies",
+    "frontend",
+    "CI workflows",
+    "frozen P2",
+    "Store v16",
+    "registry v4"
+  ],
+  "explicitNewPermission": "allow-community-dispatch restricted to local main capability; native caller and startup-loaded policy additionally required",
+  "noDeletions": true
+}

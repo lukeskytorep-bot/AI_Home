@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "targets": [
+    {
+      "profileId": "REPLACE_WITH_EXISTING_STANDARD_PROFILE_ID",
+      "apiRoot": "https://example.test/sub/api/v1/",
+      "communityOrigin": "https://example.test",
+      "communityInstance": "REPLACE_WITH_VERIFIED_COMMUNITY_INSTANCE",
+      "commands": [
+        "community.registration.status",
+        "community.registration.progress",
+        "community.registration.access.status",
+        "community.registration.prepare",
+        "community.registration.provision",
+        "community.registration.recover",
+        "community.registration.start",
+        "community.registration.complete",
+        "community.registration.complete.retry",
+        "community.registration.access.recover"
+      ]
+    }
+  ]
+}

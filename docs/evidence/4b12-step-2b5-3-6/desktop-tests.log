@@ -1,0 +1,18 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.39s
+     Running unittests src/lib.rs (src-tauri/target/debug/deps/ai_home-a9e4b14669a38d75)
+
+running 11 tests
+test community_host::desktop::tests::policy_loader_refuses_symlink_and_other_writable_config ... ok
+test community_host::desktop::tests::webview_caller_is_exact_and_dev_origin_is_not_allowed_in_release ... ok
+test community_host::desktop::tests::policy_exact_shape_bounded_and_known_grants_only ... ok
+test community_host::desktop::tests::invalid_opt_in_never_falls_back_or_creates_main ... ok
+test community_host::desktop::tests::default_startup_keeps_standard_and_community_entry_disabled ... ok
+test community_host::desktop::tests::restore_markers_and_missing_pinned_registry_refuse_before_creation ... ok
+test community_host::desktop::tests::opt_in_owns_one_host_without_keys_network_or_legacy_backup ... ok
+test community_identity::registry::finish::tests::host_tests::desktop_concurrent_ordinary_panels_queue_without_losing_requests ... ok
+test community_identity::registry::finish::tests::host_tests::desktop_denies_untrusted_callers_unpinned_profiles_and_revoked_replay ... ok
+test community_identity::registry::finish::tests::host_tests::desktop_lost_post_restarts_and_recovers_using_only_authorized_route ... ok
+test community_identity::registry::finish::tests::host_tests::desktop_routes_current_progress_complete_and_local_status_without_exposing_secrets ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 307 filtered out; finished in 1.07s
+

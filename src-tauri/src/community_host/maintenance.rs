@@ -121,6 +121,15 @@ impl CommunityHost {
     }
     /// Busy/unavailable is a native host result, not a new frozen IPC error.
     pub async fn dispatch(&self, request: Value) -> Result<Dispatch, HostError> {
+        self.dispatch_admitted(request, false).await
+    }
+    /// Desktop panels issue ordinary requests concurrently. Queue these behind
+    /// the current operation, while preserving maintenance's admission checks.
+    #[cfg(any(feature = "desktop", test))]
+    pub(crate) async fn dispatch_queued(&self, request: Value) -> Result<Dispatch, HostError> {
+        self.dispatch_admitted(request, true).await
+    }
+    async fn dispatch_admitted(&self, request: Value, queued: bool) -> Result<Dispatch, HostError> {
         if self.status() != HostStatus::Ready {
             return Err(if self.status() == HostStatus::Maintenance {
                 HostError::Busy
@@ -128,12 +137,13 @@ impl CommunityHost {
                 HostError::Unavailable
             });
         }
-        let guard = self
+        let gate = self
             .0
             .application
-            .clone()
-            .try_lock_owned()
-            .map_err(|_| HostError::Busy)?;
+            .clone();
+        let guard = if queued { gate.lock_owned().await } else {
+            gate.try_lock_owned().map_err(|_| HostError::Busy)?
+        };
         if self.status() != HostStatus::Ready {
             return Err(HostError::Busy);
         }
