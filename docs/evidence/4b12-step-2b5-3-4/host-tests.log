@@ -1,0 +1,17 @@
+   Compiling ai-home v0.0.1 (/workspace/scratch/8e3755d5c581/http_work/AI_Home/src-tauri)
+    Finished `test` profile [unoptimized] target(s) in 3.81s
+     Running unittests src/lib.rs (src-tauri/target/debug/deps/ai_home-25e02228d6537dcd)
+
+running 9 tests
+test community_identity::registry::finish::tests::host_tests::host_invalid_invite_stale_preparation_and_local_entry_cannot_send_http ... ok
+test community_identity::registry::finish::tests::host_tests::host_start_invite_is_out_of_band_and_cached_replay_never_posts_twice ... ok
+test community_identity::registry::finish::tests::host_tests::host_registry_reconcile_and_deletion_intent_block_http_and_success_replay ... ok
+test community_identity::registry::finish::tests::host_tests::host_complete_replay_and_explicit_recovery_use_original_keys_without_token_projection ... ok
+test community_identity::registry::finish::tests::host_tests::host_cancelled_http_retains_main_lock_and_maintenance_gate ... ok
+test community_identity::registry::finish::tests::host_tests::host_failed_terminal_commit_keeps_claim_and_never_redispatches ... ok
+test community_identity::registry::finish::tests::host_tests::host_receipt_replay_rechecks_policy_and_rejects_corruption ... ok
+test community_identity::registry::finish::tests::host_tests::host_lost_complete_requires_fresh_explicit_retry_and_then_recovery ... ok
+test community_identity::registry::finish::tests::host_tests::host_wrong_grant_direction_revision_and_json_self_grant_deny_before_http ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 294 filtered out; finished in 0.62s
+

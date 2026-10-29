@@ -1,0 +1,24 @@
+{
+  "noDeletions": true,
+  "unchanged": [
+    "Cargo.toml",
+    "Cargo.lock",
+    "frozen P2",
+    "Store v16 and registry v4",
+    "frontend",
+    "production Tauri setup",
+    "permissions",
+    "CI workflows"
+  ],
+  "changes": [
+    "contracts/community.local.ipc.json",
+    "src-tauri/src/community_host.rs",
+    "src-tauri/src/community_host/local.rs",
+    "src-tauri/src/community_host/maintenance.rs",
+    "src-tauri/src/community_host/registration.rs",
+    "src-tauri/src/community_identity/registry/finish.rs",
+    "src-tauri/src/community_identity/registry/finish/tests.rs",
+    "src-tauri/src/community_identity/registry/finish/tests/host_tests.rs",
+    "src-tauri/src/community_identity/registry/start.rs"
+  ]
+}

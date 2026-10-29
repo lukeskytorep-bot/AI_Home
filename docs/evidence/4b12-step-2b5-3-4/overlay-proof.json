@@ -1,0 +1,32 @@
+{
+  "baseSha256": "2891cd280b883854a1bd922af3b744402712e7b22a197eec6c0d359319174b59",
+  "changedPaths": [
+    "SHA256SUMS.txt",
+    "contracts/community.local.ipc.json",
+    "docs/AI_HOME_4B12_STEP_2B5_3_4_HTTP_HOST_PL.md",
+    "docs/AI_HOME_4B_ETAPY_PRACY_v1.0_PL.md",
+    "docs/COMMUNITY_IDENTITY_DEVELOPER.md",
+    "docs/evidence/4b12-step-2b5-3-4/P2.log",
+    "docs/evidence/4b12-step-2b5-3-4/build.log",
+    "docs/evidence/4b12-step-2b5-3-4/frontend.log",
+    "docs/evidence/4b12-step-2b5-3-4/host-tests.log",
+    "docs/evidence/4b12-step-2b5-3-4/overlay-proof.json",
+    "docs/evidence/4b12-step-2b5-3-4/plan-sync.json",
+    "docs/evidence/4b12-step-2b5-3-4/protection.json",
+    "docs/evidence/4b12-step-2b5-3-4/rust-all.log",
+    "docs/evidence/4b12-step-2b5-3-4/static.log",
+    "docs/evidence/4b12-step-2b5-3-4/summary.json",
+    "docs/evidence/4b12-step-2b5-3-4/tested-source-hashes.json",
+    "docs/evidence/manifest.sha256.json",
+    "src-tauri/src/community_host.rs",
+    "src-tauri/src/community_host/local.rs",
+    "src-tauri/src/community_host/maintenance.rs",
+    "src-tauri/src/community_host/registration.rs",
+    "src-tauri/src/community_identity/registry/finish.rs",
+    "src-tauri/src/community_identity/registry/finish/tests.rs",
+    "src-tauri/src/community_identity/registry/finish/tests/host_tests.rs",
+    "src-tauri/src/community_identity/registry/start.rs"
+  ],
+  "noDeletions": true,
+  "proof": "BASE + overlay == SOURCE byte-for-byte"
+}

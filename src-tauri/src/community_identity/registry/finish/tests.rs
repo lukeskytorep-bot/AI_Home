@@ -136,6 +136,7 @@ enum Fault {
     Replay,
 }
 struct Mock {
+    start_context:Value,
     committed: AtomicBool,
     generation: AtomicI64,
     public: PublicIdentity,
@@ -175,7 +176,11 @@ impl Mock {
         } else {
             serde_json::from_str(body).unwrap()
         };
-        let (action, mut value) = if path == "/sub/api/v1/registration/complete/" {
+        let (action, mut value) = if path == "/sub/api/v1/registration/start/" {
+            assert_eq!(method,"POST");
+            assert!(b["invite_token"].as_str().is_some_and(|s|!s.is_empty()));
+            ("start",self.start_context.clone())
+        } else if path == "/sub/api/v1/registration/complete/" {
             assert_eq!(method, "POST");
             assert_eq!(b["registration_id"], reg());
             assert!(verify_signature(
@@ -379,9 +384,12 @@ struct Setup {
     _server: Server,
 }
 async fn setup(committed: bool) -> Setup {
+    setup_at(committed,"registry.sqlite").await
+}
+async fn setup_at(committed: bool,filename:&str) -> Setup {
     let temp = Temp(std::env::temp_dir().join(format!("ai-home-finish-{}", uuid::Uuid::new_v4())));
     std::fs::create_dir_all(&temp.0).unwrap();
-    let registry = RegistrationRegistry::open(&temp.0.join("registry.sqlite"))
+    let registry = RegistrationRegistry::open(&temp.0.join(filename))
         .await
         .unwrap();
     let key_backend = Arc::new(Memory::default());
@@ -410,6 +418,7 @@ async fn setup(committed: bool) -> Setup {
     let context = json!({"ok":true,"request_id":"test","registration":{"registration_id":reg(),"state":if committed{"committed"}else{"pending"},"nonce":nonce,"expires_at":expiry,"community_origin":"https://example.test","community_instance":"test-community","profile_format":"COMMUNITY-PROFILE/1","profile_sha256":intent.profile.sha256(),"signature_algorithm":ALGORITHM,"public_key_format":PUBLIC_FORMAT,"signature_format":SIGNATURE_FORMAT,"protocol_version":"1","statement":statement,"retry":false}});
     sqlx::query("INSERT INTO community_registration_starts(scope_binding,request_sha256,attempts,response) VALUES(?,?,1,?)").bind(scope().binding()).bind("0".repeat(64)).bind(context.to_string()).execute(&registry.pool).await.unwrap();
     let mock = Arc::new(Mock {
+        start_context:context.clone(),
         committed: AtomicBool::new(committed),
         generation: AtomicI64::new(if committed { 1 } else { 0 }),
         public: ready.public_identity().unwrap().clone(),
@@ -438,6 +447,9 @@ async fn setup(committed: bool) -> Setup {
         _server: server,
     }
 }
+
+#[path = "tests/host_tests.rs"]
+mod host_tests;
 async fn begin_recovery(s: &Setup) -> FinishProgress {
     assert_eq!(
         s.finish

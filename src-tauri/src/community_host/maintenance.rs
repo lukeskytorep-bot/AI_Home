@@ -163,6 +163,19 @@ impl CommunityHost {
             Ok(super::local::dispatch(app,&service,request,access).await)
         }).await.map_err(|_|HostError::Storage)?
     }
+    /// Explicit HTTP registration; native scope/capabilities and invite are
+    /// supplied out of band. Shares cancellation-safe admission with maintenance.
+    pub async fn dispatch_registration(&self, request: Value, access: super::registration::RegistrationAccess) -> Result<Value,HostError> {
+        if self.status()!=HostStatus::Ready {return Err(if self.status()==HostStatus::Maintenance {HostError::Busy}else{HostError::Unavailable})}
+        let guard=self.0.application.clone().try_lock_owned().map_err(|_|HostError::Busy)?;
+        if self.status()!=HostStatus::Ready {return Err(HostError::Busy)}
+        if guard.is_none(){return Err(HostError::Unavailable)}
+        let service=self.0.service.clone();
+        tokio::spawn(async move {
+            let app=guard.as_ref().ok_or(HostError::Unavailable)?;
+            Ok(super::local::dispatch_registration(app,&service,request,access).await)
+        }).await.map_err(|_|HostError::Storage)?
+    }
     pub async fn create_backup(
         &self,
         destination: &Path,

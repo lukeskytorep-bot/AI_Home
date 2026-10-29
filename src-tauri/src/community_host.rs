@@ -1,6 +1,6 @@
 //! Native Community deletion and managed maintenance/recovery host.
-//! Production desktop and registration IPC remain gated on direction/capability
-//! policy and command/result integration in later 2B-5.3 substeps.
+//! Supplemental native registration adapters enforce Standard scope/capabilities.
+//! Production desktop and Experimental authorization remain separate gates.
 use crate::community_identity::{
     registry::{lifecycle, RegistrationRegistry},
     tokens::CommunityTokenStore,
@@ -8,6 +8,7 @@ use crate::community_identity::{
 };
 pub mod maintenance;
 pub mod local;
+pub mod registration;
 
 #[derive(Clone)]
 pub struct CommunityLifecycle {

@@ -80,6 +80,8 @@ pub struct RegistrationFinish {
     tokens: CommunityTokenStore,
 }
 impl RegistrationFinish {
+    #[cfg(test)]
+    pub(crate) fn set_loopback(&mut self,url:reqwest::Url){self.http.set_loopback(url);}
     pub fn new(timeout: Duration, tokens: CommunityTokenStore) -> Result<Self, FinishError> {
         Ok(Self {
             http: RegistrationStart::new(timeout)?,

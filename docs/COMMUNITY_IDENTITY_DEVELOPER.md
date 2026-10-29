@@ -1,3 +1,13 @@
+# Explicit native registration HTTP host adapter (2B-5.3.4)
+
+Use CommunityHost::dispatch_registration with a fresh RegistrationAccess for start, complete, complete.retry and access.recover. It shares the local adapter's profile/direction/capability checks, durable Main claim and cancellation-safe host gate. The invite is an out-of-band Zeroizing value, never a JSON field; only start permits it. Scope and destination come from the native grant. Existing local request fingerprints remain byte-compatible.
+
+expectedRevision means Main profile revision. Start/complete also require the Ready preparation's registrationRevision. Retry/recover require finishRevision. An unfinished HTTP claim never silently dispatches again. Use a fresh explicit operation; retry_complete replays the stored signed packet and recovery uses the existing proof/status/reissue generation protocol. Do not regenerate keys.
+
+Results expose only phase, finishRevision and onlineStatusKnown=false. They never expose a credential or server payload. Receipts are historical snapshots; access.status is a fresh local check and every later forum write must authorize and load credentials again. Main retains a write reservation throughout the protocol, so other cooperating Store writers may wait or receive busy.
+
+Production Tauri remains unmodified. The new test-only loopback seams are not available in production. Default desktop, system keyring and live forum acceptance remain required separately. Plan content 1.89 is synchronized into this source delivery with current update 1.90; its mandatory MCP component review remains a future gate.
+
 # Local credential status (2B-5.3.3)
 
 The supplemental native command community.registration.access.status requires LocalCapability::AccessStatus in addition to the existing profile/scope/direction gates. Empty payload; exact result: localCredentialUsable and onlineStatusKnown=false. For ready metadata it calls RegistrationFinish::current, validating original keys, archived registration context and scope/generation-bound token custody. Missing credentials return false; corrupt registry metadata fails closed. No receipts or secret writes, no HTTP. A true result is a local snapshot, never authorization for a later network call or proof of server acceptance. The eventual HTTP adapter must authorize and load credentials again. Production Tauri remains gated.

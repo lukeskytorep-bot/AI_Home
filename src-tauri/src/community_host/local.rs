@@ -1,4 +1,4 @@
-//! Local registration command adapter. Native caller authorization is a separate
+//! Local and explicit HTTP registration adapters. Native caller authorization is a separate
 //! argument, never a JSON field. Production Tauri and Experimental are disabled.
 use super::CommunityLifecycle;
 use crate::{
@@ -20,6 +20,10 @@ pub enum LocalCapability {
     Provision,
     Recover,
     AccessStatus,
+    Start,
+    Complete,
+    RetryComplete,
+    RecoverAccess,
 }
 /// Supplied afresh by the trusted native caller, not deserializable. This is an
 /// explicit host grant; it is not inferred from remote capability advertisements.
@@ -66,7 +70,7 @@ fn valid_result(v: &Value, contract: &Value) -> bool {
                 && v["preparationState"] != "absent"
         }
 }
-fn terminal(r: &Value, v: &Value, contract: &Value) -> Result<Value, &'static str> {
+pub(super) fn terminal(r: &Value, v: &Value, contract: &Value) -> Result<Value, &'static str> {
     let object = v.as_object().ok_or("STORAGE_ERROR")?;
     if object.len() != 4 || v["contractVersion"] != 1 || v["requestId"] != r["requestId"] {
         return Err("STORAGE_ERROR");
@@ -169,7 +173,7 @@ pub(crate) async fn dispatch(
     access: LocalAccess,
 ) -> Value {
     let r = &request;
-    match execute(app, service, r, &access).await {
+    match execute(app, service, r, &access, None).await {
         Ok(value) => value,
         Err(code) => failure(r, code),
     }
@@ -179,6 +183,7 @@ async fn execute(
     service: &CommunityLifecycle,
     r: &Value,
     a: &LocalAccess,
+    remote: Option<&super::registration::RegistrationAccess>,
 ) -> Result<Value, &'static str> {
     if r["contractVersion"] != 1 {
         return Err("UNSUPPORTED_CONTRACT_VERSION");
@@ -193,6 +198,10 @@ async fn execute(
         "community.registration.provision" => LocalCapability::Provision,
         "community.registration.recover" => LocalCapability::Recover,
         "community.registration.access.status" => LocalCapability::AccessStatus,
+        "community.registration.start" => LocalCapability::Start,
+        "community.registration.complete" => LocalCapability::Complete,
+        "community.registration.complete.retry" => LocalCapability::RetryComplete,
+        "community.registration.access.recover" => LocalCapability::RecoverAccess,
         _ => return Err("UNKNOWN_COMMAND"),
     };
     let contracts: Value =
@@ -215,6 +224,19 @@ async fn execute(
     };
     if !a.capabilities.contains(&cap) {
         return Err("POLICY_DENIED");
+    }
+    let network = matches!(
+        cap,
+        LocalCapability::Start
+            | LocalCapability::Complete
+            | LocalCapability::RetryComplete
+            | LocalCapability::RecoverAccess
+    );
+    if network != remote.is_some() {
+        return Err("POLICY_DENIED");
+    }
+    if network && !remote.unwrap().valid_for(cap) {
+        return Err("VALIDATION_ERROR");
     }
     let mut tx = app
         .community_pool()
@@ -286,20 +308,23 @@ async fn execute(
         }
         return Ok(success(r, result));
     }
+    let mut fingerprint_input = json!([
+        "community-local/1",
+        command,
+        r["profileId"],
+        r["expectedRevision"],
+        r["payload"],
+        a.scope.binding()
+    ]);
+    if network {
+        fingerprint_input
+            .as_array_mut()
+            .unwrap()
+            .push(json!(remote.and_then(|h| h.invite_digest())));
+    }
     let fingerprint = format!(
         "{:x}",
-        Sha256::digest(
-            json!([
-                "community-local/1",
-                command,
-                r["profileId"],
-                r["expectedRevision"],
-                r["payload"],
-                a.scope.binding()
-            ])
-            .to_string()
-            .as_bytes()
-        )
+        Sha256::digest(fingerprint_input.to_string().as_bytes())
     );
     if let Some(row) = sqlx::query("SELECT fingerprint,response FROM receipts WHERE request_id=?")
         .bind(r["requestId"].as_str().unwrap())
@@ -320,7 +345,11 @@ async fn execute(
                 return Err("REGISTRATION_RECONCILIATION_REQUIRED");
             }
         } else {
-            return terminal(r, &response, contract);
+            return if network {
+                super::registration::terminal(r, &response, contract)
+            } else {
+                terminal(r, &response, contract)
+            };
         }
     } else {
         crate::connections::profile_deletion::bind_host(&mut tx, Some(service), command, true)
@@ -350,6 +379,31 @@ async fn execute(
         .execute(&mut *tx)
         .await
         .map_err(|_| "STORAGE_ERROR")?;
+    if network {
+        let result = remote
+            .unwrap()
+            .perform(service, &a.scope, cap, &r["payload"])
+            .await;
+        let response = match result {
+            Ok(result) if schema::valid(&result, &contract["result"]) => success(r, result),
+            Ok(_) => return Err("STORAGE_ERROR"),
+            Err(code) => failure(r, code),
+        };
+        let changed =
+            sqlx::query("UPDATE receipts SET response=? WHERE request_id=? AND fingerprint=?")
+                .bind(response.to_string())
+                .bind(r["requestId"].as_str().unwrap())
+                .bind(&fingerprint)
+                .execute(&mut *tx)
+                .await
+                .map_err(|_| "STORAGE_ERROR")?
+                .rows_affected();
+        if changed != 1 {
+            return Err("STORAGE_ERROR");
+        }
+        tx.commit().await.map_err(|_| "STORAGE_ERROR")?;
+        return Ok(response);
+    }
     let outcome = match cap {
         LocalCapability::Prepare => {
             let public = public_profile.as_ref().ok_or("VALIDATION_ERROR")?;
@@ -382,7 +436,7 @@ async fn execute(
                 )
                 .await
         }
-        LocalCapability::Status | LocalCapability::AccessStatus => unreachable!(),
+        _ => unreachable!(),
     };
     let response = match outcome {
         Ok(record) => {
@@ -408,4 +462,16 @@ async fn execute(
     }
     tx.commit().await.map_err(|_| "STORAGE_ERROR")?;
     Ok(response)
+}
+
+pub(crate) async fn dispatch_registration(
+    app: &Application,
+    service: &CommunityLifecycle,
+    r: Value,
+    access: super::registration::RegistrationAccess,
+) -> Value {
+    match execute(app, service, &r, &access.local, Some(&access)).await {
+        Ok(v) => v,
+        Err(code) => failure(&r, code),
+    }
 }

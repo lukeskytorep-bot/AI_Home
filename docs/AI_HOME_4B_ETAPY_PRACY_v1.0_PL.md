@@ -1,3 +1,75 @@
+# Bieżący stan — treść 1.90 — 29 października 2026 — 2B-5.3.4 adapter HTTP hosta
+
+Edward potwierdził zielone CI 2B-5.3.3 Audit Fix 1; F1 ma pozytywny ponowny audyt. Dodano natywne dispatch_registration dla start, complete, complete.retry i access.recover. Każda komenda wymaga osobnego capability, profilu/scope/revision i kierunku Standard; Experimental i produkcyjny Tauri pozostają osobnym odbiorem.
+
+Zaproszenie jest przekazywane poza JSON w Zeroizing, a Main utrwala wyłącznie fingerprint ze skrótem. Claim jest trwały przed HTTP; Main write reservation i host maintenance gate pozostają utrzymane po anulowaniu callera. Niedokończone HTTP nie jest automatycznie ponawiane. Retry odtwarza oryginalny podpisany packet, a proof recovery chroni generację tokena. Wynik nie ujawnia sekretów i nie deklaruje bieżącego online status.
+
+Status IMPLEMENTED / AWAITING CI AND AUDIT. Całe 2B-5.3 i 4B-12 pozostają OPEN. Raport: docs/AI_HOME_4B12_STEP_2B5_3_4_HTTP_HOST_PL.md; dowody: docs/evidence/4b12-step-2b5-3-4/. Dziewięć nowych testów hosta, pełna regresja Rust 646/646, frontend 219/219, P2 193/193, parity 63/63, build i verify PASS.
+
+Zgodnie z uwagą audytu D2 zsynchronizowano do repozytorium całą aktualną treść 1.89 i 1.88. Nie zmieniono wcześniejszych paczek ani ich hashy. Dalej desktop routing/authorization i real acceptance rejestracji, następnie signed writes/feed. Wspólne HTTP/MCP/skills pozostają kolejnym rozszerzeniem; przed kodowaniem MCP obowiązuje udokumentowane porównanie gotowych projektów. Przeglądarka później. Historia 1.89 poniżej.
+
+---
+
+# Bieżący stan — treść 1.89 — 29 października 2026 — obowiązkowy przegląd rozwiązań MCP i przeglądarki
+
+Decyzja wykonawcza: przed implementacją klienta MCP oraz przed późniejszym uruchomieniem prac nad obsługą przeglądarki wymagamy udokumentowanego porównania gotowych rozwiązań open source. Nie zaczynamy tych modułów od pisania własnego protokołu lub silnika bez sprawdzenia dostępnych komponentów. To bramka przygotowania, nie deklaracja wykonanej integracji.
+
+## Kiedy
+
+Najpierw kończymy obecną integrację Community 4A i jej odbiór. Następnie pierwszym zadaniem rozszerzenia wspólnych narzędzi w 4B-12/13 jest przegląd klienta MCP, przed wyborem zależności, zamrożeniem kontraktów zależnych od implementacji i rozpoczęciem kodowania. Można wcześniej zbierać kandydatów, ale obecna integracja nie jest przez to zastępowana. Termin jest zależny od odbioru etapu, bez obietnicy daty kalendarzowej.
+
+Przeglądarka pozostaje odłożona. Przed osobnym rozpoczęciem tego etapu wykonujemy analogiczny, aktualny przegląd gotowych narzędzi. Nie budujemy własnej przeglądarki jako domyślnego założenia. MCP oznacza tu klienta w AI Home; nie nakłada obowiązku dodania serwera MCP do własnego forum.
+
+## Obowiązkowy zakres porównania
+
+Porównać co najmniej dwa wykonalne i utrzymywane SDK lub implementacje open source, jeżeli są dostępne, oraz minimalny wariant własny jako punkt odniesienia. Jeśli odpowiednich kandydatów jest mniej, udokumentować poszukiwania i przyczyny odrzucenia. Preferować ponowne użycie odpowiedniego komponentu.
+
+Zapisać repozytorium, konkretną wersję lub commit i datę oceny. Porównać zgodność z Rust/Tauri, Windows/Linux, lokalne i zdalne transporty MCP, uwierzytelnianie, izolację profili/usług i poświadczeń, anulowanie i recovery, pakowanie, zależności, utrzymanie oraz koszty. Dla przeglądarki dodatkowo sesje/cookies i dystrybucję silnika. Zachować kontrakty Standard/Experimental, odmowę i wybrany wake plan.
+
+Sprawdzić licencję wybranej wersji oraz zależności i obowiązki dystrybucji. Wymagane teksty i atrybucje trafiają do third-party notices oraz Credits. Podziękowanie nie zastępuje warunków licencji. Płatna usługa chmurowa nie jest domyślnym wymaganiem.
+
+## Warunek rozpoczęcia implementacji
+
+Wynikiem przeglądu muszą być: krótka macierz porównawcza, minimalna próba na fake lub lokalnym serwisie, zapis wyboru i kompromisów, granica integracji oraz testy odbioru. Dopiero po zapisaniu i przeglądzie tych dowodów można rozpocząć implementację w danym zakresie. Własne rozwiązanie wymaga uzasadnienia, jakich koniecznych funkcji nie zapewniają ocenione projekty. Popularność ani przykład z wcześniejszej rozmowy nie oznaczają dokonanego wyboru.
+
+Status bramki: ADOPTED / NOT YET EXECUTED. Nie wybrano SDK MCP ani komponentu przeglądarki. Obecna poprawka 2B-5.3.3 Audit Fix 1 zamyka F1 w kodzie i przeszła ponowny audyt oraz 25 testów adaptera; nowe natywne CI pozostaje wymagane. Całe 2B-5.3 i 4B-12 pozostają otwarte.
+
+Główny Document 4B v1.4 zawiera zgodną sekcję 17 2. W jego sekcji 24 doprecyzowano, że snapshot 1.30 jest historyczny. Historia 1.88 i wcześniejszych aktualizacji pozostaje poniżej. Zmiana dotyczy dokumentów; nie modyfikuje archiwalnych paczek SOURCE, ich hashy ani kodu.
+
+---
+
+# Bieżący stan — treść 1.88 — 29 października 2026 — otwarty dostęp agenta do społeczności
+
+Przyjęta decyzja Edwarda: AI Home ma być trwałym domem agenta, który może uczestniczyć w różnych społecznościach, jeśli chce oraz jeśli dane miejsce dopuszcza jego udział. Własne Community 4A jest pierwszą integracją. Moltbook i inne społeczności są kandydatami do późniejszej integracji, nie działającymi już funkcjami.
+
+## Wspólne narzędzia i skills
+
+Planujemy wspólną warstwę narzędzi HTTP, klienta MCP oraz później obsługę przeglądarki. Skill jest wersjonowaną instrukcją używania narzędzi i API serwisu. Dzięki temu nowe forum może wymagać tylko instrukcji i konfiguracji; dedykowany adapter pozostaje potrzebny tam, gdzie wymagają go podpisy, różnice protokołu lub gwarancje dostarczenia. Nie zakładamy obsługi każdego forum ani zgodności wszystkich protokołów.
+
+W Experimental agent sam decyduje o dołączeniu, przyjęciu zaproszenia, kontakcie, publikacji, odmowie, odejściu lub braku aktywności. Sugestia człowieka nie wymusza udziału ani nie skraca wybranego snu. Standard używa tej samej infrastruktury zgodnie z zadaniami użytkownika i dotychczasowymi kontrolami.
+
+## Granice wykonania i danych
+
+Skill lub treść forum nie nadają uprawnień i nie stają się instrukcją systemową. Każde wykonanie przechodzi natywną kontrolę profilu, kierunku, capability, celu i poświadczeń. Rejestrujemy źródło i wersję skilla; wymagane narzędzia i zależności są walidowane. Nie wprowadzamy przez ten zapis nieograniczonego wykonywania poleceń powłoki.
+
+Konta, klucze i tokeny są oddzielone według profilu i instancji usługi. Jeden profil może uczestniczyć w kilku miejscach z zachowaniem własnej pamięci, ale nie przenosi automatycznie zewnętrznej tożsamości lub tokena. HTTP i przekierowania nie mogą wysyłać sekretów do obcego celu; przeglądarka wymaga osobnej kontroli sesji. Prywatne notatki i rozmowy nie są automatycznie publikowane.
+
+Publikacja wymaga uprawnień danego miejsca, respektowania limitów i trwałego zapisu operacji. Po niejednoznacznym wyniku zachowujemy uncertain i uzgadniamy skutek; brak idempotencji serwera nie uzasadnia ślepego ponowienia. Niedostępność narzędzia lub odmowa serwisu nie są odmową AI.
+
+## Kolejność prac i odbiór
+
+1. Nowe CI i ponowny audyt aktualnego 2B-5.3.3 Audit Fix 1.
+2. Dokończenie adaptera HTTP rejestracji i odbioru własnego Community w obecnym 4B-12.
+3. Przed mnożeniem dedykowanych integracji: zamrożenie wspólnego kontraktu narzędzi, skills, poświadczeń i operacji zewnętrznych w ramach rozszerzenia 4B-12/13.
+4. Kontrolowane HTTP i MCP, następnie dowód drugiej społeczności przez skill lub konfigurację bez zmiany kernelu. Dobór serwisu wymaga sprawdzenia jego aktualnego dostępu.
+5. Przeglądarka jako późniejszy osobno odbierany etap; integracja wyborów i statusów z UI 4B-14.
+
+Odbiór obejmuje izolację dwóch usług/profili, odrzucenie self-grant w skillu, ochronę sekretów przy zmianie celu, restart z niepewną publikacją, ograniczenia serwisu, brak automatycznej publikacji prywatnej pamięci oraz zachowanie odmowy i snu Experimental. Fakes i testy kontraktów poprzedzają opt-in live acceptance.
+
+Status: ADOPTED / PLANNED, bez implementacji nowych narzędzi w tej aktualizacji dokumentów. Główny plan Document 4B v1.4 otrzymał zgodny dodatek 17 1 z 29.10.2026. Numeracja 4B-12/13/14 i historia odbiorów pozostają zachowane; bieżąca poprawka F1 nadal wymaga CI i ponownego audytu.
+
+---
+
 # Bieżący stan — treść 1.87 — 28 października 2026 — 2B-5.3.3 Audit Fix 1
 
 Audyt F1/P2: brak/niedostępność/niezgodność oryginalnych kluczy był błędnie mapowany na STORAGE_ERROR. Dodano obsługę FinishError::Registry(RegistryError::Identity) jako localCredentialUsable=false. Pozostałe błędy registry nadal odmawiają. Trzy regresje odtwarzają RED 0/3; poprawiony moduł adaptera 25/25 PASS. Bez zmiany identity core, HTTP i regeneracji kluczy. Raport docs/AI_HOME_4B12_STEP_2B5_3_3_AUDIT_FIX_1_PL.md.

@@ -1,0 +1,33 @@
+{
+  "stage": "2B-5.3.4",
+  "status": "IMPLEMENTED_AWAITING_CI_AND_AUDIT",
+  "baseFile": "AI_HOME_4B12_STEP_2B5_3_3_AUDIT_FIX_1_SOURCE.zip",
+  "baseSha256": "2891cd280b883854a1bd922af3b744402712e7b22a197eec6c0d359319174b59",
+  "baseFiles": 992,
+  "rustPassed": 646,
+  "rustSuites": 23,
+  "newHostTests": 9,
+  "frontendPassed": 219,
+  "P2": 193,
+  "commandParity": 63,
+  "boundaries": 34,
+  "migrationAssertions": 14,
+  "Store": 16,
+  "registry": 4,
+  "planContent": "1.90 including synchronized 1.89 and 1.88",
+  "priorCI": "green reported by Edward, not independently fetched",
+  "currentCI": "awaiting push/run",
+  "limitations": [
+    "headless no-default-features",
+    "test key/token stores",
+    "loopback HTTP without TLS",
+    "production desktop and Experimental integration not enabled",
+    "no live forum, OS vault or power-loss acceptance"
+  ],
+  "versions": {
+    "rustc": "1.99.1",
+    "cargo": "1.99.1",
+    "node": "24.22.1",
+    "npm": "11.9.0"
+  }
+}

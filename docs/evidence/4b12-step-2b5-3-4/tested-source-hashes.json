@@ -1,0 +1,11 @@
+{
+  "contracts/community.local.ipc.json": "c5a6c7d7a25f98e0ad2200bdfaec31ee03a6cba0a491ccf3b202ec63c49e9ad0",
+  "src-tauri/src/community_host.rs": "ce9f9506735a596e7e51f9fedcb892986981440acb8d3f3b00cb29738b9230ed",
+  "src-tauri/src/community_host/registration.rs": "ec3e6a3f68cb640e4d40e05a0716d6493148e3b7d80375708572ced6ac92d4bb",
+  "src-tauri/src/community_host/local.rs": "6e5ecb524a5fef2259f01c142ed6c0a317f426921246ed3e23e1ee2817d757d0",
+  "src-tauri/src/community_host/maintenance.rs": "55dd89585eff1dbcd9de1e964a5ce1e51105e69928846c0459e94ac872c4bbd6",
+  "src-tauri/src/community_identity/registry/finish.rs": "a19507f3ee325846ae9ef5da21a44efeaae3f01f93dd0bc64e31b70f7fe40176",
+  "src-tauri/src/community_identity/registry/start.rs": "21edbbaff85c191c796f11346ebc71f599bf1c2083d9d322c1037eb00457ae20",
+  "src-tauri/src/community_identity/registry/finish/tests.rs": "5f11ddedd91e1c8ccae8bf85f2cd33884fc010f4e0a2a29994cc23e31fc7d78d",
+  "src-tauri/src/community_identity/registry/finish/tests/host_tests.rs": "12810f15a26e371ebf02a1540f30a29d59a1f217b35506068d4c767594684aa3"
+}

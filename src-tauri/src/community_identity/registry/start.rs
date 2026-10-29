@@ -217,7 +217,7 @@ impl RegistrationStart {
         .await
     }
     #[cfg(test)]
-    pub(super) fn set_loopback(&mut self, url: Url) {
+    pub(crate) fn set_loopback(&mut self, url: Url) {
         self.loopback = Some(url);
     }
     pub(super) async fn exchange(
