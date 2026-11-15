@@ -35,13 +35,20 @@ async fn completed_restore_request_is_idempotent_across_restart(){
 
 #[tokio::test]
 async fn missing_current_is_recovered_from_safety_before_restore(){
- let d=dir();let db=d.join("foundation.sqlite3");let store=Store::open(&db).await.unwrap();let app=Application::new(store);let original=app.dispatch(req("b5","backup.create",json!({}),None)).await.response;let bid=original["result"]["id"].as_str().unwrap().to_string();let _=app.dispatch(req("p5","app.preferences.set",json!({"locale":"pl","themeId":"orbital","themeVariant":"system"}),Some(1))).await.response;let rr=app.dispatch(req("r5","backup.restore.request",json!({"backupId":bid}),None)).await.response;assert_eq!(rr["ok"],true);drop(app);std::fs::remove_file(&db).unwrap();let result=backup::apply_pending_restore(&d).await.unwrap().unwrap();assert_eq!(result["applied"],true);let restored=Store::open(&db).await.unwrap();assert_eq!(restored.preferences().await.unwrap()["locale"],"en");drop(restored);let _=std::fs::remove_dir_all(d);
+ let d=dir();let db=d.join("foundation.sqlite3");let store=Store::open(&db).await.unwrap();let pool=store.pool.clone();let app=Application::new(store);let original=app.dispatch(req("b5","backup.create",json!({}),None)).await.response;let bid=original["result"]["id"].as_str().unwrap().to_string();let _=app.dispatch(req("p5","app.preferences.set",json!({"locale":"pl","themeId":"orbital","themeVariant":"system"}),Some(1))).await.response;let rr=app.dispatch(req("r5","backup.restore.request",json!({"backupId":bid}),None)).await.response;assert_eq!(rr["ok"],true);drop(app);
+ // Simulate the filesystem fault only after SQLite releases the database handles.
+ pool.close().await;
+ drop(pool);
+ std::fs::remove_file(&db).unwrap();let result=backup::apply_pending_restore(&d).await.unwrap().unwrap();assert_eq!(result["applied"],true);let restored=Store::open(&db).await.unwrap();assert_eq!(restored.preferences().await.unwrap()["locale"],"en");drop(restored);let _=std::fs::remove_dir_all(d);
 }
 
 #[tokio::test]
 async fn crash_after_current_move_recovers_from_safety_and_finishes_restore(){
  use sha2::{Digest,Sha256};
- let d=dir();let db=d.join("foundation.sqlite3");let store=Store::open(&db).await.unwrap();let app=Application::new(store);let b=app.dispatch(req("b6","backup.create",json!({}),None)).await.response;let bid=b["result"]["id"].as_str().unwrap().to_string();let _=app.dispatch(req("p6","app.preferences.set",json!({"locale":"pl","themeId":"orbital","themeVariant":"system"}),Some(1))).await.response;let rr=app.dispatch(req("crash-r","backup.restore.request",json!({"backupId":bid}),None)).await.response;assert_eq!(rr["ok"],true);drop(app);
+ let d=dir();let db=d.join("foundation.sqlite3");let store=Store::open(&db).await.unwrap();let pool=store.pool.clone();let app=Application::new(store);let b=app.dispatch(req("b6","backup.create",json!({}),None)).await.response;let bid=b["result"]["id"].as_str().unwrap().to_string();let _=app.dispatch(req("p6","app.preferences.set",json!({"locale":"pl","themeId":"orbital","themeVariant":"system"}),Some(1))).await.response;let rr=app.dispatch(req("crash-r","backup.restore.request",json!({"backupId":bid}),None)).await.response;assert_eq!(rr["ok"],true);drop(app);
+ // Simulate the filesystem fault only after SQLite releases the database handles.
+ pool.close().await;
+ drop(pool);
  let key=format!("{:x}",Sha256::digest(b"ai-home:restore-request:crash-r"));let previous=d.join(format!("foundation.restore.previous.{key}.sqlite3"));std::fs::rename(&db,&previous).unwrap();assert!(!db.exists());
  let result=backup::apply_pending_restore(&d).await.unwrap().unwrap();assert_eq!(result["applied"],true);let restored=Store::open(&db).await.unwrap();assert_eq!(restored.preferences().await.unwrap()["locale"],"en");drop(restored);assert!(previous.exists());let _=std::fs::remove_dir_all(d);
 }

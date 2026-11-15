@@ -978,7 +978,7 @@
     "src-tauri/src/vault.rs": "c1bc634f340eb1f407c9e14c23429c44cf5395d764f0519c74b14f67ec41f514",
     "src-tauri/src/working_context.rs": "939c72d84345f29261c131b7cbf26746c66a9d5afd0af2fec820e7b9d2c17012",
     "src-tauri/tauri.conf.json": "4b1bf6b63b5e4edda3d053fef609d858a12698e0095d2ccd27fc2a5b3967cf99",
-    "src-tauri/tests/backup.rs": "72ded10da20bae3eeb26a48265482de011e9cefca7df55a33d2f67cf3b3b5611",
+    "src-tauri/tests/backup.rs": "a25ddce38f6821e021d43611c1be19ed8ffcd2cf6d0b2185e793f328dcc4beab",
     "src-tauri/tests/chat.rs": "253cd4417222911c8e1ef12afa9e91e733dc86e5fa66f19d313e090ee00fa577",
     "src-tauri/tests/chat_memory.rs": "2ca6e5f7a5123cfa433c0725ef0b663660e055bf3c1bdcce117d811049e9467a",
     "src-tauri/tests/community_host.rs": "abbb074976229af54369b538366fd9403213faaba0f91ff1c0edde9b4e6d91ec",
