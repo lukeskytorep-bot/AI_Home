@@ -982,7 +982,7 @@
     "src-tauri/tests/chat.rs": "253cd4417222911c8e1ef12afa9e91e733dc86e5fa66f19d313e090ee00fa577",
     "src-tauri/tests/chat_memory.rs": "2ca6e5f7a5123cfa433c0725ef0b663660e055bf3c1bdcce117d811049e9467a",
     "src-tauri/tests/community_host.rs": "abbb074976229af54369b538366fd9403213faaba0f91ff1c0edde9b4e6d91ec",
-    "src-tauri/tests/connections.rs": "d514438764b457cdf4e02de66eb2ede2c6640f02afd45fc1ed0a50a2a4128ef9",
+    "src-tauri/tests/connections.rs": "9af3f5652bcd0b19326d07d273a0b0ee0fcb01534094caab4a1a37edf0da0714",
     "src-tauri/tests/conversations.rs": "c9b75940c28970e644a901e0f62de49acb21950441257b2338340a828e73b2e1",
     "src-tauri/tests/diagnostics.rs": "c5634e614b38f7835e0e962b775f33244fce0594794d386f76e34955daf6c75f",
     "src-tauri/tests/experimental_continuity.rs": "77e2bd0745e9935547a68a341041d40204ab439d59e652d2d21193c0795748c0",

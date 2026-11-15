@@ -863,7 +863,9 @@ async fn hmac_receipt_survives_restart_and_missing_installation_key_fails_closed
     assert!(backend.values.lock().unwrap()[&reference].starts_with("ai-home-installation-hmac:v1:"));
     drop(app);
     pool.close().await;
+    drop(pool);
     let store = Store::open(&path).await.unwrap();
+    let pool = store.pool.clone();
     let app = Application::with_vault(store, Vault::with_backend(backend.clone()));
     assert_eq!(app.dispatch(r.clone()).await.response, original);
     let mut changed = r.clone();
@@ -880,6 +882,9 @@ async fn hmac_receipt_survives_restart_and_missing_installation_key_fails_closed
     );
     assert_eq!(backend.values.lock().unwrap().len(), before);
     drop(app);
+    // Wait for the reopened SQLite pool to release the database before deleting it.
+    pool.close().await;
+    drop(pool);
     std::fs::remove_file(path).unwrap();
 }
 
