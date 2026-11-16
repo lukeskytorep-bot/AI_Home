@@ -9,8 +9,8 @@ interface Operation {id:string;revision:number;status:string;physicalCallCount:n
 interface Model {id:string;label:string}
 const providerLabels:Record<string,string>={openrouter:'OpenRouter',openai:'OpenAI',google:'Google',anthropic:'Anthropic'};
 const terminal=(op:Operation)=>!['queued','running'].includes(op.status);
-export function ConnectionsSetup({client,locale,desktop}:{client:Client;locale:string;desktop:boolean}){
- const text=(key:string)=>t(locale,key);const [profiles,setProfiles]=useState<Profile[]>([]);const [profileId,setProfileId]=useState('');const [snapshot,setSnapshot]=useState<Snapshot>();
+export function ConnectionsSetup({client,locale,desktop,initialProfileId}:{client:Client;locale:string;desktop:boolean;initialProfileId?:string}){
+ const text=(key:string)=>t(locale,key);const [profiles,setProfiles]=useState<Profile[]>([]);const [profileId,setProfileId]=useState(initialProfileId??'');const [snapshot,setSnapshot]=useState<Snapshot>();
  const [name,setName]=useState('');const [connectionId,setConnectionId]=useState('');const [provider,setProvider]=useState('openrouter');const [endpoint,setEndpoint]=useState('');const [label,setLabel]=useState('');const [secret,setSecret]=useState('');
  const [role,setRole]=useState('primary');const [modelId,setModelId]=useState('');const [output,setOutput]=useState(1024);const [models,setModels]=useState<Model[]>([]);
  const [operation,setOperation]=useState<Operation>();const [busy,setBusy]=useState(false);const [error,setError]=useState('');const [notice,setNotice]=useState('');

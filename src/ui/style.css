@@ -17,3 +17,17 @@
 .diagnostics{margin-top:24px}.diagnostics-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:18px 0}.diagnostics-grid article,.diagnostic-summary{border:1px solid var(--border);border-radius:12px;padding:16px;background:var(--background)}.diagnostics-grid p{font-size:13px}.diagnostics dl{display:grid;grid-template-columns:auto 1fr;gap:5px 12px;font-size:13px}.diagnostics dd{margin:0}.diagnostic-actions{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}.diagnostic-summary ul{margin:.5rem 0 1rem;padding-left:1.3rem}@media(max-width:760px){.diagnostics-grid{grid-template-columns:1fr}}
 
 .community-setup textarea{width:100%;box-sizing:border-box;min-height:6rem;resize:vertical;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--background);color:inherit;font:inherit}.community-setup select{max-width:100%;min-width:0}.community-setup p{overflow-wrap:anywhere}
+
+/* The workspace owns its full width; settings and onboarding set their own measure. */
+.workspace{display:block;max-width:none}
+.center{min-width:0}
+.settings-page{max-width:70rem}
+.settings-page>.setup,.settings-community,.conversation-context{margin-top:1rem}
+.first-conversation{width:min(100%,31rem);margin:clamp(1rem,9vh,6rem) auto}
+.first-conversation h1,.settings-page>h1{font-size:clamp(1.5rem,3vw,2rem);letter-spacing:-.04em}
+.first-conversation fieldset{border:0;padding:0;margin:0;min-inline-size:0}
+.first-conversation label,.memory-settings>label{display:grid;gap:.4rem;margin-bottom:1rem}
+.first-conversation input,.first-conversation select{width:100%;min-width:0}
+.first-conversation input{border:1px solid var(--border);border-radius:10px;background:var(--background);color:inherit;padding:11px 14px}
+.first-conversation [role=status],.first-conversation [role=alert]{margin:1rem 0 0}
+.conversation-context>summary,.settings-community>summary{cursor:pointer;color:var(--accent);padding:.5rem 0}

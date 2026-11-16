@@ -1,3 +1,6 @@
+import {WorkspaceMemorySettings} from './WorkspaceMemorySettings';
+import {FirstConversation} from './FirstConversation';
+import {listStandardProfiles,prepareExistingSetup,readSetupDraft,type SetupProfile,type WorkspaceSelection} from './firstConversation';
 import {CommunityPanel} from './CommunityPanel';
 import {Conversations} from './Conversations';
 import {BackupPanel} from './BackupPanel';
@@ -9,6 +12,27 @@ import {useEffect,useState,useMemo,useRef} from 'react';import type {Preferences
 export function App({transport}:{transport:Transport}){
  const client=useMemo(()=>new Client(transport),[transport]);const [prefs,setPrefs]=useState<Preferences>();const [draft,setDraft]=useState({locale:'en',themeId:'orbital',themeVariant:'light' as Preferences['themeVariant']});const [error,setError]=useState('');const [busy,setBusy]=useState(false);const [saved,setSaved]=useState(false);const [ready,setReady]=useState(false);const [retry,setRetry]=useState(0);const revision=useRef(0);const sequence=useRef(0);// Draft ownership is independent of the last committed revision.
  const dirty=useRef(false);const edits=useRef(0);
+ const [page,setPage]=useState<'home'|'settings'|'activity'>('home');
+ const [workspaceRefresh,refreshWorkspace]=useState(0);
+ const [initial,setInitial]=useState(()=>transport.mode==='desktop'?readSetupDraft():undefined);
+ const [profiles,setProfiles]=useState<SetupProfile[]>();
+ const [profileError,setProfileError]=useState('');
+ const [selection,setSelection]=useState<WorkspaceSelection>();
+ const [showSetup,setShowSetup]=useState(Boolean(initial));
+ const desktop=transport.mode==='desktop';
+ useEffect(()=>{
+  if(!desktop||!ready)return;
+  let active=true;
+  setProfileError('');
+  void listStandardProfiles(client).then(items=>{
+    if(!active)return;
+    setProfiles(items);
+    if(!initial&&items.length===0)setShowSetup(true);
+    const existing=items.find(p=>p.status==='ready')??items[0];
+    if(!initial&&existing)setSelection(old=>old??{profileId:existing.id});
+  }).catch(()=>{if(active)setProfileError('error.transport');});
+  return()=>{active=false;};
+ },[client,desktop,ready,retry,initial]);
  const locale=draft.locale;const text=(key:string)=>t(locale,key);
  useEffect(()=>{document.documentElement.lang=locale;applyTheme(draft.themeId,draft.themeVariant);const media=window.matchMedia('(prefers-color-scheme: dark)');const change=()=>applyTheme(draft.themeId,draft.themeVariant);media.addEventListener('change',change);return()=>media.removeEventListener('change',change);},[locale,draft.themeId,draft.themeVariant]);
  useEffect(()=>{let active=true;let unlisten:(()=>void)|undefined;
@@ -20,5 +44,55 @@ export function App({transport}:{transport:Transport}){
   return()=>{active=false;unlisten?.();};
  },[client,transport,retry]);
  async function save(){if(!prefs||busy)return;const savingEdit=edits.current;setBusy(true);setError('');setSaved(false);try{const r=await client.call<Preferences>('app.preferences.set',draft,prefs.revision);if(r.ok){if(r.result.revision>=revision.current){revision.current=r.result.revision;setPrefs(r.result);if(edits.current===savingEdit){dirty.current=false;setDraft({locale:r.result.locale,themeId:r.result.themeId,themeVariant:r.result.themeVariant});setSaved(true);}}}else{setError(r.error.messageKey);if(r.error.code==='REVISION_CONFLICT'){const latest=await client.call<Preferences>('app.preferences.get');if(latest.ok&&latest.result.revision>revision.current){revision.current=latest.result.revision;setPrefs(latest.result);}}}}catch{setError('error.transport');}finally{setBusy(false);}}
- return <div className="app"><aside className="navigation"><div className="brand"><span className="orb">✦</span><div>AI Home<small>{text('brand.tagline')}</small></div></div><nav aria-label="AI Home"><button aria-current="page" className="nav active">⌂ <span>{text('nav.home')}</span></button>{['memory','knowledge','rules'].map(key=><button key={key} className="nav" disabled title={text('status.pending')}><span>{text('nav.'+key)}</span><span className="lock">○</span></button>)}<button className="nav" onClick={()=>document.getElementById('activity-log')?.scrollIntoView({behavior:'smooth'})}><span>{text('nav.activity')}</span></button><button className="nav" onClick={()=>document.getElementById('diagnostics')?.scrollIntoView({behavior:'smooth'})}><span>{text('nav.diagnostics')}</span></button></nav><div className="nav-bottom"><span className="stage">{text('status.stage')}</span><p>{text('side.conscious')}</p></div></aside><main><header><span className="status"><i/>{text(transport.mode==='desktop'?'status.desktop':'status.browser')}</span><span className="version">AI Home 0.0.1</span></header><div className="workspace"><div className="center"><section className="hero"><div className="planet" aria-hidden="true"><span>✦</span></div><div className="eyebrow">{text('hero.eyebrow')}</div><h1>{text('hero.title')}</h1><p>{text('hero.body')}</p></section><section className="setup" aria-labelledby="setup-title"><h2 id="setup-title">{text('setup.title')}</h2><p className="muted">{text('setup.body')}</p><div className="fields"><label>{text('settings.language')}<select aria-label={text('settings.language')} value={draft.locale} disabled={busy} onChange={e=>{dirty.current=true;edits.current++;setSaved(false);setDraft({...draft,locale:e.target.value});}}>{locales.map(p=><option key={p.locale} value={p.locale}>{p.displayName}</option>)}</select></label><label>{text('settings.theme')}<select aria-label={text('settings.theme')} value={draft.themeId} disabled={busy} onChange={e=>{dirty.current=true;edits.current++;setSaved(false);setDraft({...draft,themeId:e.target.value});}}>{themes.map(p=><option key={p.id} value={p.id}>{p.displayName}</option>)}</select></label><label>{text('settings.variant')}<select aria-label={text('settings.variant')} value={draft.themeVariant} disabled={busy} onChange={e=>{dirty.current=true;edits.current++;setSaved(false);setDraft({...draft,themeVariant:e.target.value as Preferences['themeVariant']});}}>{['light','dark','system'].map(v=><option key={v} value={v}>{text('variant.'+v)}</option>)}</select></label></div>{error&&<div role="alert" className="error"><strong>{text('error.title')}</strong><p>{text(error)}</p><button onClick={()=>{setError('');setRetry(x=>x+1);}}>{text('action.retry')}</button></div>}<div className="save"><button className="primary" disabled={!ready||busy} onClick={()=>void save()}>{text(ready?'action.save':'status.loading')}</button><span role="status">{saved?text('status.saved'):''}</span></div></section><ConnectionsSetup client={client} locale={locale} desktop={transport.mode==='desktop'}/><Conversations client={client} locale={locale} desktop={transport.mode==='desktop'}/><CommunityPanel client={client} transport={transport} locale={locale}/><BackupPanel client={client} locale={locale} desktop={transport.mode==='desktop'}/><ExportPanel client={client} locale={locale} desktop={transport.mode==='desktop'}/><ActivityPanel client={client} locale={locale} desktop={transport.mode==='desktop'}/><DiagnosticsPanel client={client} locale={locale} desktop={transport.mode==='desktop'}/><section className="next"><h2>{text('next.title')}</h2><div className="next-grid">{['providers','profile','memory'].map((key,i)=><article key={key}><span className="step">0{i+1}</span><h3>{text('next.'+key)}</h3><p>{text('next.'+key+'.body')}</p></article>)}</div></section></div><aside className="context"><div className="context-card"><span className="eyebrow">AI HOME</span><h2>{text('side.title')}</h2><p>✓ {text('side.standard')}</p><p>✓ {text('side.independent')}</p><hr/><p className="muted">{text('side.note')}</p></div></aside></div></main></div>;
+
+ function navigate(next: typeof page){
+  if(page==='settings'&&next!=='settings')refreshWorkspace(value=>value+1);
+  setPage(next);
+ }
+ const retryBoot=()=>{setError('');setRetry(x=>x+1);};
+ return <div className="app">
+  <aside className="navigation">
+    <div className="brand"><span className="orb" aria-hidden="true">✦</span><div>AI Home<small>{text('brand.tagline')}</small></div></div>
+    <nav aria-label="AI Home">
+      <button aria-current={page==='home'?'page':undefined} className={'nav'+(page==='home'?' active':'')} onClick={()=>navigate('home')}>{text('nav.home')}</button>
+      {['memory','knowledge','rules'].map(key=><button key={key} className="nav" disabled title={text('status.pending')}>{text('nav.'+key)}</button>)}
+      <button aria-current={page==='activity'?'page':undefined} className={'nav'+(page==='activity'?' active':'')} onClick={()=>navigate('activity')}>{text('nav.activity')}</button>
+    </nav>
+  </aside>
+  <main>
+    <header><span className="status"><i/>{text(desktop?'status.desktop':'status.browser')}</span>
+      <button aria-current={page==='settings'?'page':undefined} onClick={()=>navigate(page==='settings'?'home':'settings')}>{text('nav.settings')}</button>
+    </header>
+    <div className="workspace">
+      <div className="center" hidden={page!=='home'}>
+        {!desktop&&<section className="hero"><div className="planet" aria-hidden="true"><span>✦</span></div><h1>{text('hero.title')}</h1><p>{text('talk.preview')}</p></section>}
+        {desktop&&!profiles&&!profileError&&!error&&<p role="status">{text('status.loading')}</p>}
+        {(profileError||(!ready&&error))&&<div role="alert" className="error"><p>{text(profileError||error)}</p><button onClick={retryBoot}>{text('action.retry')}</button></div>}
+        {desktop&&ready&&profiles&&showSetup&&<FirstConversation key={initial?.id??'new'} client={client} locale={locale} initial={initial}
+          onOpen={next=>{setSelection(next);setShowSetup(false);setPage('home');}}/>}
+        {desktop&&ready&&profiles&&!showSetup&&<Conversations client={client} locale={locale} desktop
+          initialSelection={selection} workspaceMode refreshToken={workspaceRefresh}
+          onFinishSetup={async profileId=>{
+            const existing=await prepareExistingSetup(client,profileId,locale);
+            setInitial(existing);
+            setShowSetup(true);
+          }} onProfileChange={profileId=>setSelection(old=>old?.profileId===profileId?old:profileId?{profileId}:undefined)}/>}
+      </div>
+      {page==='settings'&&<div className="center settings-page">
+        <h1>{text('nav.settings')}</h1>
+        <a className="settings-jump" href="#diagnostics">{text('nav.diagnostics')}</a>
+        <section className="setup" aria-labelledby="setup-title"><h2 id="setup-title">{text('settings.appearance')}</h2><div className="fields"><label>{text('settings.language')}<select aria-label={text('settings.language')} value={draft.locale} disabled={busy} onChange={e=>{dirty.current=true;edits.current++;setSaved(false);setDraft({...draft,locale:e.target.value});}}>{locales.map(p=><option key={p.locale} value={p.locale}>{p.displayName}</option>)}</select></label><label>{text('settings.theme')}<select aria-label={text('settings.theme')} value={draft.themeId} disabled={busy} onChange={e=>{dirty.current=true;edits.current++;setSaved(false);setDraft({...draft,themeId:e.target.value});}}>{themes.map(p=><option key={p.id} value={p.id}>{p.displayName}</option>)}</select></label><label>{text('settings.variant')}<select aria-label={text('settings.variant')} value={draft.themeVariant} disabled={busy} onChange={e=>{dirty.current=true;edits.current++;setSaved(false);setDraft({...draft,themeVariant:e.target.value as Preferences['themeVariant']});}}>{['light','dark','system'].map(v=><option key={v} value={v}>{text('variant.'+v)}</option>)}</select></label></div>{error&&<div role="alert" className="error"><strong>{text('error.title')}</strong><p>{text(error)}</p><button onClick={()=>{setError('');setRetry(x=>x+1);}}>{text('action.retry')}</button></div>}<div className="save"><button className="primary" disabled={!ready||busy} onClick={()=>void save()}>{text(ready?'action.save':'status.loading')}</button><span role="status">{saved?text('status.saved'):''}</span></div></section>
+        <ConnectionsSetup client={client} locale={locale} desktop={desktop} initialProfileId={selection?.profileId}/>
+        <WorkspaceMemorySettings client={client} locale={locale} desktop={desktop} initialProfileId={selection?.profileId}/>
+        <BackupPanel client={client} locale={locale} desktop={desktop}/>
+        <ExportPanel client={client} locale={locale} desktop={desktop}/>
+        <DiagnosticsPanel client={client} locale={locale} desktop={desktop}/>
+        <details className="settings-community"><summary>{text('settings.community')}</summary>
+          <CommunityPanel client={client} transport={transport} locale={locale}/>
+        </details>
+      </div>}
+      {page==='activity'&&<ActivityPanel client={client} locale={locale} desktop={desktop}/>}
+    </div>
+  </main>
+ </div>;
 }
