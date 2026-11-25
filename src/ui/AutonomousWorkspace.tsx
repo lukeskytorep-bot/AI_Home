@@ -68,6 +68,14 @@ interface UnresolvedAction {
   idempotencyKey?: string;
 }
 
+interface ContinuitySummary {
+  activeEpisodeCount: number;
+  hasResumePacket: boolean;
+  privateReflectionCount: number;
+  approvedSelfRecordCount: number;
+  privateContentIncluded: false;
+}
+
 interface InstanceStatus {
   profileId: string;
   displayName: string;
@@ -78,6 +86,7 @@ interface InstanceStatus {
   recentDecisions: Array<{id: string; outcome: string; createdAt: string}>;
   unresolvedActions: UnresolvedAction[];
   providerConfig?: ProviderConfigView | null;
+  continuitySummary?: ContinuitySummary;
   forumConnected: false;
 }
 
@@ -231,7 +240,7 @@ export function AutonomousWorkspace({client, locale, desktop, onBackToStandard}:
     }
   }
 
-  async function toggleLifecycle(action: 'pause' | 'resume') {
+  async function toggleLifecycle(action: 'pause' | 'resume' | 'archive') {
     if (!selectedProfileId) return;
     setError('');
     setNotice('');
@@ -241,7 +250,7 @@ export function AutonomousWorkspace({client, locale, desktop, onBackToStandard}:
         setError(r.error.messageKey);
         return;
       }
-      setNotice(`${text('autonomous.pilot.instances')}: ${r.result.status}`);
+      setNotice(action === 'archive' ? text('autonomous.pilot.archived') : `${text('autonomous.pilot.instances')}: ${r.result.status}`);
       await loadInstances(selectedProfileId);
     } catch {
       setError('error.transport');
@@ -490,7 +499,10 @@ export function AutonomousWorkspace({client, locale, desktop, onBackToStandard}:
           <div className="autonomous-actions">
             <button type="button" onClick={() => void checkWake()}>{text('autonomous.pilot.checkWake')}</button>
             {status.instance.status === 'inactive'
-              ? <button type="button" onClick={() => void toggleLifecycle('resume')}>{text('autonomous.pilot.resume')}</button>
+              ? <>
+                  <button type="button" onClick={() => void toggleLifecycle('resume')}>{text('autonomous.pilot.resume')}</button>
+                  <button type="button" onClick={() => void toggleLifecycle('archive')}>{text('autonomous.pilot.archive')}</button>
+                </>
               : <button type="button" disabled={status.instance.status === 'recovery_required'} onClick={() => void toggleLifecycle('pause')}>{text('autonomous.pilot.pause')}</button>}
           </div>
         </div>
@@ -505,6 +517,22 @@ export function AutonomousWorkspace({client, locale, desktop, onBackToStandard}:
                 </li>)}
               </ul>}
         </div>
+        {status.continuitySummary && <div className="autonomous-card">
+          <h3>{text('autonomous.pilot.continuityTitle')}</h3>
+          <ul className="autonomous-compact-list">
+            <li>{text('autonomous.pilot.continuityEpisodes')}: <strong>{status.continuitySummary.activeEpisodeCount}</strong></li>
+            <li>{text('autonomous.pilot.continuityResume')}: <strong>{text(status.continuitySummary.hasResumePacket ? 'autonomous.pilot.continuityResumeReady' : 'autonomous.pilot.continuityResumeNone')}</strong></li>
+            <li>{text('autonomous.pilot.continuityReflections')}: <strong>{status.continuitySummary.privateReflectionCount}</strong></li>
+          </ul>
+          <details>
+            <summary>{text('autonomous.pilot.recentDecisions')} ({status.recentDecisions.length})</summary>
+            {status.recentDecisions.length === 0
+              ? <p className="muted">{text('autonomous.pilot.noDecisions')}</p>
+              : <ul className="autonomous-compact-list">
+                  {status.recentDecisions.map(d => <li key={d.id}><strong>{d.outcome}</strong> · {d.createdAt}</li>)}
+                </ul>}
+          </details>
+        </div>}
       </div>
 
       {status.unresolvedActions.length > 0 && <div className="autonomous-card autonomous-section">

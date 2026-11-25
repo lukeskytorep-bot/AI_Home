@@ -1032,4 +1032,158 @@ async fn permanent_profile_deletion_tombstones_autonomous_receipts_and_connectio
     assert_eq!(replayed["error"]["code"], "POLICY_DENIED");
 }
 
+#[tokio::test]
+async fn wake_check_uses_configured_api_provider_and_respects_ai_sleep_without_extra_calls() {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    let hits = Arc::new(AtomicUsize::new(0));
+    let hits_server = hits.clone();
+
+    let server = tokio::spawn(async move {
+        let body = json!({
+            "id": "chatcmpl-wake-1",
+            "choices": [{
+                "index": 0,
+                "finish_reason": "stop",
+                "message": {
+                    "role": "assistant",
+                    "content": "{\"decision\":\"sleep\",\"sleepDelayMs\":3600000}"
+                }
+            }]
+        })
+        .to_string();
+        if let Ok((mut stream, _)) = listener.accept().await {
+            hits_server.fetch_add(1, Ordering::SeqCst);
+            let mut buf = [0u8; 8192];
+            let _ = stream.read(&mut buf).await;
+            let resp = format!(
+                "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            let _ = stream.write_all(resp.as_bytes()).await;
+            let _ = stream.shutdown().await;
+        }
+    });
+
+    let store = Store::memory().await.unwrap();
+    let vault = ai_home::vault::Vault::with_backend(Arc::new(TestSecretStore::default()));
+    let app = Application::with_vault(store, vault);
+
+    let created = app
+        .dispatch(req(
+            "autonomous.instance.create",
+            None,
+            json!({"displayName": "Wake API Pilot", "initialIntervalMs": 1}),
+        ))
+        .await
+        .response;
+    let profile_id = created["result"]["profileId"].as_str().unwrap().to_string();
+
+    let cfg = app
+        .dispatch(req(
+            "autonomous.provider.configure",
+            Some(&profile_id),
+            json!({
+                "provider": "custom_openai",
+                "endpoint": format!("http://127.0.0.1:{}/v1", addr.port()),
+                "modelId": "gpt-wake-test",
+                "apiKey": "sk-wake-secret",
+                "dailyCallLimit": 5,
+                "maxOutputTokens": 128
+            }),
+        ))
+        .await
+        .response;
+    assert_eq!(cfg["ok"], true, "{cfg}");
+
+    tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+    let wake1 = app
+        .dispatch(req("autonomous.wake.check", Some(&profile_id), json!({})))
+        .await
+        .response;
+    assert_eq!(wake1["ok"], true, "{wake1}");
+    assert_eq!(wake1["result"]["result"], "completed");
+    assert_eq!(wake1["result"]["outcome"], "sleep");
+    assert_eq!(wake1["result"]["activeWakePlan"]["mode"], "deadline");
+    assert_eq!(hits.load(Ordering::SeqCst), 1);
+
+    // Second wake check before deadline must return not_due without calling HTTP.
+    let wake2 = app
+        .dispatch(req("autonomous.wake.check", Some(&profile_id), json!({})))
+        .await
+        .response;
+    assert_eq!(wake2["ok"], true, "{wake2}");
+    assert_eq!(wake2["result"]["result"], "not_due");
+    assert_eq!(hits.load(Ordering::SeqCst), 1);
+
+    let status = app
+        .dispatch(req("autonomous.instance.status", Some(&profile_id), json!({})))
+        .await
+        .response;
+    assert_eq!(status["ok"], true, "{status}");
+    assert_eq!(status["result"]["continuitySummary"]["privateContentIncluded"], false);
+    assert_eq!(status["result"]["continuitySummary"]["privateReflectionCount"], 0);
+
+    server.abort();
+}
+
+#[tokio::test]
+async fn archive_lifecycle_requires_inactive_and_enables_permanent_delete() {
+    let store = Store::memory().await.unwrap();
+    let app = Application::new(store);
+
+    let created = app
+        .dispatch(req(
+            "autonomous.instance.create",
+            None,
+            json!({"displayName": "Archive Pilot", "initialIntervalMs": 1}),
+        ))
+        .await
+        .response;
+    let profile_id = created["result"]["profileId"].as_str().unwrap().to_string();
+
+    // Archiving while ready must be denied.
+    let denied = app
+        .dispatch(req(
+            "autonomous.instance.lifecycle",
+            Some(&profile_id),
+            json!({"action": "archive"}),
+        ))
+        .await
+        .response;
+    assert_eq!(denied["ok"], false);
+    assert_eq!(denied["error"]["code"], "POLICY_DENIED");
+
+    // Pause -> archive -> permanent delete succeeds cleanly.
+    let paused = app
+        .dispatch(req(
+            "autonomous.instance.lifecycle",
+            Some(&profile_id),
+            json!({"action": "pause"}),
+        ))
+        .await
+        .response;
+    assert_eq!(paused["ok"], true, "{paused}");
+
+    let archived = app
+        .dispatch(req(
+            "autonomous.instance.lifecycle",
+            Some(&profile_id),
+            json!({"action": "archive"}),
+        ))
+        .await
+        .response;
+    assert_eq!(archived["ok"], true, "{archived}");
+    assert_eq!(archived["result"]["status"], "archived");
+    let rev = archived["result"]["profileRevision"].as_i64().unwrap();
+
+    let mut del = req("profile.delete.permanent", Some(&profile_id), json!({"confirm": true}));
+    del["expectedRevision"] = json!(rev);
+    let deleted = app.dispatch(del).await.response;
+    assert_eq!(deleted["ok"], true, "{deleted}");
+}
+
+
 

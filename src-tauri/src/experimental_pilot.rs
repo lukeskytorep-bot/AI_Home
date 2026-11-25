@@ -4,6 +4,7 @@ use sha2::{Digest, Sha256};
 use sqlx::{Row, SqlitePool};
 use std::sync::Arc;
 use crate::domain::schema;
+use crate::experimental_continuity::WorkContinuityService;
 use crate::experimental_runtime::{
     ActionExecutor, ActionIntent, ActionOutcome, Clock, DecisionChoice, DecisionProvider,
     DisabledActionExecutor, DisabledDecisionProvider, ExperimentalRuntime, OpportunityEvent,
@@ -342,11 +343,9 @@ impl<C: Clock> AutonomousPilotService<C> {
             }
             "autonomous.wake.check" => {
                 let profile_id = r["profileId"].as_str().ok_or("VALIDATION_ERROR")?;
-                self.wake_check(
+                self.wake_check_via_provider(
                     profile_id,
                     payload.get("eventKind").and_then(Value::as_str),
-                    Arc::new(DisabledDecisionProvider),
-                    Arc::new(DisabledActionExecutor),
                 )
                 .await?
             }
@@ -476,6 +475,7 @@ impl<C: Clock> AutonomousPilotService<C> {
         let recent_decisions = self.recent_decisions(profile_id, &instance_id).await?;
         let unresolved_actions = self.unresolved_actions(profile_id, &instance_id).await?;
         let provider_config = self.provider_config_public(profile_id).await?;
+        let continuity_summary = self.continuity_summary(profile_id, &instance_id).await?;
         Ok(json!({
             "profileId": profile_id,
             "displayName": display_name,
@@ -486,6 +486,7 @@ impl<C: Clock> AutonomousPilotService<C> {
             "recentDecisions": recent_decisions,
             "unresolvedActions": unresolved_actions,
             "providerConfig": provider_config,
+            "continuitySummary": continuity_summary,
             "forumConnected": false,
         }))
     }
@@ -497,6 +498,45 @@ impl<C: Clock> AutonomousPilotService<C> {
             return Err("POLICY_DENIED".into());
         }
         let current = instance["status"].as_str().unwrap_or("ready");
+        if action == "archive" {
+            // Archiving an Autonomous profile requires the instance to be inactive first.
+            if current != "inactive" {
+                return Err("POLICY_DENIED".into());
+            }
+            let row = sqlx::query("SELECT revision, body FROM profiles WHERE id=?")
+                .bind(profile_id)
+                .fetch_one(&self.pool)
+                .await
+                .map_err(storage)?;
+            let old_prof_rev: i64 = row.get("revision");
+            let mut profile: Value = serde_json::from_str(row.get::<&str, _>("body"))
+                .map_err(|_| "STORAGE_ERROR".to_string())?;
+            let next_prof_rev = old_prof_rev + 1;
+            profile["revision"] = json!(next_prof_rev);
+            profile["status"] = json!("archived");
+            if !schema::dto("Profile", &profile) {
+                return Err("VALIDATION_ERROR".into());
+            }
+            let changed = sqlx::query(
+                "UPDATE profiles SET revision=?, body=? WHERE id=? AND revision=?",
+            )
+            .bind(next_prof_rev)
+            .bind(profile.to_string())
+            .bind(profile_id)
+            .bind(old_prof_rev)
+            .execute(&self.pool)
+            .await
+            .map_err(storage)?;
+            if changed.rows_affected() != 1 {
+                return Err("REVISION_CONFLICT".into());
+            }
+            return Ok(json!({
+                "profileId": profile_id,
+                "instanceId": instance_id,
+                "status": "archived",
+                "profileRevision": next_prof_rev,
+            }));
+        }
         let next_status = match action {
             "pause" => {
                 if current == "running" || current == "recovery_required" {
@@ -1223,6 +1263,21 @@ impl<C: Clock> AutonomousPilotService<C> {
         self.record_provider_call_usage(profile_id, &today, used + 1)
             .await?;
 
+        let resume_context = WorkContinuityService::new(self.pool.clone())
+            .latest_resume_packet(profile_id, &instance_id, self.clock.now())
+            .await
+            .ok()
+            .flatten()
+            .map(|rp| {
+                json!({
+                    "episodeId": rp.episode["id"],
+                    "title": rp.episode["title"],
+                    "status": rp.episode["status"],
+                    "committedEventSequence": rp.committed_event_sequence,
+                    "unresolvedActionCount": rp.unresolved_actions.len(),
+                })
+            });
+
         let prompt_payload = json!({
             "proposal": {
                 "id": proposal["id"],
@@ -1233,6 +1288,7 @@ impl<C: Clock> AutonomousPilotService<C> {
                 "rounds": proposal["rounds"],
             },
             "activeRefusals": active_refusals,
+            "activeWorkEpisode": resume_context,
             "budget": {
                 "dailyCallLimit": limit,
                 "callsRemainingAfterThisCall": (limit - (used + 1)).max(0),
@@ -1716,6 +1772,232 @@ Silence or no_action is allowed and is not consent.";
                 Ok(res)
             }
         }
+    }
+
+    pub async fn wake_check_via_provider(
+        &self,
+        profile_id: &str,
+        event_kind: Option<&str>,
+    ) -> Result<Value, String> {
+        let (instance_id, instance) = self.require_instance(profile_id, None).await?;
+        let active_wake = self.active_wake(profile_id, &instance_id).await?;
+        let unresolved = self.unresolved_actions(profile_id, &instance_id).await?;
+        if !unresolved.is_empty() || instance["status"].as_str() == Some("recovery_required") {
+            return Ok(json!({
+                "profileId": profile_id,
+                "result": "reconciliation_required",
+                "activeWakePlan": active_wake,
+            }));
+        }
+        if instance["status"].as_str() == Some("inactive") {
+            return Ok(json!({
+                "profileId": profile_id,
+                "result": "inactive",
+                "activeWakePlan": active_wake,
+            }));
+        }
+        let now = self.clock.now();
+        if let Some(wake) = &active_wake {
+            if !is_wake_due(wake, now, event_kind)? && instance["status"].as_str() != Some("interrupted") {
+                return Ok(json!({
+                    "profileId": profile_id,
+                    "result": "not_due",
+                    "activeWakePlan": active_wake,
+                }));
+            }
+        }
+        let Some(cfg) = self.load_provider_config_raw(profile_id).await? else {
+            return self
+                .wake_check(
+                    profile_id,
+                    event_kind,
+                    Arc::new(DisabledDecisionProvider),
+                    Arc::new(DisabledActionExecutor),
+                )
+                .await;
+        };
+
+        let today = now.format("%Y-%m-%d").to_string();
+        let limit = cfg["dailyCallLimit"].as_i64().unwrap_or(20);
+        let used = if cfg["budgetDay"].as_str() == Some(today.as_str()) {
+            cfg["callsUsedToday"].as_i64().unwrap_or(0)
+        } else {
+            0
+        };
+        if used >= limit {
+            return Ok(json!({
+                "profileId": profile_id,
+                "result": "budget_exhausted",
+                "activeWakePlan": active_wake,
+            }));
+        }
+
+        let provider_kind = parse_provider_kind(cfg["provider"].as_str().unwrap_or(""))?;
+        let normalized_endpoint = cfg["normalizedEndpoint"].as_str().unwrap_or("").to_string();
+        let model_id = cfg["modelId"].as_str().unwrap_or("").to_string();
+        let cred_ref = cfg["credentialRef"].as_str().unwrap_or("").to_string();
+        let cred_rev = cfg["credentialRevision"].as_u64().unwrap_or(0);
+        let route_rev = cfg["revision"].as_u64().unwrap_or(1);
+        let max_output_tokens = cfg["maxOutputTokens"].as_u64().unwrap_or(256) as u32;
+
+        let scope = ScopeStamp {
+            profile_id: profile_id.to_string(),
+            connection_id: AUTONOMOUS_CONNECTION_ID.to_string(),
+            route_id: AUTONOMOUS_ROUTE_ID.to_string(),
+            route_revision: route_rev,
+            credential_revision: cred_rev,
+            model_id: model_id.clone(),
+            provider: provider_kind,
+            normalized_endpoint,
+        };
+        let Ok(secret) = self.vault.secret(scope.clone(), cred_ref).await else {
+            return self
+                .wake_check(
+                    profile_id,
+                    event_kind,
+                    Arc::new(DisabledDecisionProvider),
+                    Arc::new(DisabledActionExecutor),
+                )
+                .await;
+        };
+        let Ok(credential) = BoundCredential::new(&scope, secret) else {
+            return self
+                .wake_check(
+                    profile_id,
+                    event_kind,
+                    Arc::new(DisabledDecisionProvider),
+                    Arc::new(DisabledActionExecutor),
+                )
+                .await;
+        };
+
+        self.record_provider_call_usage(profile_id, &today, used + 1)
+            .await?;
+
+        let continuity = self.continuity_summary(profile_id, &instance_id).await?;
+        let wake_payload = json!({
+            "wakeOpportunity": true,
+            "eventKind": event_kind,
+            "continuitySummary": continuity,
+            "budget": {
+                "dailyCallLimit": limit,
+                "callsRemainingAfterThisCall": (limit - (used + 1)).max(0),
+            }
+        });
+        let system_prompt = "You are an autonomous AI agent receiving a scheduled wake opportunity (not a command). \
+Respond ONLY with JSON: {\"decision\": \"no_action\"|\"rest\"|\"sleep\", \"sleepDelayMs\": 3600000}.";
+        let chat_req = ProviderChatRequest {
+            provider: provider_kind,
+            model_id,
+            messages: vec![
+                ProviderMessage::text("system", system_prompt),
+                ProviderMessage::text("user", &wake_payload.to_string()),
+            ],
+            scope,
+            temperature: Some(0.2),
+            max_output_tokens: Some(max_output_tokens),
+            reasoning_effort: None,
+            reasoning_max_tokens: None,
+            reasoning_transport_kind: None,
+            reasoning_transport_value: None,
+            custom_output_token_field: None,
+            provider_routing: None,
+        };
+
+        let Ok(transport) = HttpTransport::new() else {
+            return self
+                .wake_check(
+                    profile_id,
+                    event_kind,
+                    Arc::new(DisabledDecisionProvider),
+                    Arc::new(DisabledActionExecutor),
+                )
+                .await;
+        };
+        let Ok(budget) = CallBudget::new(
+            std::time::Duration::from_secs(30),
+            2,
+            crate::providers::transport::Cancellation::default(),
+        ) else {
+            return self
+                .wake_check(
+                    profile_id,
+                    event_kind,
+                    Arc::new(DisabledDecisionProvider),
+                    Arc::new(DisabledActionExecutor),
+                )
+                .await;
+        };
+        let Ok(resp) = transport.execute_chat(&chat_req, &credential, &budget).await else {
+            return self
+                .wake_check(
+                    profile_id,
+                    event_kind,
+                    Arc::new(DisabledDecisionProvider),
+                    Arc::new(DisabledActionExecutor),
+                )
+                .await;
+        };
+        let Some(choice) = parse_wake_decision(resp.content()) else {
+            return self
+                .wake_check(
+                    profile_id,
+                    event_kind,
+                    Arc::new(DisabledDecisionProvider),
+                    Arc::new(DisabledActionExecutor),
+                )
+                .await;
+        };
+        self.wake_check(
+            profile_id,
+            event_kind,
+            Arc::new(PrecomputedDecisionProvider { choice }),
+            Arc::new(DisabledActionExecutor),
+        )
+        .await
+    }
+
+    async fn continuity_summary(&self, profile_id: &str, instance_id: &str) -> Result<Value, String> {
+        let active_episodes: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM experimental_work_episodes \
+             WHERE profile_id=? AND instance_id=? \
+             AND json_extract(body,'$.status') IN ('active','waiting','deferred','interrupted')",
+        )
+        .bind(profile_id)
+        .bind(instance_id)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(storage)?;
+        let private_reflections: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM experimental_private_reflections WHERE profile_id=? AND instance_id=?",
+        )
+        .bind(profile_id)
+        .bind(instance_id)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(storage)?;
+        let approved_self_records: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM experimental_self_records \
+             WHERE profile_id=? AND instance_id=? AND json_extract(body,'$.status')='active'",
+        )
+        .bind(profile_id)
+        .bind(instance_id)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(storage)?;
+        let has_resume = WorkContinuityService::new(self.pool.clone())
+            .latest_resume_packet(profile_id, instance_id, self.clock.now())
+            .await
+            .ok()
+            .flatten()
+            .is_some();
+        Ok(json!({
+            "activeEpisodeCount": active_episodes,
+            "hasResumePacket": has_resume,
+            "privateReflectionCount": private_reflections,
+            "approvedSelfRecordCount": approved_self_records,
+            "privateContentIncluded": false,
+        }))
     }
 
     pub async fn wake_check<D: DecisionProvider, A: ActionExecutor>(
@@ -2423,6 +2705,74 @@ fn parse_provider_decision(
             note,
         }),
         _ => None,
+    }
+}
+
+fn parse_wake_decision(raw: &str) -> Option<DecisionChoice> {
+    let trimmed = raw.trim();
+    let candidate = if let Some(inner) = trimmed.strip_prefix("```") {
+        let after_lang = inner.find('\n').map(|i| &inner[i + 1..]).unwrap_or(inner);
+        after_lang.strip_suffix("```").unwrap_or(after_lang).trim()
+    } else {
+        trimmed
+    };
+    let v: Value = serde_json::from_str(candidate).ok()?;
+    match v.get("decision")?.as_str()? {
+        "no_action" => Some(DecisionChoice::NoAction),
+        "rest" => Some(DecisionChoice::Rest),
+        "sleep" => {
+            let delay_ms = v
+                .get("sleepDelayMs")
+                .and_then(Value::as_i64)
+                .unwrap_or(3_600_000)
+                .clamp(1_000, 86_400_000);
+            Some(DecisionChoice::Sleep {
+                delay_ms,
+                interrupt_events: vec![],
+            })
+        }
+        _ => None,
+    }
+}
+
+fn is_wake_due(wake: &Value, now: DateTime<Utc>, event_kind: Option<&str>) -> Result<bool, String> {
+    let interrupts = wake
+        .get("interruptEvents")
+        .and_then(Value::as_array)
+        .map(|arr| arr.iter().filter_map(Value::as_str).collect::<Vec<_>>())
+        .unwrap_or_default();
+    if let Some(kind) = event_kind {
+        if interrupts.contains(&kind) {
+            return Ok(true);
+        }
+    }
+    match wake.get("mode").and_then(Value::as_str).unwrap_or("") {
+        "interval" => {
+            let created = wake
+                .get("createdAt")
+                .and_then(Value::as_str)
+                .ok_or("STORAGE_ERROR")?;
+            let delay = wake
+                .get("requestedDelayMs")
+                .and_then(Value::as_i64)
+                .ok_or("STORAGE_ERROR")?;
+            let created_dt = DateTime::parse_from_rfc3339(created)
+                .map(|dt| dt.with_timezone(&Utc))
+                .map_err(|_| "STORAGE_ERROR".to_string())?;
+            Ok(now >= created_dt + chrono::Duration::milliseconds(delay))
+        }
+        "deadline" => {
+            let next = wake
+                .get("nextWakeAt")
+                .and_then(Value::as_str)
+                .ok_or("STORAGE_ERROR")?;
+            let deadline = DateTime::parse_from_rfc3339(next)
+                .map(|dt| dt.with_timezone(&Utc))
+                .map_err(|_| "STORAGE_ERROR".to_string())?;
+            Ok(now >= deadline)
+        }
+        "event_only" => Ok(false),
+        _ => Err("STORAGE_ERROR".into()),
     }
 }
 

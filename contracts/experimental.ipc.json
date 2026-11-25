@@ -60,9 +60,21 @@
           "recentDecisions": {"type": "array"},
           "unresolvedActions": {"type": "array"},
           "providerConfig": {},
+          "continuitySummary": {
+            "type": "object",
+            "properties": {
+              "activeEpisodeCount": {"type": "integer", "minimum": 0},
+              "hasResumePacket": {"type": "boolean"},
+              "privateReflectionCount": {"type": "integer", "minimum": 0},
+              "approvedSelfRecordCount": {"type": "integer", "minimum": 0},
+              "privateContentIncluded": {"const": false}
+            },
+            "required": ["activeEpisodeCount", "hasResumePacket", "privateReflectionCount", "approvedSelfRecordCount", "privateContentIncluded"],
+            "additionalProperties": false
+          },
           "forumConnected": {"const": false}
         },
-        "required": ["profileId", "displayName", "instance", "activeWakePlan", "activeRefusals", "proposals", "recentDecisions", "unresolvedActions", "providerConfig", "forumConnected"],
+        "required": ["profileId", "displayName", "instance", "activeWakePlan", "activeRefusals", "proposals", "recentDecisions", "unresolvedActions", "providerConfig", "continuitySummary", "forumConnected"],
         "additionalProperties": false
       }
     },
@@ -71,7 +83,7 @@
       "payload": {
         "type": "object",
         "properties": {
-          "action": {"enum": ["pause", "resume"]}
+          "action": {"enum": ["pause", "resume", "archive"]}
         },
         "required": ["action"],
         "additionalProperties": false
@@ -81,7 +93,8 @@
         "properties": {
           "profileId": {"type": "string", "minLength": 1},
           "instanceId": {"type": "string", "minLength": 1},
-          "status": {"enum": ["ready", "inactive"]}
+          "status": {"enum": ["ready", "inactive", "archived"]},
+          "profileRevision": {"type": "integer", "minimum": 1}
         },
         "required": ["profileId", "instanceId", "status"],
         "additionalProperties": false
@@ -268,6 +281,7 @@
               "not_due",
               "busy",
               "inactive",
+              "budget_exhausted",
               "resource_unavailable",
               "reconciliation_required",
               "completed"

@@ -65,14 +65,29 @@ function readyStandardDesktop(locale: 'en' | 'pl' = 'en') {
             recentDecisions: [],
             unresolvedActions,
             providerConfig,
+            continuitySummary: {
+              activeEpisodeCount: 1,
+              hasResumePacket: true,
+              privateReflectionCount: 2,
+              approvedSelfRecordCount: 1,
+              privateContentIncluded: false,
+            },
             forumConnected: false,
           };
           break;
         }
         case 'autonomous.instance.lifecycle': {
           const inst = autonomousInstances[0];
-          inst.status = r.payload.action === 'pause' ? 'inactive' : 'ready';
-          result = {profileId: inst.profileId, instanceId: inst.instanceId, status: inst.status};
+          const action = String(r.payload.action);
+          if (action === 'archive') {
+            inst.status = 'inactive';
+            const idx = autonomousInstances.findIndex(i => i.profileId === inst.profileId);
+            if (idx >= 0) autonomousInstances.splice(idx, 1);
+            result = {profileId: inst.profileId, instanceId: inst.instanceId, status: 'archived', profileRevision: 2};
+          } else {
+            inst.status = action === 'pause' ? 'inactive' : 'ready';
+            result = {profileId: inst.profileId, instanceId: inst.instanceId, status: inst.status};
+          }
           break;
         }
         case 'autonomous.provider.configure': {
@@ -261,9 +276,15 @@ it('supports API provider configuration, pause/resume lifecycle, and uncertain a
   expect(keyInput.value).toBe('');
   expect(host.textContent).toContain('openai/gpt-4o-mini');
 
-  // Pause & resume instance.
+  // Content-free continuity & privacy summary is shown (counts only, no private text).
+  expect(host.textContent).toContain('Work continuity & private reflection');
+  expect(host.textContent).toContain('Active work episodes: 1');
+  expect(host.textContent).toContain('Private reflections (private, content not shown): 2');
+
+  // Pause & resume instance; Archive button appears only while paused.
   await act(async () => button('Pause instance').click());
   expect(host.textContent).toContain('inactive');
+  expect(button('Archive instance')).toBeTruthy();
   await act(async () => button('Resume instance').click());
   expect(host.textContent).toContain('ready');
 
