@@ -65,6 +65,7 @@ export function NotesWorkspace({client, locale, desktop, initialProfileId}: {
               profileId={profileId}
               conversationId=""
               attempts={attempts.current}
+              hideSettings
             />
             <MemoryLayersPanel
               key={'layers-' + profileId}

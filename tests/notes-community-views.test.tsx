@@ -114,3 +114,28 @@ it('keeps browser preview honest on Notes and Community without desktop IPC', as
   expect(host.textContent).toContain('Not configured');
   expect(host.textContent).toContain('onlineStatusKnown = false');
 });
+
+it('paginates across nextCursor to display relationship contacts on later pages (P3-2)', async () => {
+  const {transport} = desktopWithNotesAndContacts(false);
+  const origDispatch = transport.dispatch.bind(transport);
+  transport.dispatch = async <T,>(r: Request): Promise<Response<T>> => {
+    if (r.command === 'memory.records.list') {
+      const page = (r.payload.page as {cursor?: string} | undefined)?.cursor;
+      const result = !page
+        ? {
+            items: [{record: {id: 'mem-ep-1', revision: 1, kind: 'episodic', state: 'active', createdAt: '2026-11-25T10:00:00Z'}, metadata: {title: 'Page 1 episodic'}}],
+            nextCursor: 'cursor-page-2',
+          }
+        : {
+            items: [{record: {id: 'mem-rel-2', revision: 1, kind: 'relationship', state: 'active', createdAt: '2026-11-25T10:00:00Z', subjectRef: 'peer-leo'}, metadata: {title: 'Leo (Page 2 Contact)'}}],
+            nextCursor: '',
+          };
+      return {contractVersion: 1, requestId: r.requestId, ok: true, result: result as T};
+    }
+    return origDispatch<T>(r);
+  };
+  await act(async () => root.render(<App transport={transport}/>));
+  await act(async () => button('Community').click());
+  expect(host.textContent).toContain('Leo (Page 2 Contact)');
+});
+

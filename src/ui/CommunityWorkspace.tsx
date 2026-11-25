@@ -49,22 +49,36 @@ export function CommunityWorkspace({client, transport, locale, initialProfileId}
     }
     let active = true;
     setContactError('');
-    void client.call<{items: ContactEntry[]; nextCursor: string}>('memory.records.list', {page: {limit: 50}}, undefined, profileId)
-      .then(r => {
-        if (!active) return;
-        if (!r.ok) {
-          setContactError(r.error.messageKey);
-          setContacts([]);
-          return;
-        }
-        setContacts(r.result.items.filter(item => item.record.kind === 'relationship' && item.record.state !== 'deleted'));
-      })
-      .catch(() => {
+    void (async () => {
+      try {
+        let cursor = '';
+        let pages = 0;
+        const found: ContactEntry[] = [];
+        do {
+          const r = await client.call<{items: ContactEntry[]; nextCursor: string}>(
+            'memory.records.list',
+            {page: {limit: 50, ...(cursor ? {cursor} : {})}},
+            undefined,
+            profileId,
+          );
+          if (!active) return;
+          if (!r.ok) {
+            setContactError(r.error.messageKey);
+            setContacts([]);
+            return;
+          }
+          found.push(...r.result.items.filter(item => item.record.kind === 'relationship' && item.record.state !== 'deleted'));
+          cursor = r.result.nextCursor;
+          pages += 1;
+        } while (cursor && pages < 20);
+        if (active) setContacts(found);
+      } catch {
         if (active) {
           setContactError('error.transport');
           setContacts([]);
         }
-      });
+      }
+    })();
     return () => { active = false; };
   }, [client, desktop, profileId]);
 
