@@ -1,3 +1,4 @@
+import {AutonomousWorkspace} from './AutonomousWorkspace';
 import {WorkspaceMemorySettings} from './WorkspaceMemorySettings';
 import {FirstConversation} from './FirstConversation';
 import {listStandardProfiles,prepareExistingSetup,readSetupDraft,type SetupProfile,type WorkspaceSelection} from './firstConversation';
@@ -13,6 +14,7 @@ export function App({transport}:{transport:Transport}){
  const client=useMemo(()=>new Client(transport),[transport]);const [prefs,setPrefs]=useState<Preferences>();const [draft,setDraft]=useState({locale:'en',themeId:'orbital',themeVariant:'light' as Preferences['themeVariant']});const [error,setError]=useState('');const [busy,setBusy]=useState(false);const [saved,setSaved]=useState(false);const [ready,setReady]=useState(false);const [retry,setRetry]=useState(0);const revision=useRef(0);const sequence=useRef(0);// Draft ownership is independent of the last committed revision.
  const dirty=useRef(false);const edits=useRef(0);
  const [page,setPage]=useState<'home'|'settings'|'activity'>('home');
+ const [workspace,setWorkspace]=useState<'standard'|'autonomous'>('standard');
  const [workspaceRefresh,refreshWorkspace]=useState(0);
  const [initial,setInitial]=useState(()=>transport.mode==='desktop'?readSetupDraft():undefined);
  const [profiles,setProfiles]=useState<SetupProfile[]>();
@@ -47,7 +49,13 @@ export function App({transport}:{transport:Transport}){
 
  function navigate(next: typeof page){
   if(page==='settings'&&next!=='settings')refreshWorkspace(value=>value+1);
+  if(next==='activity')setWorkspace('standard');
   setPage(next);
+ }
+ function switchWorkspace(next: typeof workspace){
+  if(page==='settings')refreshWorkspace(value=>value+1);
+  setWorkspace(next);
+  setPage('home');
  }
  const retryBoot=()=>{setError('');setRetry(x=>x+1);};
  return <div className="app">
@@ -61,15 +69,22 @@ export function App({transport}:{transport:Transport}){
   </aside>
   <main>
     <header><span className="status"><i/>{text(desktop?'status.desktop':'status.browser')}</span>
-      <button aria-current={page==='settings'?'page':undefined} onClick={()=>navigate(page==='settings'?'home':'settings')}>{text('nav.settings')}</button>
+      <div className="header-actions">
+        <div className="workspace-switch" role="group" aria-label={text('workspace.switcher')}>
+          <button type="button" aria-pressed={workspace==='standard'} className={workspace==='standard'?'active':undefined} onClick={()=>switchWorkspace('standard')}>{text('workspace.standard')}</button>
+          <button type="button" aria-pressed={workspace==='autonomous'} className={workspace==='autonomous'?'active':undefined} onClick={()=>switchWorkspace('autonomous')}>{text('workspace.autonomous')}</button>
+        </div>
+        <button data-nav="settings" aria-current={page==='settings'?'page':undefined} onClick={()=>navigate(page==='settings'?'home':'settings')}>{text('nav.settings')}</button>
+      </div>
     </header>
     <div className="workspace">
-      <div className="center" hidden={page!=='home'}>
+      <div className="center" hidden={page!=='home'||workspace!=='standard'}>
         {!desktop&&<section className="hero"><div className="planet" aria-hidden="true"><span>✦</span></div><h1>{text('hero.title')}</h1><p>{text('talk.preview')}</p></section>}
         {desktop&&!profiles&&!profileError&&!error&&<p role="status">{text('status.loading')}</p>}
         {(profileError||(!ready&&error))&&<div role="alert" className="error"><p>{text(profileError||error)}</p><button onClick={retryBoot}>{text('action.retry')}</button></div>}
         {desktop&&ready&&profiles&&showSetup&&<FirstConversation key={initial?.id??'new'} client={client} locale={locale} initial={initial}
-          onOpen={next=>{setSelection(next);setShowSetup(false);setPage('home');}}/>}
+          onCancel={profiles.length>0&&Boolean(initial?.profileId)?()=>{setInitial(undefined);setShowSetup(false);}:undefined}
+          onOpen={next=>{setSelection(next);setInitial(undefined);setShowSetup(false);setPage('home');}}/>}
         {desktop&&ready&&profiles&&!showSetup&&<Conversations client={client} locale={locale} desktop
           initialSelection={selection} workspaceMode refreshToken={workspaceRefresh}
           onFinishSetup={async profileId=>{
@@ -78,6 +93,9 @@ export function App({transport}:{transport:Transport}){
             setShowSetup(true);
           }} onProfileChange={profileId=>setSelection(old=>old?.profileId===profileId?old:profileId?{profileId}:undefined)}/>}
       </div>
+      {page==='home'&&workspace==='autonomous'&&<div className="center">
+        <AutonomousWorkspace client={client} locale={locale} desktop={desktop} onBackToStandard={()=>switchWorkspace('standard')}/>
+      </div>}
       {page==='settings'&&<div className="center settings-page">
         <h1>{text('nav.settings')}</h1>
         <a className="settings-jump" href="#diagnostics">{text('nav.diagnostics')}</a>

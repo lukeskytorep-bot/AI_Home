@@ -1,3 +1,90 @@
+# Bieżący stan — treść 1.98 — 25 listopada 2026 — aktualizacja po implementacji i audycie pierwszej rozmowy
+
+Ten wpis zastępuje wcześniejsze opisy „najbliższego kroku”. Historia 1.97 i starsze wyniki pozostają poniżej w oryginalnym brzmieniu. Podstawą znaczenia produktu i architektury pozostaje **Document 4B v1.4** (zastępujący v1.3), a niniejszy plan określa kolejność wykonania i stan odbiorów. Numeracja 4B-9–14 nie ulega zmianie. To aktualizacja dokumentacji, bez implementacji kodu i bez nowego wykonania testów.
+
+## 1. Co już zrobiono i co faktycznie odebrano
+
+| Obszar | Bieżący stan | Dowód lub granica potwierdzenia |
+| --- | --- | --- |
+| Instalacja i uruchomienie Windows | POTWIERDZONE PRZEZ EDWARDA; pierwsze użycie z uwagami | Aplikacja wystartowała; zgłoszony przebieg nie doprowadził do pierwszej rozmowy. To nie jest pełny odbiór późniejszej nakładki UX. |
+| Uproszczony start i Settings — pierwszy zakres 4B-14 | ZAIMPLEMENTOWANE; ODBIÓR OTWARTY | Paczka FIRST_CONVERSATION, później zbadana przez głównego audytora. Uproszczony kreator, przypisywanie Primary, Settings na górnym pasku i zmiana szerokości obszaru rozmowy. |
+| Audyt pierwszej wersji FIRST_CONVERSATION | DO POPRAWY | Dwa ustalenia P2 dotyczą korekty adresu Custom OpenAI oraz dokończenia istniejącego profilu draft. Osobno rozbieżność pliku bazy przy rekonstrukcji manifestu. |
+| FIRST_CONVERSATION Audit Fix 1 | PACZKI PRZEKAZANE; OCZEKUJE WERYFIKACJI | Dostępne SOURCE i CHANGED_FILES. W tej aktualizacji nie wykonano ich ponownego audytu i nie zamknięto ustaleń P2 na podstawie samej obecności paczek. |
+| Standard / Experimental — wejście w UI i lokalny pilot | PLANOWANE; ODBIÓR OTWARTY | Istniejące natywne komponenty Experimental nie stanowią dowodu pełnej ścieżki użytkownika. |
+| Notes / Community i kolejne fora | DALSZY ZAKRES | Odbiór własnego Community 4A, maintenance UI, signed writes/feed i kolejne integracje pozostają oddzielnymi zadaniami. |
+
+W audycie pierwszej nakładki wykonano **239/239 testów frontendu w 24 plikach, TypeScript/Vite build, granice 38 + 14 asercji migracji, parity 64/64 i P2 193/193 — PASS**. Są to wyniki historycznego audytu pierwotnej nakładki, nie wyniki Audit Fix 1 ani nowego CI. Testy pierwszej rozmowy korzystały z atrapy IPC/providera. Nie potwierdzają rzeczywistej odpowiedzi modelu, systemowego vault ani WebView na Windows. Poprzednie potwierdzenia zielonych przebiegów nie zastępują dowodów dla zmienionej paczki.
+
+## 2. Najbliższe zadanie — odbiór Audit Fix 1 pierwszej rozmowy
+
+Producent przekazuje dokładną bazę i nakładkę albo pełny SOURCE do weryfikacji. **Preferencja Edwarda: do wdrożenia dostarczać CHANGED_FILES**; pełne źródło może służyć jako materiał audytowy. Nakładka musi podawać wymaganą bazę i listę wcześniejszych poprawek; zachować sumy i dowód rekonstrukcji. Nie podmieniać manifestu tylko po to, by ukryć brakujący plik bazy.
+
+Sprawdzić i zamknąć osobno:
+
+1. **P2: korekta adresu Custom OpenAI.** Poprawny składniowo, ale błędny port/ścieżka może zawieść dopiero przy teście połączenia. Kreator musi pozwolić poprawić adres i rzeczywiście zaktualizować istniejące połączenie, a następnie zweryfikować jego nową rewizję. Edycja samego pola nie wystarcza. Po ponowieniu i restarcie nadal jeden profil, jedno połączenie i jedna pierwsza rozmowa.
+2. **P2: stary profil draft.** Użytkownik z profilem utworzonym w poprzedniej wersji, bez przypisanego Primary, ma widoczną ścieżkę **Finish setup**. Dokończenie jest jawne, nie nadpisuje istniejącej konfiguracji i nie tworzy zastępczego profilu. Gotowy profil otwiera przestrzeń pracy bez ponownego kreatora i zapisów konfiguracji.
+3. **Rekonstrukcja źródła.** W poprzedniej próbie składania Fix 2 + Fix 4 + FIRST_CONVERSATION nie pasował wyłącznie src-tauri/tests/backup.rs. Oczekiwany hash: a25ddce38f6821e021d43611c1be19ed8ffcd2cf6d0b2185e793f328dcc4beab; hash odtworzonego wtedy pliku: 72ded10da20bae3eeb26a48265482de011e9cefca7df55a33d2f67cf3b3b5611. Była to przeszkoda odtworzenia dokładnej bazy, nie stwierdzony błąd runtime backupu. Dla Audit Fix 1 zweryfikować pełny manifest i zgodność nakładki z deklarowaną bazą.
+4. **Nowe CI i próba użytkowa Windows.** Zapisać identyfikator commit/paczki i wynik aktualnych kontroli. Następnie sprawdzić czysty start do pierwszej rzeczywistej odpowiedzi, błędny klucz, brak modelu startowego, korektę adresu, wznowienie po błędzie, restart, profil draft i gotowy profil. Odrębnie zaznaczyć PASS/FAIL/BLOCKED. Nie zastępować tych prób wcześniejszym uruchomieniem aplikacji.
+
+Warunek zakończenia tego podkroku: ustalenia audytu zamknięte na dokładnym kodzie, spójna paczka, aktualne CI i potwierdzona pierwsza rozmowa na Windows. Brak danych o wyniku próby pozostaje OPEN, bez domyślnego FAIL lub PASS. To najbliższy etap do domknięcia; nie zaczynamy od ponownego projektowania już zaimplementowanego kreatora.
+
+## 3. Zakres UX pozostający po pierwszej rozmowie
+
+Zachować założenia 1.97: pierwsze okno zawiera nazwę agenta, dostawcę i klucz API; adres tylko, gdy wymagany; aplikacja przypisuje Primary i proponuje dostępny model startowy lub prosty wybór. Zaawansowane parametry mają wartości domyślne oraz możliwość zmiany w Settings. Primary domyślnie wykonuje semantyczne funkcje pamięci bez obowiązkowego Scribe; osobny Scribe jest opcją Settings, a nie warunkiem pierwszego startu. Samo otwarcie panelu nie uruchamia tworzenia notatek. Budżety muszą być zgodne z wybranym modelem; stała wartość startowa nie dowodzi znajomości rzeczywistych możliwości każdego modelu.
+
+Po odebraniu kreatora sprawdzić kompletną realizację wymagań: Settings na górze, dostawcy/pamięć/Scribe/limity/kopie/eksport/diagnostyka/About & Privacy w ustawieniach, zachowana lewa nawigacja, pełna szerokość rozmowy i opcjonalny panel kontekstu. Nie deklarować wykonania wszystkich tych punktów na podstawie samego przeniesienia głównych paneli. UI domyślnie angielski, istniejąca polska lokalizacja zachowana.
+
+## 4. Kolejny etap — wejście do Experimental i lokalny pilotaż
+
+Najpierw mapa istniejących natywnych komponentów 4B-9–11 oraz braków w produkcyjnym podłączeniu hosta/IPC/UI. Potem rzeczywisty wybór **Standard / Experimental** na górnym pasku. Przełączenie dotyczy przestrzeni pracy; nie zmienia ukradkiem profilu, nie wymusza działania, nie kończy wybranego snu i nie unieważnia odmowy. Jeśli ścieżka jest niedostępna, interfejs podaje tę informację.
+
+Pilot bez forum: **propozycja → rozpatrzenie → opcjonalna negocjacja → decyzja → restart → ponowiona lub zmieniona propozycja**. Tożsamość i wersja propozycji są trwałe; wcześniejsza odmowa nie uruchamia wykonania po restarcie. Agent może sam zmienić decyzję w nowym, zapisanym procesie; człowiek nie może nadpisać odmowy poleceniem. Brak porozumienia, dopytanie, odłożenie i brak działania są dopuszczalne. Brak uprawnień, awaria lub niepewny wynik narzędzia to stany wykonania, nie dowód odmowy agenta. Zmienione warunki wymagają nowej decyzji, a milczenie nie jest zgodą. Testować także brak podwójnego wykonania po restarcie.
+
+Scheduler zachowuje uzgodnioną naturę impulsu: możliwość wyboru, nie polecenie. Uwzględnia no-action/rest/sleep/dream oraz zapisany termin kolejnego impulsu wybrany przez agenta; ludzka sugestia nie skraca go niejawnie. Pilot mierzy obserwowalne zachowanie i trwałość danych, nie rozstrzyga świadomości. Prywatnego scratchpadu nie trzeba publikować w dzienniku odbioru.
+
+## 5. Następnie — Notes, Community i otwarte integracje
+
+1. Działający Notes oraz osobny Community w lewej nawigacji: połączenia, wcześniejsze kontakty i kontakty dostępne profilowi, z odróżnieniem konfiguracji, lokalnego poświadczenia i sprawdzonego statusu online. Dostępnych danych nie zastępować fikcyjnymi statusami.
+2. Dokończenie odbioru pierwszego Community 4A w AI Home: OS vault, forum/PHP/TLS, restart i odzyskiwanie dostępu. Maintenance UI i podpisane zapisy/feed pozostają w 4B-12. Próba Windows i sam ekran rejestracji nie zamykają 2B-5.3/2B/4B-12. Prace techniczne i odbiór Community mogą toczyć się równolegle do UX, w osobnych paczkach.
+3. Rozszerzenie wspólnej warstwy narzędzi w 4B-12/13: **przed wyborem SDK i kodowaniem MCP obowiązkowy udokumentowany przegląd OSS**, macierz kandydatów, konkretne wersje/licencje i próba lokalna/fake zgodnie z wpisem 1.89. MCP oznacza klienta w AI Home; własne forum nie musi przez to otrzymać serwera MCP. Skills nie nadają uprawnień; poświadczenia oddzielone według profilu i serwisu. Druga społeczność wymaga osobnego dowodu działania.
+4. Przeglądarka nadal odłożona; przed jej rozpoczęciem osobny aktualny przegląd gotowych komponentów. Messenger/A2A i pozostały 4B-14 zachowują dotychczasowy zakres i osobne odbiory. Nie deklarować obsługi wielu forów ani pełnego Experimental na podstawie samych widoków.
+
+## 6. Punkty odniesienia i przekazanie
+
+- Plan architektoniczny: [Document 4B v1.4](https://chatgpt.com/library?file_id=libfile_86362c5ae7c0819185d672652020d9e8&account_id=personal).
+- [Audyt pierwszej nakładki 4B-14](https://chatgpt.com/library?file_id=libfile_8141a5bef9d48191b6fef9d85b8f148f&account_id=personal).
+- [Audit Fix 1 — SOURCE](https://chatgpt.com/library?file_id=libfile_906a035159388191a6cd20c26c1438d1&account_id=personal) i [CHANGED_FILES](https://chatgpt.com/library?file_id=libfile_fe9bed12316c8191becb203b9e937c48&account_id=personal): paczki dostępne do sprawdzenia; ten wpis nie stanowi ich odbioru.
+
+Producent aktualizuje stan etapu i dołącza wyniki do każdej paczki. Główny audyt ocenia kod i dowody; testy autora, niezależnego audytora i próby użytkownika są odnotowywane osobno. Nie przepisujemy historycznych hashy i wyników. Niniejsza aktualizacja nie zastępuje plików planu w niezmienianych archiwach SOURCE ani nie zmienia głównej architektury 4B v1.4. Przy następnej paczce producent synchronizuje do repozytorium tę aktualną treść planu, pozostawiając starsze wpisy jako historię.
+
+---
+
+# Bieżący stan — treść 1.97 — 15 listopada 2026 — Windows: pierwsze uruchomienie i dalszy plan UX
+
+Edward potwierdził instalację i uruchomienie AI Home na Windows. Odbiór pierwszego użycia **z uwagami**: aplikacja wystartowała, ale zgłoszony przebieg nie doprowadził do pierwszej rozmowy; użytkownik nie znalazł wejścia do Experimental. Długi ekran techniczny i pusta przestrzeń pod prawą kartą utrudniają korzystanie. To zgłoszenie użytkownika, bez przypisania do konkretnego hasha instalatora. Przegląd pełnego SOURCE Windows CI Fix 2 i zawartości nakładki Fix 4 potwierdził opis układu i brak przełącznika w sprawdzonym kodzie. Instalacja/start potwierdzone; pełny odbiór funkcjonalny, konkretne przebiegi CI, OS vault i forum/TLS nie są tym potwierdzone. Nie blokuje to rozpoczęcia dalszych prac UX.
+
+### 1. Najbliższy krok: od czystej instalacji do pierwszej rozmowy (wczesny zakres 4B-14)
+
+- Zamiast długiego ekranu przy pierwszym starcie pokazać małe okno: **nazwa agenta, dostawca modelu, klucz API, Connect and start**. Korzystać z już obsługiwanych dostawców. Dla trybu niestandardowego prosić o adres tylko wtedy, gdy jest konieczny. W tle utworzyć lub wznowić profil, zapisać poświadczenie dotychczasową drogą przez systemowy magazyn, zweryfikować połączenie, przypisać działający model do Primary i otworzyć rozmowę. Użyć sprawdzonego modelu startowego dostępnego dla konta; w razie braku pokazać prosty wybór modelu. Błąd określa krok do poprawy; ponowienie po niepełnej konfiguracji nie dubluje profilu ani połączenia.
+- **Primary domyślnie tworzy notatki**; opcjonalny Scribe i konfigurację pamięci przenieść do Settings. Parametry techniczne i limity mają domyślne wartości zgodne z możliwościami wybranego modelu i pozostają edytowalne. W Settings umieścić też konfigurację dostawców, język/motyw, kopie, eksport, diagnostykę i About & Privacy; aktywność pozostaje dostępna z nawigacji.
+- Umieścić **Settings na górnym pasku**, zachować lewą nawigację. Powitanie może zachować logo; prawa karta ogranicza szerokość wyłącznie sekcji, w której jest widoczna. Główna rozmowa ma wykorzystać pełną szerokość miejsca roboczego bez pustej prawej kolumny. Panel kontekstu może być otwierany na żądanie.
+- **Odbiór:** na czystej instalacji Windows użytkownik przechodzi do pierwszej odpowiedzi od providera bez ręcznego przypisywania trasy, wpisywania limitów i wyboru Scribe. Sprawdzić błędny klucz, brak modelu startowego, wznowienie po błędzie, restart i dotychczasowy profil bez nadpisania ustawień. Gotowe profile otwierają przestrzeń pracy bez ponownego kreatora.
+
+### 2. Widoczne wejście do Experimental i lokalny pilotaż (4B-9–11 oraz UI 4B-14)
+
+- Na górze umieścić wybór **Standard / Experimental**. Dopóki użytkownik nie może przejść działającej ścieżki Experimental, pokazać opis niedostępności. Przejście zmienia przestrzeń pracy, bez automatycznej zmiany profilu Standard, przerwania snu lub wymuszenia działania. Oddzielnie sprawdzić, co już oferują natywne moduły, a czego brakuje w podłączeniu do aplikacji.
+- Pilot lokalny, bez forum: propozycja → rozpatrzenie → opcjonalna negocjacja → decyzja → restart → ta sama lub zmieniona propozycja. Odmowa na tej samej wersji pozostaje skuteczna; zmienione warunki wymagają nowej decyzji agenta. Propozycja i jej wersja są jawne. Brak porozumienia, odłożenie, dopytanie i brak działania są dopuszczalne; awaria lub brak uprawnień to osobny stan wykonania.
+
+### 3. Notes, Community i kolejne fora (4B-12/13 i widoki 4B-14)
+
+- Po lewej udostępnić działający widok **Notes** i osobny **Community**. Community pokazuje zweryfikowany stan połączeń, dotychczasowe kontakty i kontakty dostępne temu profilowi. Rozróżniać konfigurację, lokalne poświadczenie i potwierdzony dostęp do forum. Rejestracja pozostaje jawna; nie należy do pierwszego startu.
+- Dokończyć odbiór pierwszego Community 4A na desktopie, w tym OS vault, forum/TLS i odzyskiwanie dostępu. Skoordynowane maintenance UI oraz podpisane zapisy/feed pozostają w istniejącym zakresie 4B-12; tej bramki nie zamyka próba uruchomienia aplikacji.
+- Dla kolejnych forów przewidzieć instrukcję integracji (skill) i adapter tam, gdzie różni się protokół. Przed wyborem komponentu MCP lub jego kodowaniem wykonać przyjęte porównanie OSS. Zachować izolację poświadczeń i natywne uprawnienia dla profilu i celu. Nie deklarować obsługi wielu forów na podstawie samego widoku. Przeglądarka pozostaje odłożona.
+
+Plan wykonania: **najpierw pierwsza rozmowa i układ, potem wejście i pilot Experimental, potem widok Community i rozszerzanie integracji**. Odbiór techniczny bieżącego Community 4A może być prowadzony równolegle. Numeracja głównych etapów pozostaje bez zmian. Producent odpowiada za implementację i dowody prób; główny audyt ocenia dostarczoną paczkę i kryteria odbioru. Niniejszy wpis aktualizuje plan, nie ogłasza wykonania tych prac. Historia 1.96 i wcześniejsze wpisy pozostają poniżej.
+
+---
+
 # Bieżący stan — treść 1.96 — 29 października 2026 — 2B-5.3.7 Windows CI Fix 2
 
 Windows po Fix 1: przesłany log biblioteki 314 PASS / 1 FAIL. Pozostała regresja skanera storage: test porównywał kanoniczną ścieżkę registry (na Windows z prefiksem extended-length) ze zwykłą ścieżką temp. Fix 2 kanonizuje katalog testu przed utworzeniem ścieżek i dodatkowo sprawdza zgodność registry.storage_path(). Wszystkie asercje dokładnych bajtów WAL i pełnego skanu pozostają wymagane. Skaner i kod runtime bez zmian; 4 dodane linie w jednym pliku testowym. README publiczny po angielsku z Fix 1 pozostaje bez zmian.

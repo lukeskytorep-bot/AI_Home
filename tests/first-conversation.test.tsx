@@ -332,3 +332,44 @@ it('offers explicit Finish setup for a legacy draft and completes it without cre
   expect(requests.filter(r=>r.command==='conversation.create')).toHaveLength(1);
   expect(host.querySelector('.conversations textarea')).not.toBeNull();
 });
+
+it('lets a legacy draft user return to the workspace via Back without writing changes', async () => {
+  const {transport, requests} = desktop({legacyDraft: true});
+  await mount(transport);
+  await click('Finish setup');
+  expect(host.querySelector('.first-conversation')).not.toBeNull();
+  await click('Back');
+  expect(host.querySelector('.first-conversation')).toBeNull();
+  expect(host.querySelector('.conversations')).not.toBeNull();
+  expect(requests.some(r => r.command === 'profile.create' || r.command === 'connection.create')).toBe(false);
+});
+
+it('rejects non-local HTTP, bare query/hash and control chars in custom endpoints before creating a profile', async () => {
+  const {transport, requests} = desktop();
+  await mount(transport);
+  await fill('form input:not([type=password])', 'Ada');
+  await choose('form select', 'custom_openai');
+  await fill('input[type=password]', 'test-key');
+  for (const bad of ['http://example.com/v1', 'https://example.com/v1?', 'https://example.com/v1#', 'https://example.com/v1\u0007']) {
+    await fill('input[type=url]', bad);
+    await click('Connect and start');
+    expect(host.querySelector('[role=alert]')?.textContent).toContain('HTTPS');
+  }
+  expect(requests.some(r => r.command === 'profile.create' || r.command === 'connection.create')).toBe(false);
+});
+
+it('clears saved setup draft from localStorage when cancelling via Back after a failed connection test', async () => {
+  const {transport} = desktop({legacyDraft: true});
+  await mount(transport);
+  await click('Finish setup');
+  await fill('input[type=password]', 'bad-key');
+  await click('Connect and start');
+  await finishPoll();
+  expect(localStorage.getItem(setupStorageKey)).not.toBeNull();
+  await click('Back');
+  expect(localStorage.getItem(setupStorageKey)).toBeNull();
+  await restart(transport);
+  expect(host.querySelector('.first-conversation')).toBeNull();
+  expect(host.querySelector('.conversations')).not.toBeNull();
+});
+

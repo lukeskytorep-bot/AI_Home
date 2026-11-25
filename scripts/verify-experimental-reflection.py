@@ -13,7 +13,7 @@ a=(r/'src-tauri/src/experimental_runtime.rs').read_text()
 defs=json.loads((r/'contracts/experimental.schema.json').read_text())['$defs']
 checks=[
  ('supplemental DTOs',all(n in defs for n in ['ReflectionOutput','ReflectionRun','PrivateReflection','PrivateSelfReview','PrivateSelfRecord'])),
- ('storage target', 'PRAGMA user_version=16' in s),
+ ('storage target', 'PRAGMA user_version=17' in s),
  ('new records participate in permanent deletion',all(n in s and n in c for n in ['experimental_reflection_runs','experimental_private_reflections','experimental_self_reviews','experimental_self_records'])),
  ('source tombstones','experimental_private_reflections' in d and 'experimental_self_records' in d),
  ('generator is replaceable and disabled by default','pub trait ReflectionProvider' in m and 'DisabledReflectionProvider' in a),

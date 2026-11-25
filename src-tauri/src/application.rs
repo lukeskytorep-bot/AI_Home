@@ -62,7 +62,7 @@ impl Application {
         }
 
         if crate::backup::restore_pending_for_store(&self.store) && command!="backup.restore.request" {
-            let mutates=if crate::connections::supports(command){crate::connections::mutates(command)}else{
+            let mutates=if crate::connections::supports(command){crate::connections::mutates(command)}else if crate::experimental_pilot::supports(command){crate::experimental_pilot::mutates(command)}else{
                 let catalog=embedded(include_str!("../../contracts/ipc.catalog.json"));let foundation=embedded(include_str!("../../contracts/foundation.ipc.json"));let backup=embedded(include_str!("../../contracts/backup.ipc.json"));let export=embedded(include_str!("../../contracts/export.ipc.json"));let diagnostics=embedded(include_str!("../../contracts/diagnostics.ipc.json"));
                 catalog["commands"].get(command).or_else(||foundation["commands"].get(command)).or_else(||backup["commands"].get(command)).or_else(||export["commands"].get(command)).or_else(||diagnostics["commands"].get(command)).and_then(|c|c["mutates"].as_bool()).unwrap_or(false)
             };
@@ -94,6 +94,22 @@ impl Application {
                 _=>unreachable!()
             };
             return Ok(Dispatch{response:success(r,result),event:None})
+        }
+        if matches!(
+            command,
+            "autonomous.instance.list"
+                | "autonomous.instance.create"
+                | "autonomous.instance.status"
+                | "autonomous.proposal.submit"
+                | "autonomous.proposal.negotiate"
+                | "autonomous.proposal.consider"
+                | "autonomous.wake.check"
+        ) {
+            let pilot = crate::experimental_pilot::AutonomousPilotService::system(self.store.pool.clone());
+            return Ok(match pilot.dispatch(r).await {
+                Ok(result) => Dispatch { response: success(r, result), event: None },
+                Err(code) => reject(&code),
+            });
         }
         if crate::connections::supports(command){return Ok(Dispatch{response:self.connections.dispatch(r.clone()).await,event:None})}
         let catalog=embedded(include_str!("../../contracts/ipc.catalog.json"));let foundation=embedded(include_str!("../../contracts/foundation.ipc.json"));let backup=embedded(include_str!("../../contracts/backup.ipc.json"));

@@ -250,6 +250,8 @@ async fn save_receipt(
 
 pub(crate) async fn delete_rows(tx: &mut Tx<'_>, profile: &str) -> Result<(), Failure> {
     for table in [
+        "experimental_proposal_rounds",
+        "experimental_proposals",
         "experimental_self_records",
         "experimental_self_reviews",
         "experimental_private_reflections",

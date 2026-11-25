@@ -1,0 +1,204 @@
+{
+  "contractVersion": 1,
+  "scope": "experimental_pilot",
+  "commands": {
+    "autonomous.instance.list": {
+      "mutates": false,
+      "payload": {"type": "object", "properties": {}, "required": [], "additionalProperties": false},
+      "result": {
+        "type": "object",
+        "properties": {
+          "items": {"type": "array"}
+        },
+        "required": ["items"],
+        "additionalProperties": false
+      }
+    },
+    "autonomous.instance.create": {
+      "mutates": true,
+      "payload": {
+        "type": "object",
+        "properties": {
+          "displayName": {"type": "string", "minLength": 1, "maxLength": 128},
+          "initialIntervalMs": {"type": "integer", "minimum": 1, "maximum": 86400000}
+        },
+        "required": ["displayName"],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "profileId": {"type": "string", "minLength": 1},
+          "instanceId": {"type": "string", "minLength": 1},
+          "displayName": {"type": "string", "minLength": 1},
+          "status": {"type": "string", "minLength": 1},
+          "activeWakePlan": {"type": "object"}
+        },
+        "required": ["profileId", "instanceId", "displayName", "status", "activeWakePlan"],
+        "additionalProperties": false
+      }
+    },
+    "autonomous.instance.status": {
+      "mutates": false,
+      "payload": {
+        "type": "object",
+        "properties": {
+          "instanceId": {"type": "string", "minLength": 1, "maxLength": 128}
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "profileId": {"type": "string", "minLength": 1},
+          "displayName": {"type": "string", "minLength": 1},
+          "instance": {"type": "object"},
+          "activeWakePlan": {},
+          "activeRefusals": {"type": "array"},
+          "proposals": {"type": "array"},
+          "recentDecisions": {"type": "array"},
+          "unresolvedActions": {"type": "array"},
+          "forumConnected": {"const": false}
+        },
+        "required": ["profileId", "displayName", "instance", "activeWakePlan", "activeRefusals", "proposals", "recentDecisions", "unresolvedActions", "forumConnected"],
+        "additionalProperties": false
+      }
+    },
+    "autonomous.proposal.submit": {
+      "mutates": true,
+      "payload": {
+        "type": "object",
+        "properties": {
+          "proposalId": {"type": "string", "minLength": 1, "maxLength": 128},
+          "title": {"type": "string", "minLength": 1, "maxLength": 200},
+          "terms": {"type": "string", "minLength": 1, "maxLength": 4000}
+        },
+        "required": ["title", "terms"],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "proposal": {"type": "object"},
+          "version": {"type": "integer", "minimum": 1},
+          "created": {"type": "boolean"}
+        },
+        "required": ["proposal", "version", "created"],
+        "additionalProperties": false
+      }
+    },
+    "autonomous.proposal.negotiate": {
+      "mutates": true,
+      "payload": {
+        "type": "object",
+        "properties": {
+          "proposalId": {"type": "string", "minLength": 1, "maxLength": 128},
+          "kind": {"enum": ["question", "response"]},
+          "note": {"type": "string", "minLength": 1, "maxLength": 2000}
+        },
+        "required": ["proposalId", "kind", "note"],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "proposal": {"type": "object"},
+          "round": {"type": "object"},
+          "refusalPreserved": {"type": "boolean"}
+        },
+        "required": ["proposal", "round", "refusalPreserved"],
+        "additionalProperties": false
+      }
+    },
+    "autonomous.proposal.consider": {
+      "mutates": true,
+      "payload": {
+        "type": "object",
+        "properties": {
+          "proposalId": {"type": "string", "minLength": 1, "maxLength": 128},
+          "simulationOutcome": {
+            "enum": [
+              "accept",
+              "refuse",
+              "ask",
+              "defer",
+              "no_action",
+              "rest",
+              "sleep",
+              "execution_failed",
+              "execution_uncertain"
+            ]
+          },
+          "note": {"type": "string", "maxLength": 1000},
+          "sleepDelayMs": {"type": "integer", "minimum": 1000, "maximum": 86400000},
+          "reconsiderationConditions": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {"type": "string", "minLength": 1, "maxLength": 256}
+          }
+        },
+        "required": ["proposalId"],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "enum": [
+              "decided",
+              "refusal_active",
+              "already_executed",
+              "sleeping",
+              "not_due",
+              "reconciliation_required",
+              "resource_unavailable",
+              "execution_failed",
+              "execution_uncertain"
+            ]
+          },
+          "decisionSource": {"enum": ["provider", "pilot_simulation", "policy_guard"]},
+          "decisionOutcome": {"type": "string"},
+          "decisionId": {"type": "string"},
+          "refusalId": {"type": "string"},
+          "actionId": {"type": "string"},
+          "proposal": {"type": "object"},
+          "activeWakePlan": {}
+        },
+        "required": ["status", "decisionSource", "proposal"],
+        "additionalProperties": false
+      }
+    },
+    "autonomous.wake.check": {
+      "mutates": true,
+      "payload": {
+        "type": "object",
+        "properties": {
+          "eventKind": {"type": "string", "minLength": 1, "maxLength": 128}
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "result": {
+            "enum": [
+              "not_due",
+              "busy",
+              "inactive",
+              "resource_unavailable",
+              "reconciliation_required",
+              "completed"
+            ]
+          },
+          "outcome": {"type": "string"},
+          "decisionId": {"type": "string"},
+          "activeWakePlan": {}
+        },
+        "required": ["result", "activeWakePlan"],
+        "additionalProperties": false
+      }
+    }
+  }
+}

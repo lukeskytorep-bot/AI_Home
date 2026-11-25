@@ -4,11 +4,12 @@ import type {Client} from '../ipc/client';
 import {firstConversation, readSetupDraft, providers, setupStorageKey,
   type Model, type SetupDraft, type SetupStep, type WorkspaceSelection} from './firstConversation';
 
-export function FirstConversation({client, locale, initial, onOpen}: {
+export function FirstConversation({client, locale, initial, onOpen, onCancel}: {
   client: Client;
   locale: string;
   initial?: SetupDraft;
   onOpen: (selection: WorkspaceSelection) => void;
+  onCancel?: () => void;
 }) {
   const text = (key: string) => t(locale, key);
   const saved = useRef(initial);
@@ -43,9 +44,14 @@ export function FirstConversation({client, locale, initial, onOpen}: {
     let url = '';
     if (provider === 'custom_openai') {
       try {
-        const parsed = new URL(endpoint.trim());
-        if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username ||
-            parsed.password || parsed.search || parsed.hash) throw Error();
+        if (/[\u0000-\u001f\u007f]/.test(endpoint)) throw Error();
+        const raw = endpoint.trim();
+        const parsed = new URL(raw);
+        const localHttp = parsed.protocol === 'http:' &&
+          ['localhost', '127.0.0.1', '[::1]'].includes(parsed.hostname);
+        if ((parsed.protocol !== 'https:' && !localHttp) || parsed.username ||
+            parsed.password || parsed.search || parsed.hash ||
+            parsed.href.includes('?') || parsed.href.includes('#') || parsed.port === '0') throw Error();
         url = parsed.href.replace(/\/+$/, '');
       } catch {
         setError('onboarding.endpointError');
@@ -130,7 +136,10 @@ export function FirstConversation({client, locale, initial, onOpen}: {
             {models.map(m => <option key={m.id} value={m.id}>{m.label} ({m.id})</option>)}
           </select>
         </label>}
-        <button className="primary" disabled={!name.trim() || Boolean(models && !model)}>{text('onboarding.start')}</button>
+        <div className="first-conversation-actions">
+          <button className="primary" disabled={!name.trim() || Boolean(models && !model)}>{text('onboarding.start')}</button>
+          {onCancel && <button type="button" onClick={() => { localStorage.removeItem(setupStorageKey); onCancel(); }}>{text('onboarding.cancel')}</button>}
+        </div>
       </fieldset>
     </form>
     {step && !error && <p role="status">{text('onboarding.' + step)}</p>}
