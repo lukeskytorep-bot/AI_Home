@@ -1046,7 +1046,7 @@
     "src/themes/aurora.json": "037ac2a92a892aedc67a8a498e92f749b44faca452b38d447b51e55d06a5d7d3",
     "src/themes/orbital.json": "6ae46380405f98fda97ee0acf88bc2b43015da5ad8f5d2c7584ce4bfe6d7b0b9",
     "src/ui/ActivityPanel.tsx": "674b2ab6893dca72be4b4ba779a9f3e0361d6d7dc93c317c65477e2d260be1ad",
-    "src/ui/App.tsx": "f6072da019fa4c141600d57354b12a54ce632e16e4b92f2cc841a85860c40480",
+    "src/ui/App.tsx": "471c351845c85725e192f3462fffda97291bb31360310424120dbfc9eabc97a8",
     "src/ui/AttachmentsPanel.tsx": "ece79c317b9b732fd117d33a4682f3c4f48974bba3db57de2a21407c20617a5e",
     "src/ui/AutonomousWorkspace.tsx": "5300c215c36508357a130c16e9951ee853772f2379576b24c64f76af1dba3173",
     "src/ui/BackupPanel.tsx": "f0facaaa5bce8376df12794ce7b8cb0629f34f51e17186d75678583e2ec113bf",

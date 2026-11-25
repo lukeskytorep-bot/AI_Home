@@ -1,6 +1,6 @@
 import {AutonomousWorkspace} from './AutonomousWorkspace';
 import {WorkspaceMemorySettings} from './WorkspaceMemorySettings';
-import {FirstConversation} from './FirstConversation';
+import {FirstConversation} from './FirstConversation.tsx';
 import {listStandardProfiles,prepareExistingSetup,readSetupDraft,type SetupProfile,type WorkspaceSelection} from './firstConversation';
 import {CommunityPanel} from './CommunityPanel';
 import {Conversations} from './Conversations';
