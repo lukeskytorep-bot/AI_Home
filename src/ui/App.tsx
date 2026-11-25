@@ -1,4 +1,6 @@
 import {AutonomousWorkspace} from './AutonomousWorkspace';
+import {NotesWorkspace} from './NotesWorkspace';
+import {CommunityWorkspace} from './CommunityWorkspace';
 import {WorkspaceMemorySettings} from './WorkspaceMemorySettings';
 import {FirstConversation} from './FirstConversation.tsx';
 import {listStandardProfiles,prepareExistingSetup,readSetupDraft,type SetupProfile,type WorkspaceSelection} from './firstConversation';
@@ -13,7 +15,7 @@ import {useEffect,useState,useMemo,useRef} from 'react';import type {Preferences
 export function App({transport}:{transport:Transport}){
  const client=useMemo(()=>new Client(transport),[transport]);const [prefs,setPrefs]=useState<Preferences>();const [draft,setDraft]=useState({locale:'en',themeId:'orbital',themeVariant:'light' as Preferences['themeVariant']});const [error,setError]=useState('');const [busy,setBusy]=useState(false);const [saved,setSaved]=useState(false);const [ready,setReady]=useState(false);const [retry,setRetry]=useState(0);const revision=useRef(0);const sequence=useRef(0);// Draft ownership is independent of the last committed revision.
  const dirty=useRef(false);const edits=useRef(0);
- const [page,setPage]=useState<'home'|'settings'|'activity'>('home');
+ const [page,setPage]=useState<'home'|'notes'|'community'|'settings'|'activity'>('home');
  const [workspace,setWorkspace]=useState<'standard'|'autonomous'>('standard');
  const [workspaceRefresh,refreshWorkspace]=useState(0);
  const [initial,setInitial]=useState(()=>transport.mode==='desktop'?readSetupDraft():undefined);
@@ -49,7 +51,7 @@ export function App({transport}:{transport:Transport}){
 
  function navigate(next: typeof page){
   if(page==='settings'&&next!=='settings')refreshWorkspace(value=>value+1);
-  if(next==='activity')setWorkspace('standard');
+  if(next==='activity'||next==='notes'||next==='community')setWorkspace('standard');
   setPage(next);
  }
  function switchWorkspace(next: typeof workspace){
@@ -63,7 +65,9 @@ export function App({transport}:{transport:Transport}){
     <div className="brand"><span className="orb" aria-hidden="true">✦</span><div>AI Home<small>{text('brand.tagline')}</small></div></div>
     <nav aria-label="AI Home">
       <button aria-current={page==='home'?'page':undefined} className={'nav'+(page==='home'?' active':'')} onClick={()=>navigate('home')}>{text('nav.home')}</button>
-      {['memory','knowledge','rules'].map(key=><button key={key} className="nav" disabled title={text('status.pending')}>{text('nav.'+key)}</button>)}
+      <button aria-current={page==='notes'?'page':undefined} className={'nav'+(page==='notes'?' active':'')} onClick={()=>navigate('notes')}>{text('nav.notes')}</button>
+      <button aria-current={page==='community'?'page':undefined} className={'nav'+(page==='community'?' active':'')} onClick={()=>navigate('community')}>{text('nav.community')}</button>
+      {['knowledge','rules'].map(key=><button key={key} className="nav" disabled title={text('status.pending')}>{text('nav.'+key)}</button>)}
       <button aria-current={page==='activity'?'page':undefined} className={'nav'+(page==='activity'?' active':'')} onClick={()=>navigate('activity')}>{text('nav.activity')}</button>
     </nav>
   </aside>
@@ -95,6 +99,12 @@ export function App({transport}:{transport:Transport}){
       </div>
       {page==='home'&&workspace==='autonomous'&&<div className="center">
         <AutonomousWorkspace client={client} locale={locale} desktop={desktop} onBackToStandard={()=>switchWorkspace('standard')}/>
+      </div>}
+      {page==='notes'&&<div className="center">
+        <NotesWorkspace client={client} locale={locale} desktop={desktop} initialProfileId={selection?.profileId}/>
+      </div>}
+      {page==='community'&&<div className="center">
+        <CommunityWorkspace client={client} transport={transport} locale={locale} initialProfileId={selection?.profileId}/>
       </div>}
       {page==='settings'&&<div className="center settings-page">
         <h1>{text('nav.settings')}</h1>
