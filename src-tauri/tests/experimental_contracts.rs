@@ -67,7 +67,7 @@ async fn schema_14_persists_experimental_and_internal_state_foundation_with_fore
     sqlx::query("INSERT INTO experimental_technical_checkpoints(profile_id,instance_id,episode_id,id,revision,body) VALUES(?,?,?,?,1,?)").bind("profile-a").bind("exp-a").bind("episode-a").bind("tech-a").bind(technical.to_string()).execute(pool).await.unwrap();
     assert!(sqlx::query("PRAGMA foreign_key_check").fetch_all(pool).await.unwrap().is_empty());
     let tables:i64=sqlx::query_scalar("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name LIKE 'experimental_%'").fetch_one(pool).await.unwrap();
-    assert_eq!(tables,19);
+    assert_eq!(tables,20);
 }
 
 #[tokio::test]

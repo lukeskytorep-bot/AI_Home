@@ -3,7 +3,7 @@ use sha2::{Digest,Sha256};
 use sqlx::Row;
 use tokio::sync::Mutex;
 use crate::{domain::schema,kernel::Kernel,persistence::Store};
-pub struct Application {store:Store,kernel:Kernel,gate:Mutex<()>,connections:crate::connections::Connections}
+pub struct Application {store:Store,kernel:Kernel,gate:Mutex<()>,connections:crate::connections::Connections,vault:crate::vault::Vault}
 pub struct Dispatch {pub response:Value,pub event:Option<Value>}
 fn error(r:&Value,code:&str)->Value{json!({"contractVersion":1,"requestId":r["requestId"].as_str().filter(|s|!s.is_empty()&&s.len()<=128).unwrap_or("invalid-request"),"ok":false,"error":{"code":code,"messageKey":format!("error.{}",code.to_lowercase()),"retryable":false}})}
 fn success(r:&Value,result:Value)->Value{json!({"contractVersion":1,"requestId":r["requestId"],"ok":true,"result":result})}
@@ -21,8 +21,8 @@ impl Application {
     /// Native Community adapter only; caller must retain the managed host gate.
     pub(crate) fn community_pool(&self)->&sqlx::SqlitePool { &self.store.pool }
     pub fn new(store:Store)->Self{Self::with_vault(store,crate::vault::Vault::os())}
-    pub fn with_vault(store:Store,vault:crate::vault::Vault)->Self{let mut kernel=Kernel::new();kernel.ready();let connections=crate::connections::Connections::new(store.pool.clone(),vault);Self{store,kernel,gate:Mutex::new(()),connections}}
-    pub fn with_file_picker(store:Store,vault:crate::vault::Vault,picker:std::sync::Arc<dyn crate::imports::FilePicker>)->Self{let mut kernel=Kernel::new();kernel.ready();let connections=crate::connections::Connections::with_picker(store.pool.clone(),vault,picker);Self{store,kernel,gate:Mutex::new(()),connections}}
+    pub fn with_vault(store:Store,vault:crate::vault::Vault)->Self{let mut kernel=Kernel::new();kernel.ready();let connections=crate::connections::Connections::new(store.pool.clone(),vault.clone());Self{store,kernel,gate:Mutex::new(()),connections,vault}}
+    pub fn with_file_picker(store:Store,vault:crate::vault::Vault,picker:std::sync::Arc<dyn crate::imports::FilePicker>)->Self{let mut kernel=Kernel::new();kernel.ready();let connections=crate::connections::Connections::with_picker(store.pool.clone(),vault.clone(),picker);Self{store,kernel,gate:Mutex::new(()),connections,vault}}
     /// Native integration seam only. Registration/UI and coordinated backup
     /// are not enabled by this builder. The desktop host does not call it yet.
     pub fn with_community_lifecycle(mut self,service:crate::community_host::CommunityLifecycle)->Self{
@@ -100,12 +100,18 @@ impl Application {
             "autonomous.instance.list"
                 | "autonomous.instance.create"
                 | "autonomous.instance.status"
+                | "autonomous.instance.lifecycle"
+                | "autonomous.provider.configure"
                 | "autonomous.proposal.submit"
                 | "autonomous.proposal.negotiate"
                 | "autonomous.proposal.consider"
+                | "autonomous.action.reconcile"
                 | "autonomous.wake.check"
         ) {
-            let pilot = crate::experimental_pilot::AutonomousPilotService::system(self.store.pool.clone());
+            let pilot = crate::experimental_pilot::AutonomousPilotService::system_with_vault(
+                self.store.pool.clone(),
+                self.vault.clone(),
+            );
             return Ok(match pilot.dispatch(r).await {
                 Ok(result) => Dispatch { response: success(r, result), event: None },
                 Err(code) => reject(&code),

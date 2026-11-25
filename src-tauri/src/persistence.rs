@@ -138,10 +138,11 @@ impl Store {
         let recovery_now=chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis,true);
         sqlx::query("UPDATE experimental_instances SET revision=revision+1, body=json_set(body,'$.revision',revision+1,'$.runtimeGeneration',json_extract(body,'$.runtimeGeneration')+1,'$.status','interrupted','$.updatedAt',?) WHERE json_extract(body,'$.status')='running'").bind(&recovery_now).execute(&mut *tx).await?;
         sqlx::query("UPDATE experimental_actions SET revision=revision+1, body=json_set(body,'$.revision',revision+1,'$.state','uncertain','$.updatedAt',?) WHERE json_extract(body,'$.state')='sent'").bind(&recovery_now).execute(&mut *tx).await?;
-        // 4B-14 local Autonomous pilot: durable versioned proposals and negotiation rounds.
+        // 4B-14 local Autonomous pilot: durable versioned proposals, negotiation rounds, and provider call budgets.
         for statement in [
             "CREATE TABLE IF NOT EXISTS experimental_proposals (profile_id TEXT NOT NULL, instance_id TEXT NOT NULL, id TEXT NOT NULL, version INTEGER NOT NULL, revision INTEGER NOT NULL, body TEXT NOT NULL, PRIMARY KEY(profile_id,id), FOREIGN KEY(profile_id,instance_id) REFERENCES experimental_instances(profile_id,id))",
             "CREATE TABLE IF NOT EXISTS experimental_proposal_rounds (profile_id TEXT NOT NULL, instance_id TEXT NOT NULL, proposal_id TEXT NOT NULL, id TEXT NOT NULL, round_number INTEGER NOT NULL, version INTEGER NOT NULL, body TEXT NOT NULL, PRIMARY KEY(profile_id,id), FOREIGN KEY(profile_id,proposal_id) REFERENCES experimental_proposals(profile_id,id))",
+            "CREATE TABLE IF NOT EXISTS experimental_provider_budgets (profile_id TEXT NOT NULL, instance_id TEXT NOT NULL, revision INTEGER NOT NULL, body TEXT NOT NULL, PRIMARY KEY(profile_id,instance_id), FOREIGN KEY(profile_id,instance_id) REFERENCES experimental_instances(profile_id,id))",
         ] {sqlx::query(statement).execute(&mut *tx).await?;}
         sqlx::query("PRAGMA user_version=17").execute(&mut *tx).await?;tx.commit().await?;
         let store=Self{pool,path};store.preferences().await?;Ok(store)

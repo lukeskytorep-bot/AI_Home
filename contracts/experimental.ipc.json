@@ -59,9 +59,62 @@
           "proposals": {"type": "array"},
           "recentDecisions": {"type": "array"},
           "unresolvedActions": {"type": "array"},
+          "providerConfig": {},
           "forumConnected": {"const": false}
         },
-        "required": ["profileId", "displayName", "instance", "activeWakePlan", "activeRefusals", "proposals", "recentDecisions", "unresolvedActions", "forumConnected"],
+        "required": ["profileId", "displayName", "instance", "activeWakePlan", "activeRefusals", "proposals", "recentDecisions", "unresolvedActions", "providerConfig", "forumConnected"],
+        "additionalProperties": false
+      }
+    },
+    "autonomous.instance.lifecycle": {
+      "mutates": true,
+      "payload": {
+        "type": "object",
+        "properties": {
+          "action": {"enum": ["pause", "resume"]}
+        },
+        "required": ["action"],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "profileId": {"type": "string", "minLength": 1},
+          "instanceId": {"type": "string", "minLength": 1},
+          "status": {"enum": ["ready", "inactive"]}
+        },
+        "required": ["profileId", "instanceId", "status"],
+        "additionalProperties": false
+      }
+    },
+    "autonomous.provider.configure": {
+      "mutates": true,
+      "payload": {
+        "type": "object",
+        "properties": {
+          "provider": {"enum": ["openrouter", "openai", "google", "anthropic", "custom_openai"]},
+          "endpoint": {"type": "string", "maxLength": 1024},
+          "modelId": {"type": "string", "minLength": 1, "maxLength": 512},
+          "apiKey": {"type": "string", "minLength": 1, "maxLength": 8192},
+          "dailyCallLimit": {"type": "integer", "minimum": 1, "maximum": 1000},
+          "maxOutputTokens": {"type": "integer", "minimum": 64, "maximum": 8192}
+        },
+        "required": ["provider", "modelId"],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "profileId": {"type": "string", "minLength": 1},
+          "provider": {"type": "string", "minLength": 1},
+          "normalizedEndpoint": {"type": "string", "minLength": 1},
+          "modelId": {"type": "string", "minLength": 1},
+          "hasCredential": {"type": "boolean"},
+          "dailyCallLimit": {"type": "integer", "minimum": 1},
+          "callsUsedToday": {"type": "integer", "minimum": 0},
+          "maxOutputTokens": {"type": "integer", "minimum": 64}
+        },
+        "required": ["profileId", "provider", "normalizedEndpoint", "modelId", "hasCredential", "dailyCallLimit", "callsUsedToday", "maxOutputTokens"],
         "additionalProperties": false
       }
     },
@@ -150,8 +203,10 @@
               "refusal_active",
               "already_executed",
               "sleeping",
+              "inactive",
               "not_due",
               "reconciliation_required",
+              "budget_exhausted",
               "resource_unavailable",
               "execution_failed",
               "execution_uncertain"
@@ -169,6 +224,31 @@
         "additionalProperties": false
       }
     },
+    "autonomous.action.reconcile": {
+      "mutates": true,
+      "payload": {
+        "type": "object",
+        "properties": {
+          "actionId": {"type": "string", "minLength": 1, "maxLength": 256},
+          "outcome": {"enum": ["confirmed_accepted", "confirmed_not_executed"]},
+          "receiptRef": {"type": "string", "minLength": 1, "maxLength": 256},
+          "note": {"type": "string", "maxLength": 1000}
+        },
+        "required": ["actionId", "outcome", "receiptRef"],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "profileId": {"type": "string", "minLength": 1},
+          "action": {"type": "object"},
+          "instanceStatus": {"type": "string", "minLength": 1},
+          "remainingUnresolved": {"type": "integer", "minimum": 0}
+        },
+        "required": ["profileId", "action", "instanceStatus", "remainingUnresolved"],
+        "additionalProperties": false
+      }
+    },
     "autonomous.wake.check": {
       "mutates": true,
       "payload": {
@@ -182,6 +262,7 @@
       "result": {
         "type": "object",
         "properties": {
+          "profileId": {"type": "string", "minLength": 1},
           "result": {
             "enum": [
               "not_due",
@@ -196,7 +277,7 @@
           "decisionId": {"type": "string"},
           "activeWakePlan": {}
         },
-        "required": ["result", "activeWakePlan"],
+        "required": ["profileId", "result", "activeWakePlan"],
         "additionalProperties": false
       }
     }

@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useState, type FormEvent} from 'react';
+import {useCallback, useEffect, useRef, useState, type FormEvent} from 'react';
 import {t} from '../domain/packs';
 import type {Client} from '../ipc/client';
 
@@ -9,6 +9,16 @@ interface WakePlan {
   nextWakeAt?: string;
   requestedDelayMs?: number;
   status?: string;
+}
+
+interface ProviderConfigView {
+  provider: string;
+  normalizedEndpoint: string;
+  modelId: string;
+  hasCredential: boolean;
+  dailyCallLimit: number;
+  callsUsedToday: number;
+  maxOutputTokens: number;
 }
 
 interface InstanceSummary {
@@ -51,6 +61,13 @@ interface RefusalRecord {
   createdAt: string;
 }
 
+interface UnresolvedAction {
+  id: string;
+  state: string;
+  actionKind?: string;
+  idempotencyKey?: string;
+}
+
 interface InstanceStatus {
   profileId: string;
   displayName: string;
@@ -59,7 +76,8 @@ interface InstanceStatus {
   activeRefusals: RefusalRecord[];
   proposals: ProposalRecord[];
   recentDecisions: Array<{id: string; outcome: string; createdAt: string}>;
-  unresolvedActions: Array<{id: string; state: string; actionKind?: string}>;
+  unresolvedActions: UnresolvedAction[];
+  providerConfig?: ProviderConfigView | null;
   forumConnected: false;
 }
 
@@ -89,6 +107,14 @@ const SIMULATION_OPTIONS = [
   {value: 'provider', key: 'autonomous.pilot.providerMode'},
 ] as const;
 
+const PROVIDER_OPTIONS = [
+  {value: 'openrouter', label: 'OpenRouter'},
+  {value: 'openai', label: 'OpenAI'},
+  {value: 'anthropic', label: 'Anthropic'},
+  {value: 'google', label: 'Google Gemini'},
+  {value: 'custom_openai', label: 'Custom OpenAI-compatible'},
+] as const;
+
 export function AutonomousWorkspace({client, locale, desktop, onBackToStandard}: {
   client: Client;
   locale: string;
@@ -112,6 +138,24 @@ export function AutonomousWorkspace({client, locale, desktop, onBackToStandard}:
   const [reviseTitle, setReviseTitle] = useState('');
   const [reviseTerms, setReviseTerms] = useState('');
 
+  // Provider & budget form state (secret stays in uncontrolled ref, cleared immediately on submit).
+  const [providerKind, setProviderKind] = useState('openrouter');
+  const [providerEndpoint, setProviderEndpoint] = useState('');
+  const [providerModel, setProviderModel] = useState('');
+  const [dailyLimit, setDailyLimit] = useState('20');
+  const apiKeyRef = useRef<HTMLInputElement>(null);
+
+  // Reconciliation evidence per unresolved action.
+  const [reconcileRefs, setReconcileRefs] = useState<Record<string, string>>({});
+
+  const syncProviderForm = useCallback((cfg?: ProviderConfigView | null) => {
+    if (!cfg) return;
+    setProviderKind(cfg.provider);
+    setProviderEndpoint(cfg.provider === 'custom_openai' ? cfg.normalizedEndpoint : '');
+    setProviderModel(cfg.modelId);
+    setDailyLimit(String(cfg.dailyCallLimit));
+  }, []);
+
   const loadInstances = useCallback(async (preferredProfileId?: string) => {
     if (!desktop) return;
     setLoading(true);
@@ -128,8 +172,12 @@ export function AutonomousWorkspace({client, locale, desktop, onBackToStandard}:
       setSelectedProfileId(nextId);
       if (nextId) {
         const s = await client.call<InstanceStatus>('autonomous.instance.status', {}, undefined, nextId);
-        if (s.ok) setStatus(s.result);
-        else setError(s.error.messageKey);
+        if (s.ok) {
+          setStatus(s.result);
+          syncProviderForm(s.result.providerConfig);
+        } else {
+          setError(s.error.messageKey);
+        }
       } else {
         setStatus(undefined);
       }
@@ -138,7 +186,7 @@ export function AutonomousWorkspace({client, locale, desktop, onBackToStandard}:
     } finally {
       setLoading(false);
     }
-  }, [client, desktop, selectedProfileId]);
+  }, [client, desktop, selectedProfileId, syncProviderForm]);
 
   useEffect(() => {
     if (desktop) void loadInstances();
@@ -150,8 +198,12 @@ export function AutonomousWorkspace({client, locale, desktop, onBackToStandard}:
     setError('');
     try {
       const s = await client.call<InstanceStatus>('autonomous.instance.status', {}, undefined, profileId);
-      if (s.ok) setStatus(s.result);
-      else setError(s.error.messageKey);
+      if (s.ok) {
+        setStatus(s.result);
+        syncProviderForm(s.result.providerConfig);
+      } else {
+        setError(s.error.messageKey);
+      }
     } catch {
       setError('error.transport');
     }
@@ -174,6 +226,91 @@ export function AutonomousWorkspace({client, locale, desktop, onBackToStandard}:
       }
       setNewInstanceName('');
       await loadInstances(r.result.profileId);
+    } catch {
+      setError('error.transport');
+    }
+  }
+
+  async function toggleLifecycle(action: 'pause' | 'resume') {
+    if (!selectedProfileId) return;
+    setError('');
+    setNotice('');
+    try {
+      const r = await client.call<{status: string}>('autonomous.instance.lifecycle', {action}, undefined, selectedProfileId);
+      if (!r.ok) {
+        setError(r.error.messageKey);
+        return;
+      }
+      setNotice(`${text('autonomous.pilot.instances')}: ${r.result.status}`);
+      await loadInstances(selectedProfileId);
+    } catch {
+      setError('error.transport');
+    }
+  }
+
+  async function saveProvider(e: FormEvent) {
+    e.preventDefault();
+    if (!selectedProfileId || !providerModel.trim()) return;
+    let cleanEndpoint = '';
+    if (providerKind === 'custom_openai') {
+      try {
+        if (/[\u0000-\u001f\u007f]/.test(providerEndpoint)) throw Error();
+        const parsed = new URL(providerEndpoint.trim());
+        const localHttp = parsed.protocol === 'http:' &&
+          ['localhost', '127.0.0.1', '[::1]'].includes(parsed.hostname);
+        if ((parsed.protocol !== 'https:' && !localHttp) || parsed.username ||
+            parsed.password || parsed.search || parsed.hash ||
+            parsed.href.includes('?') || parsed.href.includes('#') || parsed.port === '0') throw Error();
+        cleanEndpoint = parsed.href.replace(/\/+$/, '');
+      } catch {
+        setError('onboarding.endpointError');
+        return;
+      }
+    }
+    const secret = apiKeyRef.current?.value ?? '';
+    if (apiKeyRef.current) apiKeyRef.current.value = '';
+    setError('');
+    setNotice('');
+    try {
+      const limit = Math.max(1, Math.min(1000, Number.parseInt(dailyLimit, 10) || 20));
+      const payload: Record<string, unknown> = {
+        provider: providerKind,
+        modelId: providerModel.trim(),
+        dailyCallLimit: limit,
+        maxOutputTokens: 512,
+      };
+      if (providerKind === 'custom_openai') payload.endpoint = cleanEndpoint;
+      if (secret) payload.apiKey = secret;
+      const r = await client.call('autonomous.provider.configure', payload, undefined, selectedProfileId);
+      if (!r.ok) {
+        setError(r.error.messageKey);
+        return;
+      }
+      setNotice(text('autonomous.pilot.providerSaved'));
+      await loadInstances(selectedProfileId);
+    } catch {
+      setError('error.transport');
+    }
+  }
+
+  async function reconcile(actionId: string, outcome: 'confirmed_accepted' | 'confirmed_not_executed') {
+    if (!selectedProfileId) return;
+    const evidence = (reconcileRefs[actionId] ?? '').trim() || `manual-reconciliation:${outcome}`;
+    setError('');
+    setNotice('');
+    try {
+      const r = await client.call('autonomous.action.reconcile', {
+        actionId,
+        outcome,
+        receiptRef: evidence,
+      }, undefined, selectedProfileId);
+      if (!r.ok) {
+        setError(r.error.messageKey);
+        return;
+      }
+      setReconcileRefs(prev => ({...prev, [actionId]: ''}));
+      setNotice(text('autonomous.pilot.reconciled'));
+      await loadInstances(selectedProfileId);
     } catch {
       setError('error.transport');
     }
@@ -350,7 +487,12 @@ export function AutonomousWorkspace({client, locale, desktop, onBackToStandard}:
             {status.instance.status} · {status.activeWakePlan?.mode ?? 'none'} ({status.activeWakePlan?.origin ?? '-'})
             {status.activeWakePlan?.nextWakeAt ? ` → ${status.activeWakePlan.nextWakeAt}` : ''}
           </p>
-          <button type="button" onClick={() => void checkWake()}>{text('autonomous.pilot.checkWake')}</button>
+          <div className="autonomous-actions">
+            <button type="button" onClick={() => void checkWake()}>{text('autonomous.pilot.checkWake')}</button>
+            {status.instance.status === 'inactive'
+              ? <button type="button" onClick={() => void toggleLifecycle('resume')}>{text('autonomous.pilot.resume')}</button>
+              : <button type="button" disabled={status.instance.status === 'recovery_required'} onClick={() => void toggleLifecycle('pause')}>{text('autonomous.pilot.pause')}</button>}
+          </div>
         </div>
         <div className="autonomous-card">
           <h3>{text('autonomous.pilot.refusals')} ({status.activeRefusals.length})</h3>
@@ -362,11 +504,64 @@ export function AutonomousWorkspace({client, locale, desktop, onBackToStandard}:
                   {r.reconsiderationConditions?.length ? ` (${r.reconsiderationConditions.join(', ')})` : ''}
                 </li>)}
               </ul>}
-          {status.unresolvedActions.length > 0 && <p role="alert" className="error">
-            {text('autonomous.pilot.unresolved')}: {status.unresolvedActions.length}
-          </p>}
         </div>
       </div>
+
+      {status.unresolvedActions.length > 0 && <div className="autonomous-card autonomous-section">
+        <h3 role="alert">{text('autonomous.pilot.unresolved')} ({status.unresolvedActions.length})</h3>
+        {status.unresolvedActions.map(act => <div key={act.id} className="autonomous-revise-form">
+          <strong><code>{act.id}</code> ({act.state})</strong>
+          <div className="autonomous-inline-form">
+            <input
+              aria-label={text('autonomous.pilot.reconcileEvidence')}
+              placeholder={text('autonomous.pilot.reconcileEvidence')}
+              value={reconcileRefs[act.id] ?? ''}
+              maxLength={256}
+              onChange={e => setReconcileRefs(prev => ({...prev, [act.id]: e.target.value}))}
+            />
+            <button type="button" className="primary" onClick={() => void reconcile(act.id, 'confirmed_accepted')}>
+              {text('autonomous.pilot.reconcileAccept')}
+            </button>
+            <button type="button" onClick={() => void reconcile(act.id, 'confirmed_not_executed')}>
+              {text('autonomous.pilot.reconcileNotExecuted')}
+            </button>
+          </div>
+        </div>)}
+      </div>}
+
+      <details className="autonomous-card autonomous-section">
+        <summary>
+          <strong>{text('autonomous.pilot.providerTitle')}</strong>
+          {status.providerConfig
+            ? ` · ${status.providerConfig.provider} / ${status.providerConfig.modelId} (${text('autonomous.pilot.budgetUsage')}: ${status.providerConfig.callsUsedToday}/${status.providerConfig.dailyCallLimit})`
+            : ''}
+        </summary>
+        {!status.providerConfig && <p className="muted">{text('autonomous.pilot.providerNone')}</p>}
+        <form onSubmit={e => void saveProvider(e)} className="autonomous-revise-form">
+          <div className="fields">
+            <label>{text('config.provider')}
+              <select value={providerKind} onChange={e => setProviderKind(e.target.value)}>
+                {PROVIDER_OPTIONS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+              </select>
+            </label>
+            {providerKind === 'custom_openai' && <label>{text('config.endpoint')}
+              <input type="url" value={providerEndpoint} maxLength={1024} required placeholder="https://…/v1" onChange={e => setProviderEndpoint(e.target.value)} />
+            </label>}
+            <label>{text('autonomous.pilot.modelId')}
+              <input value={providerModel} maxLength={512} required onChange={e => setProviderModel(e.target.value)} />
+            </label>
+            <label>{text('config.key')}
+              <input ref={apiKeyRef} type="password" autoComplete="off" spellCheck={false} maxLength={8192} required={!status.providerConfig?.hasCredential} />
+            </label>
+            <label>{text('autonomous.pilot.dailyLimit')}
+              <input type="number" min={1} max={1000} value={dailyLimit} onChange={e => setDailyLimit(e.target.value)} />
+            </label>
+          </div>
+          <div className="autonomous-actions">
+            <button type="submit" className="primary" disabled={!providerModel.trim()}>{text('autonomous.pilot.saveProvider')}</button>
+          </div>
+        </form>
+      </details>
 
       <form className="autonomous-section" onSubmit={e => void submitProposal(e)}>
         <h2>{text('autonomous.pilot.newProposal')}</h2>

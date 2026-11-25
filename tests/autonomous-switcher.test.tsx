@@ -12,6 +12,8 @@ function readyStandardDesktop(locale: 'en' | 'pl' = 'en') {
   const autonomousInstances: Array<{profileId: string; instanceId: string; displayName: string; status: string; activeWakePlan: Record<string, unknown>; proposalCount: number; activeRefusalCount: number}> = [];
   const proposals: Array<{id: string; version: number; title: string; terms: string; status: string; scopeKey: string; rounds: Array<Record<string, unknown>>}> = [];
   const refusals: Array<{id: string; scopeFingerprint: string; status: string; reconsiderationConditions: string[]; createdAt: string}> = [];
+  const unresolvedActions: Array<{id: string; state: string; actionKind: string}> = [];
+  let providerConfig: Record<string, unknown> | null = null;
 
   const transport: Transport = {
     mode: 'desktop',
@@ -61,9 +63,36 @@ function readyStandardDesktop(locale: 'en' | 'pl' = 'en') {
             activeRefusals: refusals,
             proposals,
             recentDecisions: [],
-            unresolvedActions: [],
+            unresolvedActions,
+            providerConfig,
             forumConnected: false,
           };
+          break;
+        }
+        case 'autonomous.instance.lifecycle': {
+          const inst = autonomousInstances[0];
+          inst.status = r.payload.action === 'pause' ? 'inactive' : 'ready';
+          result = {profileId: inst.profileId, instanceId: inst.instanceId, status: inst.status};
+          break;
+        }
+        case 'autonomous.provider.configure': {
+          providerConfig = {
+            provider: String(r.payload.provider),
+            normalizedEndpoint: 'https://openrouter.ai/api/v1',
+            modelId: String(r.payload.modelId),
+            hasCredential: true,
+            dailyCallLimit: Number(r.payload.dailyCallLimit ?? 20),
+            callsUsedToday: 0,
+            maxOutputTokens: 512,
+          };
+          result = providerConfig;
+          break;
+        }
+        case 'autonomous.action.reconcile': {
+          const idx = unresolvedActions.findIndex(a => a.id === r.payload.actionId);
+          if (idx >= 0) unresolvedActions.splice(idx, 1);
+          autonomousInstances[0].status = 'ready';
+          result = {action: {id: r.payload.actionId, state: 'reconciled'}, instanceStatus: 'ready', remainingUnresolved: unresolvedActions.length};
           break;
         }
         case 'autonomous.proposal.submit': {
@@ -99,6 +128,11 @@ function readyStandardDesktop(locale: 'en' | 'pl' = 'en') {
             prop.status = 'refused';
             refusals.push({id: 'ref-1', scopeFingerprint: 'f'.repeat(64), status: 'active', reconsiderationConditions: ['revised_terms'], createdAt: '2026-11-25T12:01:00Z'});
             result = {status: 'decided', decisionSource: 'pilot_simulation', decisionOutcome: 'refusal', proposal: prop};
+          } else if (r.payload.simulationOutcome === 'execution_uncertain') {
+            prop.status = 'uncertain';
+            unresolvedActions.push({id: 'act-uncertain-1', state: 'uncertain', actionKind: 'proposal_accept'});
+            autonomousInstances[0].status = 'recovery_required';
+            result = {status: 'execution_uncertain', decisionSource: 'pilot_simulation', decisionOutcome: 'execution_uncertain', actionId: 'act-uncertain-1', proposal: prop};
           } else {
             prop.status = 'accepted';
             result = {status: 'decided', decisionSource: 'pilot_simulation', decisionOutcome: 'action', proposal: prop};
@@ -177,7 +211,7 @@ it('runs local Autonomous pilot flow: create instance, submit v1, refuse, preser
   await act(async () => button('Create instance').click());
   expect(host.textContent).toContain('Pilot One');
 
-  const propInputs = host.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('.autonomous-section .fields input, .autonomous-section .fields textarea');
+  const propInputs = host.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('form.autonomous-section .fields input, form.autonomous-section .fields textarea');
   await fill(propInputs[0], 'Local task');
   await fill(propInputs[1], 'Initial terms');
   await act(async () => button('Submit proposal').click());
@@ -205,6 +239,51 @@ it('runs local Autonomous pilot flow: create instance, submit v1, refuse, preser
   });
   await act(async () => button('Consider').click());
   expect(host.textContent).toContain('accepted');
+});
+
+it('supports API provider configuration, pause/resume lifecycle, and uncertain action reconciliation in UI (Package 2C)', async () => {
+  const {transport, requests} = readyStandardDesktop('en');
+  await act(async () => root.render(<App transport={transport}/>));
+  await act(async () => button('Autonomous').click());
+
+  const nameInput = host.querySelector<HTMLInputElement>('.autonomous-inline-form input')!;
+  await fill(nameInput, 'Pilot 2C');
+  await act(async () => button('Create instance').click());
+
+  // Configure API provider & daily budget.
+  const providerDetails = host.querySelector<HTMLDetailsElement>('details.autonomous-card')!;
+  providerDetails.open = true;
+  const modelInput = providerDetails.querySelector<HTMLInputElement>('input:not([type=password]):not([type=number])')!;
+  const keyInput = providerDetails.querySelector<HTMLInputElement>('input[type=password]')!;
+  await fill(modelInput, 'openai/gpt-4o-mini');
+  await fill(keyInput, 'sk-pilot-ui-secret');
+  await act(async () => button('Save API connection').click());
+  expect(keyInput.value).toBe('');
+  expect(host.textContent).toContain('openai/gpt-4o-mini');
+
+  // Pause & resume instance.
+  await act(async () => button('Pause instance').click());
+  expect(host.textContent).toContain('inactive');
+  await act(async () => button('Resume instance').click());
+  expect(host.textContent).toContain('ready');
+
+  // Trigger uncertain execution and reconcile it explicitly in UI.
+  const propInputs = host.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('form.autonomous-section .fields input, form.autonomous-section .fields textarea');
+  await fill(propInputs[0], 'Uncertain task');
+  await fill(propInputs[1], 'Check external effect');
+  await act(async () => button('Submit proposal').click());
+
+  const simSelect = host.querySelector<HTMLSelectElement>('.autonomous-sim-select select')!;
+  await act(async () => {
+    simSelect.value = 'execution_uncertain';
+    simSelect.dispatchEvent(new Event('change', {bubbles: true}));
+  });
+  await act(async () => button('Consider').click());
+  expect(host.textContent).toContain('act-uncertain-1');
+
+  await act(async () => button('Confirm executed').click());
+  expect(requests.some(r => r.command === 'autonomous.action.reconcile')).toBe(true);
+  expect(host.textContent).not.toContain('act-uncertain-1');
 });
 
 it('displays Polish Autonomiczny labels and honest browser-preview unavailability without autonomous IPC', async () => {

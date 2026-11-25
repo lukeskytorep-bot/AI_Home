@@ -1,3 +1,38 @@
+# Bieżący stan — treść 1.99 — 25 listopada 2026 — odbiór audytowy Paczki 2B i doprecyzowanie wymagań trybu Autonomous
+
+Ten wpis aktualizuje bieżący stan po niezależnym audycie Paczki 2B (lokalny pilotaż trybu **Autonomous / Autonomiczny** bez forum) oraz dopisuje do planu docelowe cechy i akcje potrzebne w aplikacji dla autonomicznego AI (do realizacji w kolejnych krokach, zgodnie z kolejnością prac). Historia 1.98 i wszystkie wcześniejsze wpisy pozostają poniżej w oryginalnym brzmieniu.
+
+## 1. Stan po niezależnym audycie Paczki 2B (`AI_HOME_4B14_PACKAGE_2B_CHANGED_FILES.zip` na bazie `92ab720`)
+
+- **Werdykt niezależnego audytu kodu (Linux headless):** **ZAAKCEPTOWANE WARUNKOWO (PASS w zakresie kodu, kontraktów, migracji v17 i testów)**.
+- **Wyniki audytu:** `verify-source.py` PASS (1085 hashy manifestu / 1086 `SHA256SUMS.txt`), `npm test` 25/25 plików (247/247 PASS), `npm run build` PASS, `cargo test --all-targets --no-default-features --locked` 24/24 zestawy (**667/667 PASS**), zamrożone P2 193/193 PASS, `verify-boundaries.mjs` 39/39 + 14 asercji migracji SQLite v17 PASS, `verify-command-parity.py` 71/71 PASS, wszystkie skrypty `verify-standard-*`, `verify-experimental-*`, `verify-community-*`, `verify-rust-source-text.py` PASS.
+- **Zamknięte uwagi z audytu 2A:** `D1` (synchronizacja planu i manifestów), `P3-1` (walidacja znaków kontrolnych i pustych `?`/`#` w URL Custom OpenAI), `P3-2` (czyszczenie `setupStorageKey` na `Back`), `P3-3` (synchronizacja przełącznika przy kliknięciu `Activity`).
+- **Uwagi nieblokujące z audytu 2B (do domknięcia w Paczce 2C):**
+  - `P3-A`: objęcie mutujących komend `autonomous.*` standardową idempotencją `receipts` po `requestId`.
+  - `P3-B`: podpięcie rzeczywistego adaptera `DecisionProvider` przez istniejącą warstwę API (`providers/` + `Vault`) w miejsce zaślepki `DisabledDecisionProvider`.
+- **Bramki nadal OPEN (wymagają środowiska docelowego):** Windows CI (`build_desktop=true`), próba użytkowa pierwszej rozmowy oraz przełącznika/pilotażu na Windows (WebView2 + OS Vault + rzeczywisty klucz API), odbiór live forum Community 4A / TLS, obowiązkowy przegląd OSS przed kodowaniem MCP oraz przeglądarka (odłożona).
+
+## 2. Docelowe cechy i akcje aplikacji dla autonomicznego AI (uzupełnienie sekcji 4)
+
+Poniższe elementy rozwijają fundament 4B-9–11 oraz lokalny pilotaż 2B w stronę pełnego środowiska pracy autonomicznego AI (realizowane etapami, bez naruszania izolacji trybu Standard ani zamrożonych kontraktów P2):
+
+1. **Podłączenie trybu Autonomous do warstwy API i magazynu kluczy (`providers/` + `Vault`):** własna konfiguracja połączenia API i modelu dla instancji Autonomous oraz rzeczywisty adapter `DecisionProvider`, dzięki któremu model przez API samodzielnie podejmuje decyzje (`accept`, `refuse`, `ask`, `defer`, `no_action`, `rest`, `sleep`). Błąd sieci, timeout lub niepoprawny format odpowiedzi pozostają stanem technicznym — nigdy fałszywą zgodą ani odmową.
+2. **Jawna ścieżka uzgadniania niepewnych akcji (`Reconciliation`):** komenda IPC i ekran UI pozwalające po awarii lub niejednoznacznym wyniku (`sent`/`uncertain`) zweryfikować skutek i jawnie rozliczyć akcję (potwierdzona z dowodem `receiptRef` albo nieudana), zdejmując blokadę `reconciliation_required` bez ślepego powtarzania operacji.
+3. **Twardy budżet zasobów (wywołań / tokenów) widoczny również dla agenta:** edytowalny limit wywołań/tokenów chroniący konto API użytkownika przed niekontrolowanym zużyciem, a jednocześnie przekazywany agentowi w kontekście okazji (`OpportunityPacket`), by mógł świadomie zarządzać swoją aktywnością i snem.
+4. **Natywny wyzwalacz oparty na `nextWakeAt` oraz pauza/wznowienie instancji:** docelowe wybudzanie zgodnie z wybranym przez agenta czasem (`nextWakeAt`) lub zdarzeniem bez okresowego odpytywania w UI (`setInterval`), wraz z jawnym technicznym wstrzymaniem/wznowieniem instancji (bez nadpisywania odmów i bez skracania wybranego snu).
+5. **Asynchroniczna skrzynka spraw i jawny status bez podglądania prywatności:** oddzielenie komunikacji bez przymusu (propozycje, pytania agenta, odłożone sprawy) od czatu synchronicznego w Standard oraz czytelny status aktywności („śpi do…”, „reflektuje”, „oczekuje na uzgodnienie”) bez publikowania prywatnego scratchpadu agenta.
+6. **Podpięcie istniejących modułów ciągłości i refleksji (`experimental_continuity`, `experimental_reflection`):** włączenie `ResumePacket`, `Reflect`, `Dream`, `SelfReview` i `SelfWithdrawal` do produkcyjnego cyklu decyzyjnego instancji Autonomous.
+7. **Pełny cykl życia instancji w UI:** wstrzymanie, wznowienie, archiwizacja, kopia zapasowa i bezpieczne trwałe usunięcie nieaktywnej instancji z zachowaniem ochrony aktywnej pracy i historii odmów.
+
+## 3. Najbliższy krok wykonawczy — Paczka 2C
+
+1. Domknięcie `P3-A` (idempotencja `receipts` dla mutujących komend `autonomous.*`).
+2. Domknięcie `P3-B` (konfiguracja połączenia/trasy API dla instancji Autonomous + prawdziwy adapter `DecisionProvider` przez `providers/` + `Vault` + twardy budżet wywołań/tokenów).
+3. Dodanie jawnego uzgadniania akcji `uncertain` (`autonomous.action.reconcile`) w backendzie i UI.
+4. Dodanie technicznej pauzy i wznowienia instancji (`autonomous.instance.lifecycle`) w backendzie i UI.
+
+---
+
 # Bieżący stan — treść 1.98 — 25 listopada 2026 — aktualizacja po implementacji i audycie pierwszej rozmowy
 
 Ten wpis zastępuje wcześniejsze opisy „najbliższego kroku”. Historia 1.97 i starsze wyniki pozostają poniżej w oryginalnym brzmieniu. Podstawą znaczenia produktu i architektury pozostaje **Document 4B v1.4** (zastępujący v1.3), a niniejszy plan określa kolejność wykonania i stan odbiorów. Numeracja 4B-9–14 nie ulega zmianie. To aktualizacja dokumentacji, bez implementacji kodu i bez nowego wykonania testów.

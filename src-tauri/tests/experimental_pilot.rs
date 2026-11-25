@@ -533,3 +533,503 @@ fn simulation_types_are_constructible() {
     let _ = SimulationDecisionProvider::decide;
     let _ = SimulationActionExecutor::execute;
 }
+
+#[derive(Default)]
+struct TestSecretStore(Mutex<std::collections::HashMap<String, String>>);
+impl ai_home::vault::SecretStore for TestSecretStore {
+    fn read(&self, id: &str) -> Result<Option<String>, ai_home::vault::VaultError> {
+        Ok(self.0.lock().unwrap().get(id).cloned())
+    }
+    fn write_new(&self, id: &str, value: &str) -> Result<(), ai_home::vault::VaultError> {
+        let mut map = self.0.lock().unwrap();
+        if map.contains_key(id) {
+            return Err(ai_home::vault::VaultError::Exists);
+        }
+        map.insert(id.to_string(), value.to_string());
+        Ok(())
+    }
+}
+
+#[tokio::test]
+async fn idempotency_receipts_replay_and_conflict_on_mutating_autonomous_commands() {
+    let store = Store::memory().await.unwrap();
+    let app = Application::new(store);
+
+    let req1 = json!({
+        "contractVersion": 1,
+        "requestId": "fixed-create-req-1",
+        "command": "autonomous.instance.create",
+        "payload": {"displayName": "Idempotent Nova", "initialIntervalMs": 1}
+    });
+    let first = app.dispatch(req1.clone()).await.response;
+    assert_eq!(first["ok"], true, "{first}");
+    let replay = app.dispatch(req1).await.response;
+    assert_eq!(replay["ok"], true, "{replay}");
+    assert_eq!(first["result"]["profileId"], replay["result"]["profileId"]);
+
+    let list = app
+        .dispatch(req("autonomous.instance.list", None, json!({})))
+        .await
+        .response;
+    assert_eq!(list["result"]["items"].as_array().unwrap().len(), 1);
+
+    let conflict = app
+        .dispatch(json!({
+            "contractVersion": 1,
+            "requestId": "fixed-create-req-1",
+            "command": "autonomous.instance.create",
+            "payload": {"displayName": "Different Name", "initialIntervalMs": 1}
+        }))
+        .await
+        .response;
+    assert_eq!(conflict["ok"], false);
+    assert_eq!(conflict["error"]["code"], "IDEMPOTENCY_CONFLICT");
+}
+
+#[tokio::test]
+async fn provider_adapter_uses_vault_and_http_api_enforces_daily_budget_and_handles_malformed_json() {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    let hits = Arc::new(AtomicUsize::new(0));
+    let hits_server = hits.clone();
+
+    let server = tokio::spawn(async move {
+        let replies = [
+            json!({
+                "id": "chatcmpl-1",
+                "choices": [{
+                    "index": 0,
+                    "finish_reason": "stop",
+                    "message": {
+                        "role": "assistant",
+                        "content": "{\"decision\":\"refuse\",\"note\":\"Scope too wide\",\"reconsiderationConditions\":[\"narrow_scope\"]}"
+                    }
+                }]
+            })
+            .to_string(),
+            json!({
+                "id": "chatcmpl-2",
+                "choices": [{
+                    "index": 0,
+                    "finish_reason": "stop",
+                    "message": {
+                        "role": "assistant",
+                        "content": "not-valid-json-at-all"
+                    }
+                }]
+            })
+            .to_string(),
+        ];
+        for body in replies {
+            let Ok((mut stream, _)) = listener.accept().await else { break };
+            hits_server.fetch_add(1, Ordering::SeqCst);
+            let mut buf = [0u8; 8192];
+            let _ = stream.read(&mut buf).await;
+            let resp = format!(
+                "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            let _ = stream.write_all(resp.as_bytes()).await;
+            let _ = stream.shutdown().await;
+        }
+    });
+
+    let store = Store::memory().await.unwrap();
+    let pool = store.pool.clone();
+    let vault = ai_home::vault::Vault::with_backend(Arc::new(TestSecretStore::default()));
+    let app = Application::with_vault(store, vault);
+
+    let created = app
+        .dispatch(req(
+            "autonomous.instance.create",
+            None,
+            json!({"displayName": "API Pilot", "initialIntervalMs": 1}),
+        ))
+        .await
+        .response;
+    let profile_id = created["result"]["profileId"].as_str().unwrap().to_string();
+
+    let secret = "sk-test-autonomous-secret-999";
+    let configured = app
+        .dispatch(req(
+            "autonomous.provider.configure",
+            Some(&profile_id),
+            json!({
+                "provider": "custom_openai",
+                "endpoint": format!("http://127.0.0.1:{}/v1", addr.port()),
+                "modelId": "gpt-pilot-test",
+                "apiKey": secret,
+                "dailyCallLimit": 2,
+                "maxOutputTokens": 256
+            }),
+        ))
+        .await
+        .response;
+    assert_eq!(configured["ok"], true, "{configured}");
+    assert_eq!(configured["result"]["hasCredential"], true);
+    assert_eq!(configured["result"]["dailyCallLimit"], 2);
+
+    // Raw API key must NEVER appear in SQLite connections or receipts.
+    let conn_body: String = sqlx::query_scalar("SELECT body FROM connections WHERE profile_id=?")
+        .bind(&profile_id)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert!(!conn_body.contains(secret));
+    let receipt_leaks: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM receipts WHERE response LIKE ? OR fingerprint LIKE ?")
+        .bind(format!("%{secret}%"))
+        .bind(format!("%{secret}%"))
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(receipt_leaks, 0);
+
+    // Submit proposal v1 -> real HTTP call returns refusal JSON.
+    let p1 = app
+        .dispatch(req(
+            "autonomous.proposal.submit",
+            Some(&profile_id),
+            json!({"title": "API Proposal", "terms": "Broad scope"}),
+        ))
+        .await
+        .response;
+    let pid = p1["result"]["proposal"]["id"].as_str().unwrap().to_string();
+
+    let c1 = app
+        .dispatch(req(
+            "autonomous.proposal.consider",
+            Some(&profile_id),
+            json!({"proposalId": pid}),
+        ))
+        .await
+        .response;
+    assert_eq!(c1["ok"], true, "{c1}");
+    assert_eq!(c1["result"]["status"], "decided");
+    assert_eq!(c1["result"]["decisionSource"], "provider");
+    assert_eq!(c1["result"]["decisionOutcome"], "refusal");
+    assert_eq!(c1["result"]["proposal"]["status"], "refused");
+    assert_eq!(hits.load(Ordering::SeqCst), 1);
+
+    // Revise to v2 -> server returns malformed non-JSON -> resource_unavailable (never consent or refusal).
+    let p2 = app
+        .dispatch(req(
+            "autonomous.proposal.submit",
+            Some(&profile_id),
+            json!({"proposalId": pid, "title": "API Proposal", "terms": "Narrower scope"}),
+        ))
+        .await
+        .response;
+    assert_eq!(p2["result"]["version"], 2);
+
+    let c2 = app
+        .dispatch(req(
+            "autonomous.proposal.consider",
+            Some(&profile_id),
+            json!({"proposalId": pid}),
+        ))
+        .await
+        .response;
+    assert_eq!(c2["ok"], true, "{c2}");
+    assert_eq!(c2["result"]["status"], "resource_unavailable");
+    assert_eq!(c2["result"]["decisionSource"], "provider");
+    assert_eq!(c2["result"]["proposal"]["status"], "pending");
+    assert_eq!(hits.load(Ordering::SeqCst), 2);
+
+    // Third call exceeds dailyCallLimit=2 -> budget_exhausted without any HTTP call.
+    let c3 = app
+        .dispatch(req(
+            "autonomous.proposal.consider",
+            Some(&profile_id),
+            json!({"proposalId": pid}),
+        ))
+        .await
+        .response;
+    assert_eq!(c3["ok"], true, "{c3}");
+    assert_eq!(c3["result"]["status"], "budget_exhausted");
+    assert_eq!(c3["result"]["decisionSource"], "policy_guard");
+    assert_eq!(hits.load(Ordering::SeqCst), 2);
+
+    server.abort();
+}
+
+#[tokio::test]
+async fn reconcile_uncertain_action_clears_recovery_fence_and_prevents_double_execution() {
+    let store = Store::memory().await.unwrap();
+    let app = Application::new(store);
+
+    let created = app
+        .dispatch(req(
+            "autonomous.instance.create",
+            None,
+            json!({"displayName": "Reconcile Pilot", "initialIntervalMs": 1}),
+        ))
+        .await
+        .response;
+    let profile_id = created["result"]["profileId"].as_str().unwrap().to_string();
+
+    let p1 = app
+        .dispatch(req(
+            "autonomous.proposal.submit",
+            Some(&profile_id),
+            json!({"title": "External step", "terms": "Run once"}),
+        ))
+        .await
+        .response;
+    let pid = p1["result"]["proposal"]["id"].as_str().unwrap().to_string();
+
+    let uncertain = app
+        .dispatch(req(
+            "autonomous.proposal.consider",
+            Some(&profile_id),
+            json!({"proposalId": pid, "simulationOutcome": "execution_uncertain"}),
+        ))
+        .await
+        .response;
+    assert_eq!(uncertain["result"]["status"], "execution_uncertain");
+    let action_id = uncertain["result"]["actionId"].as_str().unwrap().to_string();
+
+    // Reconcile as confirmed_accepted with explicit receipt evidence.
+    let rec = app
+        .dispatch(req(
+            "autonomous.action.reconcile",
+            Some(&profile_id),
+            json!({
+                "actionId": action_id,
+                "outcome": "confirmed_accepted",
+                "receiptRef": "manual-proof-123",
+                "note": "Verified externally"
+            }),
+        ))
+        .await
+        .response;
+    assert_eq!(rec["ok"], true, "{rec}");
+    assert_eq!(rec["result"]["instanceStatus"], "ready");
+    assert_eq!(rec["result"]["remainingUnresolved"], 0);
+    assert_eq!(rec["result"]["action"]["state"], "reconciled");
+
+    // Same version v1 must now report already_executed, never double-execute.
+    let retry = app
+        .dispatch(req(
+            "autonomous.proposal.consider",
+            Some(&profile_id),
+            json!({"proposalId": pid, "simulationOutcome": "accept"}),
+        ))
+        .await
+        .response;
+    assert_eq!(retry["ok"], true, "{retry}");
+    assert_eq!(retry["result"]["status"], "already_executed");
+    assert_eq!(retry["result"]["decisionSource"], "policy_guard");
+}
+
+#[tokio::test]
+async fn pause_and_resume_lifecycle_blocks_consider_without_erasing_refusals() {
+    let store = Store::memory().await.unwrap();
+    let app = Application::new(store);
+
+    let created = app
+        .dispatch(req(
+            "autonomous.instance.create",
+            None,
+            json!({"displayName": "Pause Pilot", "initialIntervalMs": 1}),
+        ))
+        .await
+        .response;
+    let profile_id = created["result"]["profileId"].as_str().unwrap().to_string();
+
+    let p1 = app
+        .dispatch(req(
+            "autonomous.proposal.submit",
+            Some(&profile_id),
+            json!({"title": "Refused first", "terms": "Scope A"}),
+        ))
+        .await
+        .response;
+    let pid = p1["result"]["proposal"]["id"].as_str().unwrap().to_string();
+
+    let refused = app
+        .dispatch(req(
+            "autonomous.proposal.consider",
+            Some(&profile_id),
+            json!({"proposalId": pid, "simulationOutcome": "refuse"}),
+        ))
+        .await
+        .response;
+    assert_eq!(refused["result"]["decisionOutcome"], "refusal");
+
+    let paused = app
+        .dispatch(req(
+            "autonomous.instance.lifecycle",
+            Some(&profile_id),
+            json!({"action": "pause"}),
+        ))
+        .await
+        .response;
+    assert_eq!(paused["ok"], true, "{paused}");
+    assert_eq!(paused["result"]["status"], "inactive");
+
+    let p2 = app
+        .dispatch(req(
+            "autonomous.proposal.submit",
+            Some(&profile_id),
+            json!({"title": "While paused", "terms": "Scope B"}),
+        ))
+        .await
+        .response;
+    let pid2 = p2["result"]["proposal"]["id"].as_str().unwrap().to_string();
+
+    let blocked = app
+        .dispatch(req(
+            "autonomous.proposal.consider",
+            Some(&profile_id),
+            json!({"proposalId": pid2, "simulationOutcome": "accept"}),
+        ))
+        .await
+        .response;
+    assert_eq!(blocked["ok"], true, "{blocked}");
+    assert_eq!(blocked["result"]["status"], "inactive");
+    assert_eq!(blocked["result"]["decisionSource"], "policy_guard");
+
+    let resumed = app
+        .dispatch(req(
+            "autonomous.instance.lifecycle",
+            Some(&profile_id),
+            json!({"action": "resume"}),
+        ))
+        .await
+        .response;
+    assert_eq!(resumed["ok"], true, "{resumed}");
+    assert_eq!(resumed["result"]["status"], "ready");
+
+    // Previous refusal on p1 v1 must still be active after pause/resume.
+    let still_refused = app
+        .dispatch(req(
+            "autonomous.proposal.consider",
+            Some(&profile_id),
+            json!({"proposalId": pid, "simulationOutcome": "accept"}),
+        ))
+        .await
+        .response;
+    assert_eq!(still_refused["result"]["status"], "refusal_active");
+}
+
+#[tokio::test]
+async fn permanent_profile_deletion_tombstones_autonomous_receipts_and_connections_keep_strict_dtos() {
+    let store = Store::memory().await.unwrap();
+    let pool = store.pool.clone();
+    let vault = ai_home::vault::Vault::with_backend(Arc::new(TestSecretStore::default()));
+    let app = Application::with_vault(store, vault);
+
+    let created = app
+        .dispatch(req(
+            "autonomous.instance.create",
+            None,
+            json!({"displayName": "Ephemeral Autonomous", "initialIntervalMs": 1}),
+        ))
+        .await
+        .response;
+    assert_eq!(created["ok"], true, "{created}");
+    let profile_id = created["result"]["profileId"].as_str().unwrap().to_string();
+
+    let cfg = app
+        .dispatch(req(
+            "autonomous.provider.configure",
+            Some(&profile_id),
+            json!({
+                "provider": "openrouter",
+                "modelId": "openai/gpt-4o-mini",
+                "apiKey": "sk-ephemeral-secret",
+                "dailyCallLimit": 5,
+                "maxOutputTokens": 256
+            }),
+        ))
+        .await
+        .response;
+    assert_eq!(cfg["ok"], true, "{cfg}");
+
+    // connections and routes rows MUST validate against frozen P2 DTO schemas.
+    let conn_raw: String = sqlx::query_scalar("SELECT body FROM connections WHERE profile_id=?")
+        .bind(&profile_id)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    let conn_val: Value = serde_json::from_str(&conn_raw).unwrap();
+    assert!(
+        ai_home::domain::schema::dto("ProviderConnection", &conn_val),
+        "connections row must be strict ProviderConnection DTO: {conn_val}"
+    );
+    let route_raw: String = sqlx::query_scalar("SELECT body FROM routes WHERE profile_id=?")
+        .bind(&profile_id)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    let route_val: Value = serde_json::from_str(&route_raw).unwrap();
+    assert!(
+        ai_home::domain::schema::dto("ModelRoute", &route_val),
+        "routes row must be strict ModelRoute DTO: {route_val}"
+    );
+
+    let submit_req = json!({
+        "contractVersion": 1,
+        "requestId": "req-ephemeral-proposal-1",
+        "profileId": profile_id,
+        "command": "autonomous.proposal.submit",
+        "payload": {"title": "Confidential Proposal", "terms": "SECRET-PROPOSAL-TERMS-XYZ"}
+    });
+    let submitted = app.dispatch(submit_req.clone()).await.response;
+    assert_eq!(submitted["ok"], true, "{submitted}");
+
+    // Pause, archive, and permanently delete the profile.
+    let paused = app
+        .dispatch(req(
+            "autonomous.instance.lifecycle",
+            Some(&profile_id),
+            json!({"action": "pause"}),
+        ))
+        .await
+        .response;
+    assert_eq!(paused["ok"], true, "{paused}");
+
+    let prof_rev: i64 = sqlx::query_scalar("SELECT revision FROM profiles WHERE id=?")
+        .bind(&profile_id)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    sqlx::query("UPDATE profiles SET revision=?, body=json_set(body,'$.revision',?,'$.status','archived') WHERE id=?")
+        .bind(prof_rev + 1)
+        .bind(prof_rev + 1)
+        .bind(&profile_id)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+    let mut del_req = req("profile.delete.permanent", Some(&profile_id), json!({"confirm": true}));
+    del_req["expectedRevision"] = json!(prof_rev + 1);
+    let deleted = app.dispatch(del_req).await.response;
+    assert_eq!(deleted["ok"], true, "{deleted}");
+
+    // Budget table must be cleaned.
+    let budgets_left: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM experimental_provider_budgets WHERE profile_id=?")
+        .bind(&profile_id)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(budgets_left, 0);
+
+    // Every autonomous.* receipt for the deleted profile must be tombstoned (no leaked terms/titles).
+    let leaked: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM receipts WHERE response LIKE '%SECRET-PROPOSAL-TERMS-XYZ%' OR response LIKE '%Confidential Proposal%' OR response LIKE '%Ephemeral Autonomous%'",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(leaked, 0, "Autonomous receipts must be tombstoned on permanent profile deletion");
+
+    // Replaying the tombstoned request ID must return POLICY_DENIED (never resurrected data).
+    let replayed = app.dispatch(submit_req).await.response;
+    assert_eq!(replayed["ok"], false, "{replayed}");
+    assert_eq!(replayed["error"]["code"], "POLICY_DENIED");
+}
+
+

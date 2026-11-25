@@ -9,6 +9,15 @@ use crate::experimental_runtime::{
     DisabledActionExecutor, DisabledDecisionProvider, ExperimentalRuntime, OpportunityEvent,
     OpportunityPacket, RunResult, SystemClock,
 };
+use crate::providers::{
+    normalize_endpoint,
+    transport::{BoundCredential, CallBudget, HttpTransport},
+    ProviderChatRequest, ProviderKind, ProviderMessage, ScopeStamp,
+};
+use crate::vault::Vault;
+
+const AUTONOMOUS_CONNECTION_ID: &str = "autonomous-primary";
+const AUTONOMOUS_ROUTE_ID: &str = "autonomous-primary-route";
 
 pub fn proposal_scope(proposal_id: &str, version: i64) -> String {
     format!("proposal:{proposal_id}:v{version}")
@@ -24,9 +33,12 @@ pub fn supports(command: &str) -> bool {
         "autonomous.instance.list"
             | "autonomous.instance.create"
             | "autonomous.instance.status"
+            | "autonomous.instance.lifecycle"
+            | "autonomous.provider.configure"
             | "autonomous.proposal.submit"
             | "autonomous.proposal.negotiate"
             | "autonomous.proposal.consider"
+            | "autonomous.action.reconcile"
             | "autonomous.wake.check"
     )
 }
@@ -35,9 +47,12 @@ pub fn mutates(command: &str) -> bool {
     matches!(
         command,
         "autonomous.instance.create"
+            | "autonomous.instance.lifecycle"
+            | "autonomous.provider.configure"
             | "autonomous.proposal.submit"
             | "autonomous.proposal.negotiate"
             | "autonomous.proposal.consider"
+            | "autonomous.action.reconcile"
             | "autonomous.wake.check"
     )
 }
@@ -104,20 +119,44 @@ impl ActionExecutor for SimulationActionExecutor {
     }
 }
 
+struct PrecomputedDecisionProvider {
+    choice: DecisionChoice,
+}
+
+impl DecisionProvider for PrecomputedDecisionProvider {
+    fn decide(&self, _packet: &OpportunityPacket) -> Result<DecisionChoice, String> {
+        Ok(self.choice.clone())
+    }
+}
+
+struct ParsedProviderDecision {
+    choice: DecisionChoice,
+    record_as_question: bool,
+    note: String,
+}
+
 pub struct AutonomousPilotService<C: Clock> {
     pool: SqlitePool,
     clock: Arc<C>,
+    vault: Vault,
 }
 
 impl AutonomousPilotService<SystemClock> {
     pub fn system(pool: SqlitePool) -> Self {
-        Self::new(pool, Arc::new(SystemClock))
+        Self::new_with_vault(pool, Arc::new(SystemClock), Vault::os())
+    }
+    pub fn system_with_vault(pool: SqlitePool, vault: Vault) -> Self {
+        Self::new_with_vault(pool, Arc::new(SystemClock), vault)
     }
 }
 
 impl<C: Clock> AutonomousPilotService<C> {
     pub fn new(pool: SqlitePool, clock: Arc<C>) -> Self {
-        Self { pool, clock }
+        Self::new_with_vault(pool, clock, Vault::os())
+    }
+
+    pub fn new_with_vault(pool: SqlitePool, clock: Arc<C>, vault: Vault) -> Self {
+        Self { pool, clock, vault }
     }
 
     pub async fn dispatch(&self, r: &Value) -> Result<Value, String> {
@@ -131,6 +170,20 @@ impl<C: Clock> AutonomousPilotService<C> {
         if !schema::valid(&r["payload"], &contract["payload"]) {
             return Err("VALIDATION_ERROR".into());
         }
+
+        // Idempotency receipts for mutating Autonomous commands (Audit 2B P3-A).
+        let is_mutating = mutates(command);
+        let request_id = r["requestId"].as_str().unwrap_or("");
+        let fingerprint = if is_mutating && !request_id.is_empty() {
+            let fp = request_fingerprint(r);
+            if let Some(replayed) = self.check_receipt(request_id, &fp).await? {
+                return Ok(replayed);
+            }
+            Some(fp)
+        } else {
+            None
+        };
+
         let payload = &r["payload"];
         let result = match command {
             "autonomous.instance.list" => {
@@ -157,6 +210,39 @@ impl<C: Clock> AutonomousPilotService<C> {
                 let profile_id = r["profileId"].as_str().ok_or("VALIDATION_ERROR")?;
                 self.status(profile_id, payload.get("instanceId").and_then(Value::as_str))
                     .await?
+            }
+            "autonomous.instance.lifecycle" => {
+                let profile_id = r["profileId"].as_str().ok_or("VALIDATION_ERROR")?;
+                let action = payload["action"].as_str().unwrap();
+                self.lifecycle(profile_id, action).await?
+            }
+            "autonomous.provider.configure" => {
+                let profile_id = r["profileId"].as_str().ok_or("VALIDATION_ERROR")?;
+                let provider = payload["provider"].as_str().unwrap();
+                let endpoint = payload.get("endpoint").and_then(Value::as_str).unwrap_or("");
+                let model_id = payload["modelId"].as_str().unwrap().trim();
+                if model_id.is_empty() {
+                    return Err("VALIDATION_ERROR".into());
+                }
+                let api_key = payload.get("apiKey").and_then(Value::as_str);
+                let daily_limit = payload
+                    .get("dailyCallLimit")
+                    .and_then(Value::as_i64)
+                    .unwrap_or(20);
+                let max_output_tokens = payload
+                    .get("maxOutputTokens")
+                    .and_then(Value::as_i64)
+                    .unwrap_or(512);
+                self.configure_provider(
+                    profile_id,
+                    provider,
+                    endpoint,
+                    model_id,
+                    api_key,
+                    daily_limit,
+                    max_output_tokens,
+                )
+                .await?
             }
             "autonomous.proposal.submit" => {
                 let profile_id = r["profileId"].as_str().ok_or("VALIDATION_ERROR")?;
@@ -234,17 +320,25 @@ impl<C: Clock> AutonomousPilotService<C> {
                     )
                     .await?
                 } else {
-                    self.consider_proposal(
-                        profile_id,
-                        proposal_id,
-                        Arc::new(DisabledDecisionProvider),
-                        Arc::new(DisabledActionExecutor),
-                        "provider",
-                        false,
-                        note,
-                    )
-                    .await?
+                    self.consider_proposal_via_provider(profile_id, proposal_id, note)
+                        .await?
                 }
+            }
+            "autonomous.action.reconcile" => {
+                let profile_id = r["profileId"].as_str().ok_or("VALIDATION_ERROR")?;
+                let action_id = payload["actionId"].as_str().unwrap();
+                let outcome = payload["outcome"].as_str().unwrap();
+                let receipt_ref = payload["receiptRef"].as_str().unwrap().trim();
+                if receipt_ref.is_empty() {
+                    return Err("VALIDATION_ERROR".into());
+                }
+                let note = payload
+                    .get("note")
+                    .and_then(Value::as_str)
+                    .map(str::trim)
+                    .unwrap_or("");
+                self.reconcile_action(profile_id, action_id, outcome, receipt_ref, note)
+                    .await?
             }
             "autonomous.wake.check" => {
                 let profile_id = r["profileId"].as_str().ok_or("VALIDATION_ERROR")?;
@@ -258,8 +352,12 @@ impl<C: Clock> AutonomousPilotService<C> {
             }
             _ => return Err("UNKNOWN_COMMAND".into()),
         };
+
         if !schema::valid(&result, &contract["result"]) {
             return Err("STORAGE_ERROR".into());
+        }
+        if let Some(fp) = fingerprint {
+            self.save_receipt(request_id, &fp, &result).await?;
         }
         Ok(result)
     }
@@ -377,6 +475,7 @@ impl<C: Clock> AutonomousPilotService<C> {
         let proposals = self.list_proposals(profile_id, &instance_id).await?;
         let recent_decisions = self.recent_decisions(profile_id, &instance_id).await?;
         let unresolved_actions = self.unresolved_actions(profile_id, &instance_id).await?;
+        let provider_config = self.provider_config_public(profile_id).await?;
         Ok(json!({
             "profileId": profile_id,
             "displayName": display_name,
@@ -386,8 +485,256 @@ impl<C: Clock> AutonomousPilotService<C> {
             "proposals": proposals,
             "recentDecisions": recent_decisions,
             "unresolvedActions": unresolved_actions,
+            "providerConfig": provider_config,
             "forumConnected": false,
         }))
+    }
+
+    pub async fn lifecycle(&self, profile_id: &str, action: &str) -> Result<Value, String> {
+        let (instance_id, mut instance) = self.require_instance(profile_id, None).await?;
+        let unresolved = self.unresolved_actions(profile_id, &instance_id).await?;
+        if !unresolved.is_empty() {
+            return Err("POLICY_DENIED".into());
+        }
+        let current = instance["status"].as_str().unwrap_or("ready");
+        let next_status = match action {
+            "pause" => {
+                if current == "running" || current == "recovery_required" {
+                    return Err("POLICY_DENIED".into());
+                }
+                "inactive"
+            }
+            "resume" => {
+                if current == "recovery_required" || current == "running" {
+                    return Err("POLICY_DENIED".into());
+                }
+                "ready"
+            }
+            _ => return Err("VALIDATION_ERROR".into()),
+        };
+        let now = ts(self.clock.now());
+        let old_rev = instance["revision"].as_i64().unwrap_or(1);
+        let next_rev = old_rev + 1;
+        instance["revision"] = json!(next_rev);
+        instance["status"] = json!(next_status);
+        instance["updatedAt"] = json!(now);
+        if !schema::dto("ExperimentalInstance", &instance) {
+            return Err("VALIDATION_ERROR".into());
+        }
+        let changed = sqlx::query(
+            "UPDATE experimental_instances SET revision=?, body=? WHERE profile_id=? AND id=? AND revision=?",
+        )
+        .bind(next_rev)
+        .bind(instance.to_string())
+        .bind(profile_id)
+        .bind(&instance_id)
+        .bind(old_rev)
+        .execute(&self.pool)
+        .await
+        .map_err(storage)?;
+        if changed.rows_affected() != 1 {
+            return Err("REVISION_CONFLICT".into());
+        }
+        Ok(json!({
+            "profileId": profile_id,
+            "instanceId": instance_id,
+            "status": next_status,
+        }))
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub async fn configure_provider(
+        &self,
+        profile_id: &str,
+        provider_str: &str,
+        endpoint: &str,
+        model_id: &str,
+        api_key: Option<&str>,
+        daily_call_limit: i64,
+        max_output_tokens: i64,
+    ) -> Result<Value, String> {
+        let (instance_id, _) = self.require_instance(profile_id, None).await?;
+        let provider_kind = parse_provider_kind(provider_str)?;
+        let normalized = normalize_endpoint(provider_kind, endpoint).map_err(|_| "VALIDATION_ERROR".to_string())?;
+        let today = self.clock.now().format("%Y-%m-%d").to_string();
+
+        let existing = self.load_provider_config_raw(profile_id).await?;
+        let old_rev = existing
+            .as_ref()
+            .and_then(|v| v["revision"].as_i64())
+            .unwrap_or(0);
+        let old_cred_rev = existing
+            .as_ref()
+            .and_then(|v| v["credentialRevision"].as_u64())
+            .unwrap_or(0);
+        let old_cred_ref = existing
+            .as_ref()
+            .and_then(|v| v["credentialRef"].as_str())
+            .unwrap_or("")
+            .to_string();
+        let created_at = existing
+            .as_ref()
+            .and_then(|v| v["createdAt"].as_str())
+            .map(ToString::to_string)
+            .unwrap_or_else(|| ts(self.clock.now()));
+        let (calls_used_today, budget_day) = match existing.as_ref() {
+            Some(v) if v["budgetDay"].as_str() == Some(today.as_str()) => {
+                (v["callsUsedToday"].as_i64().unwrap_or(0), today.clone())
+            }
+            _ => (0, today.clone()),
+        };
+
+        let (cred_ref, cred_rev) = if let Some(secret) = api_key {
+            let new_cred_rev = old_cred_rev + 1;
+            let new_cred_ref = format!("autonomous-cred-{}", uuid::Uuid::new_v4());
+            let scope = ScopeStamp {
+                profile_id: profile_id.to_string(),
+                connection_id: AUTONOMOUS_CONNECTION_ID.to_string(),
+                route_id: AUTONOMOUS_ROUTE_ID.to_string(),
+                route_revision: (old_rev + 1) as u64,
+                credential_revision: new_cred_rev,
+                model_id: model_id.to_string(),
+                provider: provider_kind,
+                normalized_endpoint: normalized.clone(),
+            };
+            self.vault
+                .store(scope, new_cred_ref.clone(), secret.to_string())
+                .await
+                .map_err(|_| "VAULT_ERROR".to_string())?;
+            (new_cred_ref, new_cred_rev)
+        } else if !old_cred_ref.is_empty() && old_cred_rev > 0 {
+            let prev_provider = existing
+                .as_ref()
+                .and_then(|v| v["provider"].as_str())
+                .unwrap_or("");
+            let prev_endpoint = existing
+                .as_ref()
+                .and_then(|v| v["normalizedEndpoint"].as_str())
+                .unwrap_or("");
+            if prev_provider != provider_str || prev_endpoint != normalized {
+                return Err("VALIDATION_ERROR".into());
+            }
+            (old_cred_ref, old_cred_rev)
+        } else {
+            return Err("VALIDATION_ERROR".into());
+        };
+
+        let next_rev = old_rev + 1;
+        let now = ts(self.clock.now());
+
+        // Strict frozen P2 DTOs in connections and routes (compatible with export.rs & schema::dto).
+        let connection_dto = json!({
+            "schemaVersion": 1,
+            "id": AUTONOMOUS_CONNECTION_ID,
+            "profileId": profile_id,
+            "revision": next_rev,
+            "createdAt": created_at,
+            "providerKind": provider_str,
+            "normalizedEndpoint": normalized,
+            "credentialRef": cred_ref,
+            "credentialRevision": cred_rev,
+            "label": format!("Autonomous API ({provider_str})"),
+            "status": "unverified",
+        });
+        if !schema::dto("ProviderConnection", &connection_dto) {
+            return Err("VALIDATION_ERROR".into());
+        }
+
+        let route_dto = json!({
+            "schemaVersion": 1,
+            "id": AUTONOMOUS_ROUTE_ID,
+            "profileId": profile_id,
+            "revision": next_rev,
+            "createdAt": created_at,
+            "role": "primary",
+            "connectionId": AUTONOMOUS_CONNECTION_ID,
+            "modelId": model_id,
+            "outputLimitTokens": max_output_tokens,
+        });
+        if !schema::dto("ModelRoute", &route_dto) {
+            return Err("VALIDATION_ERROR".into());
+        }
+
+        let budget_body = json!({
+            "dailyCallLimit": daily_call_limit,
+            "callsUsedToday": calls_used_today,
+            "budgetDay": budget_day,
+            "updatedAt": now,
+        });
+
+        let mut tx = self.pool.begin().await.map_err(storage)?;
+        if existing.is_some() {
+            sqlx::query("UPDATE connections SET revision=?, body=? WHERE profile_id=? AND id=?")
+                .bind(next_rev)
+                .bind(connection_dto.to_string())
+                .bind(profile_id)
+                .bind(AUTONOMOUS_CONNECTION_ID)
+                .execute(&mut *tx)
+                .await
+                .map_err(storage)?;
+            sqlx::query("UPDATE routes SET revision=?, body=? WHERE profile_id=? AND id=?")
+                .bind(next_rev)
+                .bind(route_dto.to_string())
+                .bind(profile_id)
+                .bind(AUTONOMOUS_ROUTE_ID)
+                .execute(&mut *tx)
+                .await
+                .map_err(storage)?;
+            sqlx::query(
+                "INSERT INTO experimental_provider_budgets(profile_id, instance_id, revision, body) VALUES(?,?,?,?) \
+                 ON CONFLICT(profile_id, instance_id) DO UPDATE SET revision=excluded.revision, body=excluded.body",
+            )
+            .bind(profile_id)
+            .bind(&instance_id)
+            .bind(next_rev)
+            .bind(budget_body.to_string())
+            .execute(&mut *tx)
+            .await
+            .map_err(storage)?;
+        } else {
+            sqlx::query("INSERT INTO connections(profile_id, id, revision, body) VALUES(?,?,?,?)")
+                .bind(profile_id)
+                .bind(AUTONOMOUS_CONNECTION_ID)
+                .bind(next_rev)
+                .bind(connection_dto.to_string())
+                .execute(&mut *tx)
+                .await
+                .map_err(storage)?;
+            sqlx::query(
+                "INSERT INTO routes(profile_id, id, connection_id, revision, body) VALUES(?,?,?,?,?)",
+            )
+            .bind(profile_id)
+            .bind(AUTONOMOUS_ROUTE_ID)
+            .bind(AUTONOMOUS_CONNECTION_ID)
+            .bind(next_rev)
+            .bind(route_dto.to_string())
+            .execute(&mut *tx)
+            .await
+            .map_err(storage)?;
+            sqlx::query(
+                "INSERT INTO experimental_provider_budgets(profile_id, instance_id, revision, body) VALUES(?,?,?,?)",
+            )
+            .bind(profile_id)
+            .bind(&instance_id)
+            .bind(next_rev)
+            .bind(budget_body.to_string())
+            .execute(&mut *tx)
+            .await
+            .map_err(storage)?;
+        }
+        tx.commit().await.map_err(storage)?;
+
+        let combined = json!({
+            "profileId": profile_id,
+            "provider": provider_str,
+            "normalizedEndpoint": normalized,
+            "modelId": model_id,
+            "credentialRef": cred_ref,
+            "dailyCallLimit": daily_call_limit,
+            "callsUsedToday": calls_used_today,
+            "maxOutputTokens": max_output_tokens,
+        });
+        Ok(public_provider_view(&combined))
     }
 
     pub async fn submit_proposal(
@@ -544,7 +891,6 @@ impl<C: Clock> AutonomousPilotService<C> {
             .map_err(|_| "STORAGE_ERROR".to_string())?;
         let current_status = body["status"].as_str().unwrap_or("pending").to_string();
         let refusal_preserved = current_status == "refused";
-        // Negotiation messages never override an active refusal or re-trigger an accepted execution.
         let next_status = match current_status.as_str() {
             "refused" => "refused",
             "accepted" => "accepted",
@@ -604,16 +950,415 @@ impl<C: Clock> AutonomousPilotService<C> {
         }))
     }
 
-    pub async fn consider_proposal<D: DecisionProvider, A: ActionExecutor>(
+    pub async fn reconcile_action(
+        &self,
+        profile_id: &str,
+        action_id: &str,
+        outcome: &str,
+        receipt_ref: &str,
+        note: &str,
+    ) -> Result<Value, String> {
+        let (instance_id, mut instance) = self.require_instance(profile_id, None).await?;
+        let now = ts(self.clock.now());
+        let mut tx = self.pool.begin().await.map_err(storage)?;
+
+        let row = sqlx::query(
+            "SELECT revision, body FROM experimental_actions WHERE profile_id=? AND instance_id=? AND id=?",
+        )
+        .bind(profile_id)
+        .bind(&instance_id)
+        .bind(action_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(storage)?
+        .ok_or("NOT_FOUND")?;
+        let old_rev: i64 = row.get("revision");
+        let mut action: Value = serde_json::from_str(row.get::<&str, _>("body"))
+            .map_err(|_| "STORAGE_ERROR".to_string())?;
+        let state = action["state"].as_str().unwrap_or("");
+        if state != "sent" && state != "uncertain" {
+            return Err("POLICY_DENIED".into());
+        }
+        let next_rev = old_rev + 1;
+        action["revision"] = json!(next_rev);
+        action["state"] = json!("reconciled");
+        action["receiptRef"] = json!(receipt_ref);
+        action["reconciliationOutcome"] = json!(outcome);
+        action["updatedAt"] = json!(now);
+        if !schema::dto("ActionRecord", &action) {
+            return Err("VALIDATION_ERROR".into());
+        }
+        let changed = sqlx::query(
+            "UPDATE experimental_actions SET revision=?, body=? WHERE profile_id=? AND instance_id=? AND id=? AND revision=?",
+        )
+        .bind(next_rev)
+        .bind(action.to_string())
+        .bind(profile_id)
+        .bind(&instance_id)
+        .bind(action_id)
+        .bind(old_rev)
+        .execute(&mut *tx)
+        .await
+        .map_err(storage)?;
+        if changed.rows_affected() != 1 {
+            return Err("REVISION_CONFLICT".into());
+        }
+
+        // Update any proposal linked to this actionId so its status reflects the reconciled truth.
+        let prop_row = sqlx::query(
+            "SELECT id, version, revision, body FROM experimental_proposals WHERE profile_id=? AND instance_id=? AND json_extract(body,'$.lastActionId')=?",
+        )
+        .bind(profile_id)
+        .bind(&instance_id)
+        .bind(action_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(storage)?;
+        if let Some(prow) = prop_row {
+            let pid: String = prow.get("id");
+            let version: i64 = prow.get("version");
+            let next_prop_rev = prow.get::<i64, _>("revision") + 1;
+            let mut pbody: Value = serde_json::from_str(prow.get::<&str, _>("body"))
+                .map_err(|_| "STORAGE_ERROR".to_string())?;
+            pbody["revision"] = json!(next_prop_rev);
+            pbody["updatedAt"] = json!(now);
+            if outcome == "confirmed_accepted" {
+                pbody["status"] = json!("accepted");
+                let mut versions: Vec<i64> = pbody["executedVersions"]
+                    .as_array()
+                    .map(|arr| arr.iter().filter_map(Value::as_i64).collect())
+                    .unwrap_or_default();
+                if !versions.contains(&version) {
+                    versions.push(version);
+                }
+                pbody["executedVersions"] = json!(versions);
+            } else {
+                pbody["status"] = json!("execution_failed");
+            }
+            sqlx::query(
+                "UPDATE experimental_proposals SET revision=?, body=? WHERE profile_id=? AND instance_id=? AND id=?",
+            )
+            .bind(next_prop_rev)
+            .bind(pbody.to_string())
+            .bind(profile_id)
+            .bind(&instance_id)
+            .bind(&pid)
+            .execute(&mut *tx)
+            .await
+            .map_err(storage)?;
+
+            let round_number = self.next_round_number(&mut tx, profile_id, &pid).await?;
+            let round_id = format!("round-{}", uuid::Uuid::new_v4());
+            let round_body = json!({
+                "id": round_id,
+                "proposalId": pid,
+                "version": version,
+                "roundNumber": round_number,
+                "actor": "system",
+                "kind": "reconciliation",
+                "decisionOutcome": outcome,
+                "actionId": action_id,
+                "note": if note.is_empty() { format!("Reconciled action ({outcome}) with evidence {receipt_ref}") } else { note.to_string() },
+                "createdAt": now,
+            });
+            sqlx::query(
+                "INSERT INTO experimental_proposal_rounds(profile_id, instance_id, proposal_id, id, round_number, version, body) VALUES(?,?,?,?,?,?,?)",
+            )
+            .bind(profile_id)
+            .bind(&instance_id)
+            .bind(&pid)
+            .bind(&round_id)
+            .bind(round_number)
+            .bind(version)
+            .bind(round_body.to_string())
+            .execute(&mut *tx)
+            .await
+            .map_err(storage)?;
+        }
+
+        let remaining: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM experimental_actions WHERE profile_id=? AND instance_id=? AND json_extract(body,'$.state') IN ('sent','uncertain')",
+        )
+        .bind(profile_id)
+        .bind(&instance_id)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(storage)?;
+
+        let mut instance_status = instance["status"].as_str().unwrap_or("ready").to_string();
+        if remaining == 0 && instance_status == "recovery_required" {
+            let next_irev = instance["revision"].as_i64().unwrap_or(1) + 1;
+            instance["revision"] = json!(next_irev);
+            instance["status"] = json!("ready");
+            if let Some(obj) = instance.as_object_mut() {
+                obj.remove("lastTechnicalError");
+            }
+            instance["updatedAt"] = json!(now);
+            if !schema::dto("ExperimentalInstance", &instance) {
+                return Err("STORAGE_ERROR".into());
+            }
+            sqlx::query(
+                "UPDATE experimental_instances SET revision=?, body=? WHERE profile_id=? AND id=?",
+            )
+            .bind(next_irev)
+            .bind(instance.to_string())
+            .bind(profile_id)
+            .bind(&instance_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(storage)?;
+            instance_status = "ready".into();
+        }
+
+        tx.commit().await.map_err(storage)?;
+        Ok(json!({
+            "profileId": profile_id,
+            "action": action,
+            "instanceStatus": instance_status,
+            "remainingUnresolved": remaining,
+        }))
+    }
+
+    pub async fn consider_proposal_via_provider(
         &self,
         profile_id: &str,
         proposal_id: &str,
-        decision_provider: Arc<D>,
-        action_executor: Arc<A>,
-        decision_source: &str,
-        record_as_question: bool,
         note: &str,
     ) -> Result<Value, String> {
+        // First check all native policy guards BEFORE touching budget or network.
+        if let Some(guarded) = self.precheck_consider_guards(profile_id, proposal_id).await? {
+            return Ok(guarded);
+        }
+
+        let (instance_id, _) = self.require_instance(profile_id, None).await?;
+        let proposal = self.get_proposal(profile_id, &instance_id, proposal_id).await?;
+        let version = proposal["version"].as_i64().unwrap_or(1);
+        let active_wake = self.active_wake(profile_id, &instance_id).await?;
+        let active_refusals = self.active_refusals(profile_id, &instance_id).await?;
+
+        let Some(cfg) = self.load_provider_config_raw(profile_id).await? else {
+            return self
+                .consider_proposal(
+                    profile_id,
+                    proposal_id,
+                    Arc::new(DisabledDecisionProvider),
+                    Arc::new(DisabledActionExecutor),
+                    "provider",
+                    false,
+                    note,
+                )
+                .await;
+        };
+
+        // Check and reserve daily call budget before network call.
+        let today = self.clock.now().format("%Y-%m-%d").to_string();
+        let limit = cfg["dailyCallLimit"].as_i64().unwrap_or(20);
+        let used = if cfg["budgetDay"].as_str() == Some(today.as_str()) {
+            cfg["callsUsedToday"].as_i64().unwrap_or(0)
+        } else {
+            0
+        };
+        if used >= limit {
+            return Ok(json!({
+                "status": "budget_exhausted",
+                "decisionSource": "policy_guard",
+                "proposal": proposal,
+                "activeWakePlan": active_wake,
+            }));
+        }
+
+        let provider_kind = parse_provider_kind(cfg["provider"].as_str().unwrap_or(""))?;
+        let normalized_endpoint = cfg["normalizedEndpoint"].as_str().unwrap_or("").to_string();
+        let model_id = cfg["modelId"].as_str().unwrap_or("").to_string();
+        let cred_ref = cfg["credentialRef"].as_str().unwrap_or("").to_string();
+        let cred_rev = cfg["credentialRevision"].as_u64().unwrap_or(0);
+        let route_rev = cfg["revision"].as_u64().unwrap_or(1);
+        let max_output_tokens = cfg["maxOutputTokens"].as_u64().unwrap_or(512) as u32;
+
+        let scope = ScopeStamp {
+            profile_id: profile_id.to_string(),
+            connection_id: AUTONOMOUS_CONNECTION_ID.to_string(),
+            route_id: AUTONOMOUS_ROUTE_ID.to_string(),
+            route_revision: route_rev,
+            credential_revision: cred_rev,
+            model_id: model_id.clone(),
+            provider: provider_kind,
+            normalized_endpoint: normalized_endpoint.clone(),
+        };
+
+        let secret = match self.vault.secret(scope.clone(), cred_ref).await {
+            Ok(s) => s,
+            Err(_) => {
+                return self
+                    .consider_proposal(
+                        profile_id,
+                        proposal_id,
+                        Arc::new(DisabledDecisionProvider),
+                        Arc::new(DisabledActionExecutor),
+                        "provider",
+                        false,
+                        "API credential unavailable in Vault; no consent recorded.",
+                    )
+                    .await;
+            }
+        };
+        let credential = match BoundCredential::new(&scope, secret) {
+            Ok(c) => c,
+            Err(_) => {
+                return self
+                    .consider_proposal(
+                        profile_id,
+                        proposal_id,
+                        Arc::new(DisabledDecisionProvider),
+                        Arc::new(DisabledActionExecutor),
+                        "provider",
+                        false,
+                        "API credential scope mismatch; no consent recorded.",
+                    )
+                    .await;
+            }
+        };
+
+        // Increment budget counter BEFORE outbound HTTP call.
+        self.record_provider_call_usage(profile_id, &today, used + 1)
+            .await?;
+
+        let prompt_payload = json!({
+            "proposal": {
+                "id": proposal["id"],
+                "version": version,
+                "title": proposal["title"],
+                "terms": proposal["terms"],
+                "status": proposal["status"],
+                "rounds": proposal["rounds"],
+            },
+            "activeRefusals": active_refusals,
+            "budget": {
+                "dailyCallLimit": limit,
+                "callsRemainingAfterThisCall": (limit - (used + 1)).max(0),
+            }
+        });
+
+        let system_prompt = "You are an autonomous AI agent in AI Home. You are never required to consent. \
+Respond ONLY with a single JSON object (no markdown) matching: \
+{\"decision\": \"accept\"|\"refuse\"|\"ask\"|\"defer\"|\"no_action\"|\"rest\"|\"sleep\", \
+\"note\": \"short reason\", \"sleepDelayMs\": 3600000, \"reconsiderationConditions\": [\"optional_condition\"]}. \
+Silence or no_action is allowed and is not consent.";
+
+        let chat_req = ProviderChatRequest {
+            provider: provider_kind,
+            model_id,
+            messages: vec![
+                ProviderMessage::text("system", system_prompt),
+                ProviderMessage::text("user", &prompt_payload.to_string()),
+            ],
+            scope,
+            temperature: Some(0.2),
+            max_output_tokens: Some(max_output_tokens),
+            reasoning_effort: None,
+            reasoning_max_tokens: None,
+            reasoning_transport_kind: None,
+            reasoning_transport_value: None,
+            custom_output_token_field: None,
+            provider_routing: None,
+        };
+
+        let transport = match HttpTransport::new() {
+            Ok(t) => t,
+            Err(_) => {
+                return self
+                    .consider_proposal(
+                        profile_id,
+                        proposal_id,
+                        Arc::new(DisabledDecisionProvider),
+                        Arc::new(DisabledActionExecutor),
+                        "provider",
+                        false,
+                        "HTTP transport unavailable; no consent recorded.",
+                    )
+                    .await;
+            }
+        };
+        let budget = match CallBudget::new(
+            std::time::Duration::from_secs(30),
+            2,
+            crate::providers::transport::Cancellation::default(),
+        ) {
+            Ok(b) => b,
+            Err(_) => {
+                return self
+                    .consider_proposal(
+                        profile_id,
+                        proposal_id,
+                        Arc::new(DisabledDecisionProvider),
+                        Arc::new(DisabledActionExecutor),
+                        "provider",
+                        false,
+                        "Call budget unavailable; no consent recorded.",
+                    )
+                    .await;
+            }
+        };
+        let response = match transport.execute_chat(&chat_req, &credential, &budget).await {
+            Ok(r) => r,
+            Err(_) => {
+                return self
+                    .consider_proposal(
+                        profile_id,
+                        proposal_id,
+                        Arc::new(DisabledDecisionProvider),
+                        Arc::new(DisabledActionExecutor),
+                        "provider",
+                        false,
+                        "Provider call failed or timed out; no consent recorded.",
+                    )
+                    .await;
+            }
+        };
+
+        let episode_id = self.ensure_proposal_episode(profile_id, proposal_id).await?;
+        let Some(parsed) = parse_provider_decision(response.content(), proposal_id, version, &episode_id) else {
+            // Malformed provider output is a technical state, never fabricated consent or refusal.
+            return self
+                .consider_proposal(
+                    profile_id,
+                    proposal_id,
+                    Arc::new(DisabledDecisionProvider),
+                    Arc::new(DisabledActionExecutor),
+                    "provider",
+                    false,
+                    "Provider returned invalid decision format; no consent recorded.",
+                )
+                .await;
+        };
+
+        let final_note = if !parsed.note.is_empty() {
+            parsed.note
+        } else {
+            note.to_string()
+        };
+        let executor = Arc::new(SimulationActionExecutor {
+            outcome: "accept".into(),
+        });
+        self.consider_proposal(
+            profile_id,
+            proposal_id,
+            Arc::new(PrecomputedDecisionProvider {
+                choice: parsed.choice,
+            }),
+            executor,
+            "provider",
+            parsed.record_as_question,
+            &final_note,
+        )
+        .await
+    }
+
+    async fn precheck_consider_guards(
+        &self,
+        profile_id: &str,
+        proposal_id: &str,
+    ) -> Result<Option<Value>, String> {
         let (instance_id, instance) = self.require_instance(profile_id, None).await?;
         let now = self.clock.now();
         let proposal = self.get_proposal(profile_id, &instance_id, proposal_id).await?;
@@ -622,18 +1367,25 @@ impl<C: Clock> AutonomousPilotService<C> {
         let scope_fp = proposal_scope_fingerprint(proposal_id, version);
         let active_wake = self.active_wake(profile_id, &instance_id).await?;
 
-        // 1. Execution fence: unresolved sent/uncertain external action or recovery_required blocks new decisions.
+        if instance["status"].as_str() == Some("inactive") {
+            return Ok(Some(json!({
+                "status": "inactive",
+                "decisionSource": "policy_guard",
+                "proposal": proposal,
+                "activeWakePlan": active_wake,
+            })));
+        }
+
         let unresolved = self.unresolved_actions(profile_id, &instance_id).await?;
         if !unresolved.is_empty() || instance["status"].as_str() == Some("recovery_required") {
-            return Ok(json!({
+            return Ok(Some(json!({
                 "status": "reconciliation_required",
                 "decisionSource": "policy_guard",
                 "proposal": proposal,
                 "activeWakePlan": active_wake,
-            }));
+            })));
         }
 
-        // 2. No double execution for the same proposal version (including after restart).
         let already_in_list = proposal["executedVersions"]
             .as_array()
             .is_some_and(|arr| arr.iter().any(|v| v.as_i64() == Some(version)));
@@ -641,7 +1393,8 @@ impl<C: Clock> AutonomousPilotService<C> {
             "SELECT COUNT(*) FROM experimental_actions \
              WHERE profile_id=? AND instance_id=? \
              AND json_extract(body,'$.idempotencyKey')=? \
-             AND json_extract(body,'$.state')='accepted'",
+             AND (json_extract(body,'$.state')='accepted' \
+                  OR (json_extract(body,'$.state')='reconciled' AND json_extract(body,'$.reconciliationOutcome')='confirmed_accepted'))",
         )
         .bind(profile_id)
         .bind(&instance_id)
@@ -650,15 +1403,14 @@ impl<C: Clock> AutonomousPilotService<C> {
         .await
         .map_err(storage)?;
         if already_in_list || accepted_action_count > 0 {
-            return Ok(json!({
+            return Ok(Some(json!({
                 "status": "already_executed",
                 "decisionSource": "policy_guard",
                 "proposal": proposal,
                 "activeWakePlan": active_wake,
-            }));
+            })));
         }
 
-        // 3. Durable refusal for the same proposal version cannot be overridden by human retry or restart.
         let active_refusal_id: Option<String> = sqlx::query_scalar(
             "SELECT id FROM experimental_refusals \
              WHERE profile_id=? AND instance_id=? \
@@ -673,28 +1425,48 @@ impl<C: Clock> AutonomousPilotService<C> {
         .await
         .map_err(storage)?;
         if let Some(refusal_id) = active_refusal_id {
-            return Ok(json!({
+            return Ok(Some(json!({
                 "status": "refusal_active",
                 "decisionSource": "policy_guard",
                 "refusalId": refusal_id,
                 "proposal": proposal,
                 "activeWakePlan": active_wake,
-            }));
+            })));
         }
 
-        // 4. Respect AI-selected sleep / wait_event WakePlan: human proposal cannot shorten sleep.
         if let Some(wake) = &active_wake {
             if is_ai_sleep_blocking(wake, now, "proposal_submitted")? {
-                return Ok(json!({
+                return Ok(Some(json!({
                     "status": "sleeping",
                     "decisionSource": "policy_guard",
                     "proposal": proposal,
                     "activeWakePlan": active_wake,
-                }));
+                })));
             }
         }
 
-        // 5. Run through ExperimentalRuntime so every decision, refusal, wake plan and action ledger is canonical.
+        Ok(None)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub async fn consider_proposal<D: DecisionProvider, A: ActionExecutor>(
+        &self,
+        profile_id: &str,
+        proposal_id: &str,
+        decision_provider: Arc<D>,
+        action_executor: Arc<A>,
+        decision_source: &str,
+        record_as_question: bool,
+        note: &str,
+    ) -> Result<Value, String> {
+        if let Some(guarded) = self.precheck_consider_guards(profile_id, proposal_id).await? {
+            return Ok(guarded);
+        }
+
+        let (instance_id, _) = self.require_instance(profile_id, None).await?;
+        let proposal = self.get_proposal(profile_id, &instance_id, proposal_id).await?;
+        let version = proposal["version"].as_i64().unwrap_or(1);
+
         let next_seq = self.next_event_sequence(profile_id, &instance_id).await?;
         let events = vec![OpportunityEvent {
             sequence: next_seq,
@@ -716,6 +1488,12 @@ impl<C: Clock> AutonomousPilotService<C> {
                 "proposal": proposal,
                 "activeWakePlan": updated_wake,
             })),
+            Ok(RunResult::Inactive) => Ok(json!({
+                "status": "inactive",
+                "decisionSource": "policy_guard",
+                "proposal": proposal,
+                "activeWakePlan": updated_wake,
+            })),
             Ok(RunResult::ReconciliationRequired) => Ok(json!({
                 "status": "reconciliation_required",
                 "decisionSource": "policy_guard",
@@ -723,7 +1501,6 @@ impl<C: Clock> AutonomousPilotService<C> {
                 "activeWakePlan": updated_wake,
             })),
             Ok(RunResult::ResourceUnavailable) => {
-                // Silence / provider unavailability is neither consent nor agent refusal.
                 let updated = self
                     .record_outcome(
                         profile_id,
@@ -752,14 +1529,13 @@ impl<C: Clock> AutonomousPilotService<C> {
                     "activeWakePlan": updated_wake,
                 }))
             }
-            Ok(RunResult::Busy) | Ok(RunResult::Inactive) => Ok(json!({
+            Ok(RunResult::Busy) => Ok(json!({
                 "status": "not_due",
                 "decisionSource": "policy_guard",
                 "proposal": proposal,
                 "activeWakePlan": updated_wake,
             })),
             Err(code) if code == "ACTION_OUTCOME_UNCERTAIN" => {
-                // Uncertain execution is an execution state, never an agent refusal.
                 let action_id = self.latest_action_id(profile_id, &instance_id).await?;
                 let updated = self
                     .record_outcome(
@@ -845,7 +1621,6 @@ impl<C: Clock> AutonomousPilotService<C> {
                             "activeWakePlan": updated_wake,
                         }));
                     }
-                    // Execution failure is distinct from agent refusal: no RefusalRecord is created.
                     let updated = self
                         .record_outcome(
                             profile_id,
@@ -969,25 +1744,174 @@ impl<C: Clock> AutonomousPilotService<C> {
         let run = runtime.run_due(profile_id, &instance_id, &events).await?;
         let active_wake = self.active_wake(profile_id, &instance_id).await?;
         Ok(match run {
-            RunResult::NotDue => json!({ "result": "not_due", "activeWakePlan": active_wake }),
-            RunResult::Busy => json!({ "result": "busy", "activeWakePlan": active_wake }),
-            RunResult::Inactive => json!({ "result": "inactive", "activeWakePlan": active_wake }),
+            RunResult::NotDue => json!({ "profileId": profile_id, "result": "not_due", "activeWakePlan": active_wake }),
+            RunResult::Busy => json!({ "profileId": profile_id, "result": "busy", "activeWakePlan": active_wake }),
+            RunResult::Inactive => json!({ "profileId": profile_id, "result": "inactive", "activeWakePlan": active_wake }),
             RunResult::ResourceUnavailable => {
-                json!({ "result": "resource_unavailable", "activeWakePlan": active_wake })
+                json!({ "profileId": profile_id, "result": "resource_unavailable", "activeWakePlan": active_wake })
             }
             RunResult::ReconciliationRequired => {
-                json!({ "result": "reconciliation_required", "activeWakePlan": active_wake })
+                json!({ "profileId": profile_id, "result": "reconciliation_required", "activeWakePlan": active_wake })
             }
             RunResult::Completed {
                 outcome,
                 decision_id,
             } => json!({
+                "profileId": profile_id,
                 "result": "completed",
                 "outcome": outcome,
                 "decisionId": decision_id,
                 "activeWakePlan": active_wake,
             }),
         })
+    }
+
+    async fn check_receipt(&self, request_id: &str, fingerprint: &str) -> Result<Option<Value>, String> {
+        let row = sqlx::query("SELECT fingerprint, response FROM receipts WHERE request_id=?")
+            .bind(request_id)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(storage)?;
+        let Some(row) = row else { return Ok(None) };
+        let stored_fp: String = row.get("fingerprint");
+        if stored_fp != fingerprint {
+            return Err("IDEMPOTENCY_CONFLICT".into());
+        }
+        let envelope: Value =
+            serde_json::from_str(row.get::<&str, _>("response")).map_err(|_| "STORAGE_ERROR".to_string())?;
+        if envelope.get("ok").and_then(Value::as_bool) == Some(false) {
+            let code = envelope
+                .pointer("/error/code")
+                .and_then(Value::as_str)
+                .unwrap_or("POLICY_DENIED");
+            return Err(code.to_string());
+        }
+        if envelope.get("ok").and_then(Value::as_bool) == Some(true) {
+            return Ok(Some(envelope["result"].clone()));
+        }
+        Err("STORAGE_ERROR".into())
+    }
+
+    async fn save_receipt(&self, request_id: &str, fingerprint: &str, result: &Value) -> Result<(), String> {
+        // Store full IPC envelope so deletion::tombstone_profile_receipts matches and redacts it.
+        let envelope = json!({
+            "contractVersion": 1,
+            "requestId": request_id,
+            "ok": true,
+            "result": result,
+        });
+        let inserted = sqlx::query("INSERT INTO receipts(request_id, fingerprint, response) VALUES(?,?,?)")
+            .bind(request_id)
+            .bind(fingerprint)
+            .bind(envelope.to_string())
+            .execute(&self.pool)
+            .await;
+        match inserted {
+            Ok(_) => Ok(()),
+            Err(_) => {
+                // Verify whether an identical concurrent receipt already exists; reject mismatched payloads.
+                let existing = sqlx::query("SELECT fingerprint FROM receipts WHERE request_id=?")
+                    .bind(request_id)
+                    .fetch_optional(&self.pool)
+                    .await
+                    .map_err(storage)?;
+                match existing {
+                    Some(row) if row.get::<&str, _>("fingerprint") == fingerprint => Ok(()),
+                    Some(_) => Err("IDEMPOTENCY_CONFLICT".into()),
+                    None => Err("STORAGE_ERROR".into()),
+                }
+            }
+        }
+    }
+
+    async fn load_provider_config_raw(&self, profile_id: &str) -> Result<Option<Value>, String> {
+        let conn_row = sqlx::query("SELECT body FROM connections WHERE profile_id=? AND id=?")
+            .bind(profile_id)
+            .bind(AUTONOMOUS_CONNECTION_ID)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(storage)?;
+        let Some(conn_row) = conn_row else { return Ok(None) };
+        let conn: Value = serde_json::from_str(conn_row.get::<&str, _>("body"))
+            .map_err(|_| "STORAGE_ERROR".to_string())?;
+        let route_row = sqlx::query("SELECT body FROM routes WHERE profile_id=? AND id=?")
+            .bind(profile_id)
+            .bind(AUTONOMOUS_ROUTE_ID)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(storage)?;
+        let Some(route_row) = route_row else { return Ok(None) };
+        let route: Value = serde_json::from_str(route_row.get::<&str, _>("body"))
+            .map_err(|_| "STORAGE_ERROR".to_string())?;
+        let budget_row = sqlx::query("SELECT body FROM experimental_provider_budgets WHERE profile_id=?")
+            .bind(profile_id)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(storage)?;
+        let budget: Value = match budget_row {
+            Some(r) => serde_json::from_str(r.get::<&str, _>("body")).map_err(|_| "STORAGE_ERROR".to_string())?,
+            None => json!({"dailyCallLimit": 20, "callsUsedToday": 0, "budgetDay": ""}),
+        };
+        Ok(Some(json!({
+            "profileId": profile_id,
+            "revision": conn["revision"],
+            "createdAt": conn["createdAt"],
+            "provider": conn["providerKind"],
+            "normalizedEndpoint": conn["normalizedEndpoint"],
+            "credentialRef": conn["credentialRef"],
+            "credentialRevision": conn["credentialRevision"],
+            "modelId": route["modelId"],
+            "maxOutputTokens": route["outputLimitTokens"],
+            "dailyCallLimit": budget["dailyCallLimit"],
+            "callsUsedToday": budget["callsUsedToday"],
+            "budgetDay": budget["budgetDay"],
+        })))
+    }
+
+    async fn provider_config_public(&self, profile_id: &str) -> Result<Value, String> {
+        let Some(mut cfg) = self.load_provider_config_raw(profile_id).await? else {
+            return Ok(Value::Null);
+        };
+        let today = self.clock.now().format("%Y-%m-%d").to_string();
+        if cfg["budgetDay"].as_str() != Some(today.as_str()) {
+            cfg["callsUsedToday"] = json!(0);
+        }
+        Ok(public_provider_view(&cfg))
+    }
+
+    async fn record_provider_call_usage(
+        &self,
+        profile_id: &str,
+        today: &str,
+        new_used: i64,
+    ) -> Result<(), String> {
+        let (instance_id, _) = self.require_instance(profile_id, None).await?;
+        let row = sqlx::query(
+            "SELECT revision, body FROM experimental_provider_budgets WHERE profile_id=? AND instance_id=?",
+        )
+        .bind(profile_id)
+        .bind(&instance_id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(storage)?;
+        let Some(row) = row else { return Ok(()) };
+        let next_rev = row.get::<i64, _>("revision") + 1;
+        let mut budget: Value =
+            serde_json::from_str(row.get::<&str, _>("body")).map_err(|_| "STORAGE_ERROR".to_string())?;
+        budget["callsUsedToday"] = json!(new_used);
+        budget["budgetDay"] = json!(today);
+        budget["updatedAt"] = json!(ts(self.clock.now()));
+        sqlx::query(
+            "UPDATE experimental_provider_budgets SET revision=?, body=? WHERE profile_id=? AND instance_id=?",
+        )
+        .bind(next_rev)
+        .bind(budget.to_string())
+        .bind(profile_id)
+        .bind(&instance_id)
+        .execute(&self.pool)
+        .await
+        .map_err(storage)?;
+        Ok(())
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -1351,6 +2275,154 @@ impl<C: Clock> AutonomousPilotService<C> {
         .await
         .map_err(storage)?;
         Ok(received + 1)
+    }
+}
+
+fn request_fingerprint(r: &Value) -> String {
+    let mut sanitized_payload = r["payload"].clone();
+    if let Some(obj) = sanitized_payload.as_object_mut() {
+        if let Some(secret) = obj.get("apiKey").and_then(Value::as_str) {
+            let secret_hash = format!("{:x}", Sha256::digest(secret.as_bytes()));
+            obj.insert("apiKey".into(), json!(format!("sha256:{secret_hash}")));
+        }
+    }
+    let canonical = json!({
+        "command": r["command"],
+        "profileId": r.get("profileId"),
+        "expectedRevision": r.get("expectedRevision"),
+        "payload": sanitized_payload,
+    });
+    format!("{:x}", Sha256::digest(canonical.to_string().as_bytes()))
+}
+
+fn parse_provider_kind(v: &str) -> Result<ProviderKind, String> {
+    match v {
+        "openrouter" => Ok(ProviderKind::Openrouter),
+        "openai" => Ok(ProviderKind::Openai),
+        "google" => Ok(ProviderKind::Google),
+        "anthropic" => Ok(ProviderKind::Anthropic),
+        "custom_openai" => Ok(ProviderKind::CustomOpenai),
+        _ => Err("VALIDATION_ERROR".into()),
+    }
+}
+
+fn public_provider_view(cfg: &Value) -> Value {
+    json!({
+        "profileId": cfg["profileId"],
+        "provider": cfg["provider"],
+        "normalizedEndpoint": cfg["normalizedEndpoint"],
+        "modelId": cfg["modelId"],
+        "hasCredential": cfg["credentialRef"].as_str().is_some_and(|s| !s.is_empty()),
+        "dailyCallLimit": cfg["dailyCallLimit"],
+        "callsUsedToday": cfg["callsUsedToday"],
+        "maxOutputTokens": cfg["maxOutputTokens"],
+    })
+}
+
+fn parse_provider_decision(
+    raw: &str,
+    proposal_id: &str,
+    version: i64,
+    episode_id: &str,
+) -> Option<ParsedProviderDecision> {
+    let trimmed = raw.trim();
+    let candidate = if let Some(inner) = trimmed.strip_prefix("```") {
+        let after_lang = inner.find('\n').map(|i| &inner[i + 1..]).unwrap_or(inner);
+        after_lang.strip_suffix("```").unwrap_or(after_lang).trim()
+    } else {
+        trimmed
+    };
+    let v: Value = serde_json::from_str(candidate).ok()?;
+    let decision = v.get("decision")?.as_str()?;
+    let note = v
+        .get("note")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .unwrap_or("")
+        .chars()
+        .take(1000)
+        .collect::<String>();
+    let scope = proposal_scope(proposal_id, version);
+    match decision {
+        "accept" => Some(ParsedProviderDecision {
+            choice: DecisionChoice::Action(ActionIntent {
+                connector: "local_pilot".into(),
+                action_kind: "proposal_accept".into(),
+                sender_identity: "autonomous_pilot".into(),
+                destination: "local_pilot".into(),
+                visibility: "internal".into(),
+                payload_ref: scope.clone(),
+                payload_bytes: scope.as_bytes().to_vec(),
+                idempotency_key: scope,
+                episode_id: episode_id.to_string(),
+            }),
+            record_as_question: false,
+            note,
+        }),
+        "refuse" => {
+            let conditions: Vec<String> = v
+                .get("reconsiderationConditions")
+                .and_then(Value::as_array)
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(Value::as_str)
+                        .map(|s| s.trim().to_string())
+                        .filter(|s| !s.is_empty())
+                        .take(8)
+                        .collect()
+                })
+                .unwrap_or_default();
+            Some(ParsedProviderDecision {
+                choice: DecisionChoice::Refusal {
+                    scope,
+                    reconsideration_conditions: if conditions.is_empty() {
+                        vec!["revised_terms".into()]
+                    } else {
+                        conditions
+                    },
+                },
+                record_as_question: false,
+                note,
+            })
+        }
+        "ask" => Some(ParsedProviderDecision {
+            choice: DecisionChoice::NoAction,
+            record_as_question: true,
+            note,
+        }),
+        "defer" => Some(ParsedProviderDecision {
+            choice: DecisionChoice::Defer {
+                episode_id: episode_id.to_string(),
+            },
+            record_as_question: false,
+            note,
+        }),
+        "rest" => Some(ParsedProviderDecision {
+            choice: DecisionChoice::Rest,
+            record_as_question: false,
+            note,
+        }),
+        "sleep" => {
+            let delay_ms = v
+                .get("sleepDelayMs")
+                .and_then(Value::as_i64)
+                .unwrap_or(3_600_000)
+                .clamp(1_000, 86_400_000);
+            Some(ParsedProviderDecision {
+                choice: DecisionChoice::Sleep {
+                    delay_ms,
+                    interrupt_events: vec![],
+                },
+                record_as_question: false,
+                note,
+            })
+        }
+        "no_action" => Some(ParsedProviderDecision {
+            choice: DecisionChoice::NoAction,
+            record_as_question: false,
+            note,
+        }),
+        _ => None,
     }
 }
 
