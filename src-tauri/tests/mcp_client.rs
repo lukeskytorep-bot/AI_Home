@@ -659,3 +659,219 @@ async fn mcp_enforces_endpoint_canonicalization_and_jsonrpc_id_matching() {
     server.abort();
 }
 
+#[tokio::test]
+async fn mcp_ipc_save_discover_allowlist_call_and_idempotency_end_to_end() {
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    let call_hits = Arc::new(AtomicUsize::new(0));
+    let call_hits_srv = call_hits.clone();
+
+    let server = tokio::spawn(async move {
+        for _ in 0..3 {
+            if let Ok((mut stream, _)) = listener.accept().await {
+                let mut buf = [0u8; 16384];
+                let n = stream.read(&mut buf).await.unwrap_or(0);
+                let text = String::from_utf8_lossy(&buf[..n]);
+                assert!(text.to_ascii_lowercase().contains("authorization: bearer sk-ipc-mcp-1"));
+                let body_part = text.split("\r\n\r\n").nth(1).unwrap_or("{}");
+                let rpc: Value = serde_json::from_str(body_part).unwrap();
+                let id = rpc["id"].clone();
+                let method = rpc["method"].as_str().unwrap_or("");
+                let result = match method {
+                    "initialize" => json!({
+                        "protocolVersion": MCP_PROTOCOL_VERSION,
+                        "serverInfo": {"name": "ipc-fake-mcp", "version": "1.0.0"},
+                        "capabilities": {"tools": {}}
+                    }),
+                    "tools/list" => json!({
+                        "tools": [{
+                            "name": "kb.search",
+                            "description": "Read-only search",
+                            "inputSchema": {"type": "object"},
+                            "annotations": {"readOnlyHint": true}
+                        }]
+                    }),
+                    "tools/call" => {
+                        call_hits_srv.fetch_add(1, Ordering::SeqCst);
+                        json!({
+                            "isError": false,
+                            "receiptRef": "ipc-mcp-rcpt-7",
+                            "content": [{"type": "text", "text": "found: ok"}]
+                        })
+                    }
+                    _ => json!({}),
+                };
+                let resp = http_json("200 OK", &json!({"jsonrpc": "2.0", "id": id, "result": result}));
+                let _ = stream.write_all(resp.as_bytes()).await;
+                let _ = stream.shutdown().await;
+            }
+        }
+    });
+
+    let store = Store::memory().await.unwrap();
+    let vault = Vault::with_backend(Arc::new(MemorySecretStore::default()));
+    let app = Application::with_vault(store, vault);
+
+    // Create a Standard profile.
+    let prof = app
+        .dispatch(req("profile.create", None, json!({"displayName": "MCP User"})))
+        .await
+        .response;
+    assert_eq!(prof["ok"], true, "{prof}");
+    let profile_id = prof["result"]["id"].as_str().unwrap().to_string();
+
+    // Save MCP server with secret in Vault; secret must never appear in response.
+    let saved = app
+        .dispatch(req(
+            "mcp.server.save",
+            Some(&profile_id),
+            json!({
+                "name": "Local KB",
+                "endpoint": format!("http://127.0.0.1:{}/mcp/", addr.port()),
+                "apiKey": "sk-ipc-mcp-1",
+                "allowMutating": false,
+                "allowedTools": []
+            }),
+        ))
+        .await
+        .response;
+    assert_eq!(saved["ok"], true, "{saved}");
+    assert!(!saved.to_string().contains("sk-ipc-mcp-1"));
+    assert_eq!(saved["result"]["server"]["hasCredential"], true);
+    let server_id = saved["result"]["server"]["id"].as_str().unwrap().to_string();
+
+    // Discover tools via IPC (initialize + tools/list).
+    let disc = app
+        .dispatch(req("mcp.server.discover", Some(&profile_id), json!({"serverId": server_id})))
+        .await
+        .response;
+    assert_eq!(disc["ok"], true, "{disc}");
+    assert_eq!(disc["result"]["capabilities"]["serverName"], "ipc-fake-mcp");
+    assert_eq!(disc["result"]["tools"][0]["name"], "kb.search");
+    assert_eq!(disc["result"]["tools"][0]["untrustedExternalMetadata"], true);
+
+    // Tool is NOT auto-allowed by discover -> calling it returns policy_denied without HTTP call.
+    let denied = app
+        .dispatch(req(
+            "mcp.tool.call",
+            Some(&profile_id),
+            json!({"serverId": server_id, "toolName": "kb.search", "arguments": {"q": "a"}}),
+        ))
+        .await
+        .response;
+    assert_eq!(denied["ok"], true, "{denied}");
+    assert_eq!(denied["result"]["status"], "policy_denied");
+    assert_eq!(call_hits.load(Ordering::SeqCst), 0);
+
+    // Explicitly add kb.search to native allowlist via mcp.server.save.
+    let updated = app
+        .dispatch(req(
+            "mcp.server.save",
+            Some(&profile_id),
+            json!({
+                "serverId": server_id,
+                "name": "Local KB",
+                "endpoint": format!("http://127.0.0.1:{}/mcp", addr.port()),
+                "allowedTools": ["kb.search"]
+            }),
+        ))
+        .await
+        .response;
+    assert_eq!(updated["ok"], true, "{updated}");
+    assert_eq!(updated["result"]["server"]["hasCredential"], true);
+
+    // Call tool with explicit requestId; replaying same requestId returns cached receipt without second HTTP call.
+    let call_req = json!({
+        "contractVersion": 1,
+        "requestId": "req-mcp-call-idemp-1",
+        "profileId": profile_id,
+        "command": "mcp.tool.call",
+        "payload": {"serverId": server_id, "toolName": "kb.search", "arguments": {"q": "test"}}
+    });
+    let called1 = app.dispatch(call_req.clone()).await.response;
+    assert_eq!(called1["ok"], true, "{called1}");
+    assert_eq!(called1["result"]["status"], "succeeded");
+    assert_eq!(called1["result"]["receiptRef"], "ipc-mcp-rcpt-7");
+    assert_eq!(call_hits.load(Ordering::SeqCst), 1);
+
+    let called2 = app.dispatch(call_req).await.response;
+    assert_eq!(called2, called1);
+    assert_eq!(call_hits.load(Ordering::SeqCst), 1);
+
+    // Delete server cleanly.
+    let deleted = app
+        .dispatch(req("mcp.server.delete", Some(&profile_id), json!({"serverId": server_id})))
+        .await
+        .response;
+    assert_eq!(deleted["ok"], true, "{deleted}");
+    assert_eq!(deleted["result"]["deleted"], true);
+
+    let listed = app
+        .dispatch(req("mcp.server.list", Some(&profile_id), json!({})))
+        .await
+        .response;
+    assert_eq!(listed["result"]["items"].as_array().unwrap().len(), 0);
+
+    server.abort();
+}
+
+#[tokio::test]
+async fn mcp_ipc_permanent_profile_delete_removes_mcp_servers_and_tombstones_receipts() {
+    let store = Store::memory().await.unwrap();
+    let pool = store.pool.clone();
+    let vault = Vault::with_backend(Arc::new(MemorySecretStore::default()));
+    let app = Application::with_vault(store, vault);
+
+    let prof = app
+        .dispatch(req("profile.create", None, json!({"displayName": "Ephemeral MCP Profile"})))
+        .await
+        .response;
+    let profile_id = prof["result"]["id"].as_str().unwrap().to_string();
+    let rev = prof["result"]["revision"].as_i64().unwrap();
+
+    let save_req = json!({
+        "contractVersion": 1,
+        "requestId": "req-mcp-ephemeral-save",
+        "profileId": profile_id,
+        "command": "mcp.server.save",
+        "payload": {
+            "name": "SECRET-MCP-SERVER-NAME",
+            "endpoint": "https://example.com/mcp",
+            "apiKey": "sk-ephemeral-mcp"
+        }
+    });
+    let saved = app.dispatch(save_req.clone()).await.response;
+    assert_eq!(saved["ok"], true, "{saved}");
+
+    let mut arch = req("profile.archive", Some(&profile_id), json!({"archived": true}));
+    arch["expectedRevision"] = json!(rev);
+    let archived = app.dispatch(arch).await.response;
+    assert_eq!(archived["ok"], true, "{archived}");
+    let arch_rev = archived["result"]["revision"].as_i64().unwrap();
+
+    let mut del = req("profile.delete.permanent", Some(&profile_id), json!({"confirm": true}));
+    del["expectedRevision"] = json!(arch_rev);
+    let deleted = app.dispatch(del).await.response;
+    assert_eq!(deleted["ok"], true, "{deleted}");
+
+    let left: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM mcp_servers WHERE profile_id=?")
+        .bind(&profile_id)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(left, 0);
+
+    let leaked: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM receipts WHERE response LIKE '%SECRET-MCP-SERVER-NAME%'",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(leaked, 0, "MCP receipts must be tombstoned on permanent profile deletion");
+
+    let replayed = app.dispatch(save_req).await.response;
+    assert_eq!(replayed["ok"], false);
+    assert_eq!(replayed["error"]["code"], "POLICY_DENIED");
+}
+
+

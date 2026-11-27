@@ -72,7 +72,7 @@ impl Application {
         }
 
         if crate::backup::restore_pending_for_store(&self.store) && command!="backup.restore.request" {
-            let mutates=if crate::connections::supports(command){crate::connections::mutates(command)}else if crate::experimental_pilot::supports(command){crate::experimental_pilot::mutates(command)}else{
+            let mutates=if crate::connections::supports(command){crate::connections::mutates(command)}else if crate::experimental_pilot::supports(command){crate::experimental_pilot::mutates(command)}else if crate::mcp_client::supports(command){crate::mcp_client::mutates(command)}else{
                 let catalog=embedded(include_str!("../../contracts/ipc.catalog.json"));let foundation=embedded(include_str!("../../contracts/foundation.ipc.json"));let backup=embedded(include_str!("../../contracts/backup.ipc.json"));let export=embedded(include_str!("../../contracts/export.ipc.json"));let diagnostics=embedded(include_str!("../../contracts/diagnostics.ipc.json"));
                 catalog["commands"].get(command).or_else(||foundation["commands"].get(command)).or_else(||backup["commands"].get(command)).or_else(||export["commands"].get(command)).or_else(||diagnostics["commands"].get(command)).and_then(|c|c["mutates"].as_bool()).unwrap_or(false)
             };
@@ -130,6 +130,23 @@ impl Application {
                     }
                     Dispatch { response: success(r, result), event: None }
                 }
+                Err(code) => reject(&code),
+            });
+        }
+        if matches!(
+            command,
+            "mcp.server.list"
+                | "mcp.server.save"
+                | "mcp.server.delete"
+                | "mcp.server.discover"
+                | "mcp.tool.call"
+        ) {
+            let mcp = crate::mcp_client::McpService::new(
+                self.store.pool.clone(),
+                self.vault.clone(),
+            );
+            return Ok(match mcp.dispatch(r).await {
+                Ok(result) => Dispatch { response: success(r, result), event: None },
                 Err(code) => reject(&code),
             });
         }

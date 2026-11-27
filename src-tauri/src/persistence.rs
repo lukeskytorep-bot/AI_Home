@@ -2,7 +2,7 @@ use serde_json::{json,Value};
 use sqlx::{sqlite::{SqliteConnectOptions,SqlitePoolOptions},Row,SqlitePool};
 use std::path::{Path,PathBuf};
 use crate::domain::schema;
-pub const CURRENT_SCHEMA:i64=17;
+pub const CURRENT_SCHEMA:i64=18;
 pub struct Store {pub pool:SqlitePool,path:Option<PathBuf>}
 impl Store {
     pub async fn open(path:&Path)->Result<Self,sqlx::Error>{
@@ -144,7 +144,9 @@ impl Store {
             "CREATE TABLE IF NOT EXISTS experimental_proposal_rounds (profile_id TEXT NOT NULL, instance_id TEXT NOT NULL, proposal_id TEXT NOT NULL, id TEXT NOT NULL, round_number INTEGER NOT NULL, version INTEGER NOT NULL, body TEXT NOT NULL, PRIMARY KEY(profile_id,id), FOREIGN KEY(profile_id,proposal_id) REFERENCES experimental_proposals(profile_id,id))",
             "CREATE TABLE IF NOT EXISTS experimental_provider_budgets (profile_id TEXT NOT NULL, instance_id TEXT NOT NULL, revision INTEGER NOT NULL, body TEXT NOT NULL, PRIMARY KEY(profile_id,instance_id), FOREIGN KEY(profile_id,instance_id) REFERENCES experimental_instances(profile_id,id))",
         ] {sqlx::query(statement).execute(&mut *tx).await?;}
-        sqlx::query("PRAGMA user_version=17").execute(&mut *tx).await?;tx.commit().await?;
+        // 4B-12/13 MCP client: per-profile isolated MCP server bindings and allowlists (credentials stay in Vault).
+        sqlx::query("CREATE TABLE IF NOT EXISTS mcp_servers (profile_id TEXT NOT NULL REFERENCES profiles(id), id TEXT NOT NULL, revision INTEGER NOT NULL CHECK(revision>=1), body TEXT NOT NULL, PRIMARY KEY(profile_id,id))").execute(&mut *tx).await?;
+        sqlx::query("PRAGMA user_version=18").execute(&mut *tx).await?;tx.commit().await?;
         let store=Self{pool,path};store.preferences().await?;Ok(store)
     }
 
