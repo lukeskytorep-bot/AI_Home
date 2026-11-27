@@ -298,6 +298,7 @@ impl DesktopRuntime {
                 Some(p) => Application::with_file_picker(store, vault, p),
                 None => Application::with_vault(store, vault),
             };
+            let _ = app.start_autonomous_wake_scheduler();
             Ok(Self::Standard(app))
         }
     }

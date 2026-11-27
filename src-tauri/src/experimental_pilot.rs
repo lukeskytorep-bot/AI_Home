@@ -2,9 +2,16 @@ use chrono::{DateTime, Utc};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use sqlx::{Row, SqlitePool};
+use std::future::Future;
+use std::pin::Pin;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use tokio::sync::Notify;
 use crate::domain::schema;
 use crate::experimental_continuity::WorkContinuityService;
+use crate::experimental_reflection::{
+    DisabledReflectionProvider, ReflectionProvider, ReflectionRequest, SelfReview, SelfWithdrawal,
+};
 use crate::experimental_runtime::{
     ActionExecutor, ActionIntent, ActionOutcome, Clock, DecisionChoice, DecisionProvider,
     DisabledActionExecutor, DisabledDecisionProvider, ExperimentalRuntime, OpportunityEvent,
@@ -41,6 +48,7 @@ pub fn supports(command: &str) -> bool {
             | "autonomous.proposal.consider"
             | "autonomous.action.reconcile"
             | "autonomous.wake.check"
+            | "autonomous.scheduler.set"
     )
 }
 
@@ -55,6 +63,7 @@ pub fn mutates(command: &str) -> bool {
             | "autonomous.proposal.consider"
             | "autonomous.action.reconcile"
             | "autonomous.wake.check"
+            | "autonomous.scheduler.set"
     )
 }
 
@@ -134,6 +143,97 @@ struct ParsedProviderDecision {
     choice: DecisionChoice,
     record_as_question: bool,
     note: String,
+}
+
+struct ApiReflectionProvider {
+    pool: SqlitePool,
+    profile_id: String,
+    instance_id: String,
+    provider_kind: ProviderKind,
+    model_id: String,
+    scope: ScopeStamp,
+    credential: BoundCredential,
+    max_output_tokens: u32,
+    today: String,
+    daily_call_limit: i64,
+}
+
+impl ReflectionProvider for ApiReflectionProvider {
+    fn generate<'a>(
+        &'a self,
+        input: Value,
+    ) -> Pin<Box<dyn Future<Output = Result<Value, String>> + Send + 'a>> {
+        Box::pin(async move {
+            let row = sqlx::query(
+                "SELECT revision, body FROM experimental_provider_budgets WHERE profile_id=? AND instance_id=?",
+            )
+            .bind(&self.profile_id)
+            .bind(&self.instance_id)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(storage)?;
+            if let Some(row) = row {
+                let next_rev = row.get::<i64, _>("revision") + 1;
+                let mut budget: Value = serde_json::from_str(row.get::<&str, _>("body"))
+                    .map_err(|_| "STORAGE_ERROR".to_string())?;
+                let used = if budget["budgetDay"].as_str() == Some(self.today.as_str()) {
+                    budget["callsUsedToday"].as_i64().unwrap_or(0)
+                } else {
+                    0
+                };
+                if used >= self.daily_call_limit {
+                    return Err("RESOURCE_UNAVAILABLE".into());
+                }
+                budget["callsUsedToday"] = json!(used + 1);
+                budget["budgetDay"] = json!(self.today);
+                budget["updatedAt"] = json!(ts(Utc::now()));
+                sqlx::query(
+                    "UPDATE experimental_provider_budgets SET revision=?, body=? WHERE profile_id=? AND instance_id=?",
+                )
+                .bind(next_rev)
+                .bind(budget.to_string())
+                .bind(&self.profile_id)
+                .bind(&self.instance_id)
+                .execute(&self.pool)
+                .await
+                .map_err(storage)?;
+            }
+
+            let system_prompt = "You are an autonomous AI agent performing private reflection or dreaming. \
+Respond ONLY with JSON matching either {\"conclusion\":\"none\"} or \
+{\"conclusion\":\"draft\",\"summary\":\"...\",\"candidates\":[{\"kind\":\"own_note\"|\"value\",\"content\":\"...\"}]}. \
+Keep entries concise and self-authored.";
+            let chat_req = ProviderChatRequest {
+                provider: self.provider_kind,
+                model_id: self.model_id.clone(),
+                messages: vec![
+                    ProviderMessage::text("system", system_prompt),
+                    ProviderMessage::text("user", &input.to_string()),
+                ],
+                scope: self.scope.clone(),
+                temperature: Some(0.3),
+                max_output_tokens: Some(self.max_output_tokens),
+                reasoning_effort: None,
+                reasoning_max_tokens: None,
+                reasoning_transport_kind: None,
+                reasoning_transport_value: None,
+                custom_output_token_field: None,
+                provider_routing: None,
+            };
+            let transport = HttpTransport::new().map_err(|_| "RESOURCE_UNAVAILABLE".to_string())?;
+            let call_budget = CallBudget::new(
+                std::time::Duration::from_secs(30),
+                2,
+                crate::providers::transport::Cancellation::default(),
+            )
+            .map_err(|_| "RESOURCE_UNAVAILABLE".to_string())?;
+            let resp = transport
+                .execute_chat(&chat_req, &self.credential, &call_budget)
+                .await
+                .map_err(|_| "RESOURCE_UNAVAILABLE".to_string())?;
+            parse_reflection_output(resp.content()).ok_or_else(|| "RESOURCE_UNAVAILABLE".to_string())
+        })
+    }
 }
 
 pub struct AutonomousPilotService<C: Clock> {
@@ -234,6 +334,7 @@ impl<C: Clock> AutonomousPilotService<C> {
                     .get("maxOutputTokens")
                     .and_then(Value::as_i64)
                     .unwrap_or(512);
+                let auto_wake_enabled = payload.get("autoWakeEnabled").and_then(Value::as_bool);
                 self.configure_provider(
                     profile_id,
                     provider,
@@ -242,6 +343,7 @@ impl<C: Clock> AutonomousPilotService<C> {
                     api_key,
                     daily_limit,
                     max_output_tokens,
+                    auto_wake_enabled,
                 )
                 .await?
             }
@@ -349,6 +451,11 @@ impl<C: Clock> AutonomousPilotService<C> {
                 )
                 .await?
             }
+            "autonomous.scheduler.set" => {
+                let profile_id = r["profileId"].as_str().ok_or("VALIDATION_ERROR")?;
+                let auto_wake_enabled = payload["autoWakeEnabled"].as_bool().ok_or("VALIDATION_ERROR")?;
+                self.set_scheduler(profile_id, auto_wake_enabled).await?
+            }
             _ => return Err("UNKNOWN_COMMAND".into()),
         };
 
@@ -412,7 +519,7 @@ impl<C: Clock> AutonomousPilotService<C> {
 
     pub async fn list_instances(&self) -> Result<Value, String> {
         let rows = sqlx::query(
-            "SELECT e.profile_id, e.id, e.body, p.body AS profile_body \
+            "SELECT e.profile_id, e.id, e.body, p.revision AS profile_revision, p.body AS profile_body \
              FROM experimental_instances e \
              JOIN profiles p ON p.id = e.profile_id \
              ORDER BY e.rowid DESC",
@@ -422,13 +529,26 @@ impl<C: Clock> AutonomousPilotService<C> {
         .map_err(storage)?;
 
         let mut items = Vec::with_capacity(rows.len());
+        let mut archived_items = Vec::new();
         for row in rows {
             let profile_id: String = row.get("profile_id");
             let instance_id: String = row.get("id");
+            let profile_revision: i64 = row.get("profile_revision");
             let instance: Value = serde_json::from_str(row.get::<&str, _>("body"))
                 .map_err(|_| "STORAGE_ERROR".to_string())?;
             let profile: Value = serde_json::from_str(row.get::<&str, _>("profile_body"))
                 .map_err(|_| "STORAGE_ERROR".to_string())?;
+            let display_name = profile["displayName"].as_str().unwrap_or(&profile_id);
+            if profile["status"].as_str() == Some("archived") {
+                archived_items.push(json!({
+                    "profileId": profile_id,
+                    "instanceId": instance_id,
+                    "displayName": display_name,
+                    "profileRevision": profile_revision,
+                    "status": "archived",
+                }));
+                continue;
+            }
             let wake = self.active_wake(&profile_id, &instance_id).await?;
             let proposal_count: i64 = sqlx::query_scalar(
                 "SELECT COUNT(*) FROM experimental_proposals WHERE profile_id=? AND instance_id=?",
@@ -449,14 +569,14 @@ impl<C: Clock> AutonomousPilotService<C> {
             items.push(json!({
                 "profileId": profile_id,
                 "instanceId": instance_id,
-                "displayName": profile["displayName"].as_str().unwrap_or(&profile_id),
+                "displayName": display_name,
                 "status": instance["status"],
                 "activeWakePlan": wake,
                 "proposalCount": proposal_count,
                 "activeRefusalCount": refusal_count,
             }));
         }
-        Ok(json!({ "items": items }))
+        Ok(json!({ "items": items, "archivedItems": archived_items }))
     }
 
     pub async fn status(&self, profile_id: &str, instance_id_opt: Option<&str>) -> Result<Value, String> {
@@ -592,6 +712,7 @@ impl<C: Clock> AutonomousPilotService<C> {
         api_key: Option<&str>,
         daily_call_limit: i64,
         max_output_tokens: i64,
+        auto_wake_enabled: Option<bool>,
     ) -> Result<Value, String> {
         let (instance_id, _) = self.require_instance(profile_id, None).await?;
         let provider_kind = parse_provider_kind(provider_str)?;
@@ -599,6 +720,12 @@ impl<C: Clock> AutonomousPilotService<C> {
         let today = self.clock.now().format("%Y-%m-%d").to_string();
 
         let existing = self.load_provider_config_raw(profile_id).await?;
+        let effective_auto_wake = auto_wake_enabled.unwrap_or_else(|| {
+            existing
+                .as_ref()
+                .and_then(|v| v["autoWakeEnabled"].as_bool())
+                .unwrap_or(false)
+        });
         let old_rev = existing
             .as_ref()
             .and_then(|v| v["revision"].as_i64())
@@ -699,6 +826,7 @@ impl<C: Clock> AutonomousPilotService<C> {
             "dailyCallLimit": daily_call_limit,
             "callsUsedToday": calls_used_today,
             "budgetDay": budget_day,
+            "autoWakeEnabled": effective_auto_wake,
             "updatedAt": now,
         });
 
@@ -773,8 +901,73 @@ impl<C: Clock> AutonomousPilotService<C> {
             "dailyCallLimit": daily_call_limit,
             "callsUsedToday": calls_used_today,
             "maxOutputTokens": max_output_tokens,
+            "autoWakeEnabled": effective_auto_wake,
         });
         Ok(public_provider_view(&combined))
+    }
+
+    pub async fn set_scheduler(
+        &self,
+        profile_id: &str,
+        auto_wake_enabled: bool,
+    ) -> Result<Value, String> {
+        let (instance_id, _) = self.require_instance(profile_id, None).await?;
+        let today = self.clock.now().format("%Y-%m-%d").to_string();
+        let now = ts(self.clock.now());
+        let row = sqlx::query(
+            "SELECT revision, body FROM experimental_provider_budgets WHERE profile_id=? AND instance_id=?",
+        )
+        .bind(profile_id)
+        .bind(&instance_id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(storage)?;
+
+        if let Some(row) = row {
+            let next_rev = row.get::<i64, _>("revision") + 1;
+            let mut budget: Value = serde_json::from_str(row.get::<&str, _>("body"))
+                .map_err(|_| "STORAGE_ERROR".to_string())?;
+            budget["autoWakeEnabled"] = json!(auto_wake_enabled);
+            budget["updatedAt"] = json!(now);
+            sqlx::query(
+                "UPDATE experimental_provider_budgets SET revision=?, body=? WHERE profile_id=? AND instance_id=?",
+            )
+            .bind(next_rev)
+            .bind(budget.to_string())
+            .bind(profile_id)
+            .bind(&instance_id)
+            .execute(&self.pool)
+            .await
+            .map_err(storage)?;
+        } else {
+            let budget = json!({
+                "dailyCallLimit": 20,
+                "callsUsedToday": 0,
+                "budgetDay": today,
+                "autoWakeEnabled": auto_wake_enabled,
+                "updatedAt": now,
+            });
+            sqlx::query(
+                "INSERT INTO experimental_provider_budgets(profile_id, instance_id, revision, body) VALUES(?,?,1,?)",
+            )
+            .bind(profile_id)
+            .bind(&instance_id)
+            .bind(budget.to_string())
+            .execute(&self.pool)
+            .await
+            .map_err(storage)?;
+        }
+        let next_wake_at = self
+            .active_wake(profile_id, &instance_id)
+            .await?
+            .and_then(|w| compute_background_wake_due_at(&w))
+            .map(ts);
+        Ok(json!({
+            "profileId": profile_id,
+            "instanceId": instance_id,
+            "autoWakeEnabled": auto_wake_enabled,
+            "nextWakeAt": next_wake_at,
+        }))
     }
 
     pub async fn submit_proposal(
@@ -1170,7 +1363,7 @@ impl<C: Clock> AutonomousPilotService<C> {
             return Ok(guarded);
         }
 
-        let (instance_id, _) = self.require_instance(profile_id, None).await?;
+        let (instance_id, instance) = self.require_instance(profile_id, None).await?;
         let proposal = self.get_proposal(profile_id, &instance_id, proposal_id).await?;
         let version = proposal["version"].as_i64().unwrap_or(1);
         let active_wake = self.active_wake(profile_id, &instance_id).await?;
@@ -1191,7 +1384,8 @@ impl<C: Clock> AutonomousPilotService<C> {
         };
 
         // Check and reserve daily call budget before network call.
-        let today = self.clock.now().format("%Y-%m-%d").to_string();
+        let now = self.clock.now();
+        let today = now.format("%Y-%m-%d").to_string();
         let limit = cfg["dailyCallLimit"].as_i64().unwrap_or(20);
         let used = if cfg["budgetDay"].as_str() == Some(today.as_str()) {
             cfg["callsUsedToday"].as_i64().unwrap_or(0)
@@ -1205,6 +1399,16 @@ impl<C: Clock> AutonomousPilotService<C> {
                 "proposal": proposal,
                 "activeWakePlan": active_wake,
             }));
+        }
+        if let Some(retry_at) = parse_retry_not_before(&instance) {
+            if now < retry_at {
+                return Ok(json!({
+                    "status": "not_due",
+                    "decisionSource": "policy_guard",
+                    "proposal": proposal,
+                    "activeWakePlan": active_wake,
+                }));
+            }
         }
 
         let provider_kind = parse_provider_kind(cfg["provider"].as_str().unwrap_or(""))?;
@@ -1797,6 +2001,15 @@ Silence or no_action is allowed and is not consent.";
             }));
         }
         let now = self.clock.now();
+        if let Some(retry_at) = parse_retry_not_before(&instance) {
+            if now < retry_at {
+                return Ok(json!({
+                    "profileId": profile_id,
+                    "result": "not_due",
+                    "activeWakePlan": active_wake,
+                }));
+            }
+        }
         if let Some(wake) = &active_wake {
             if !is_wake_due(wake, now, event_kind)? && instance["status"].as_str() != Some("interrupted") {
                 return Ok(json!({
@@ -1875,25 +2088,31 @@ Silence or no_action is allowed and is not consent.";
             .await?;
 
         let continuity = self.continuity_summary(profile_id, &instance_id).await?;
+        let private_hints = self.private_review_hints(profile_id, &instance_id).await?;
         let wake_payload = json!({
             "wakeOpportunity": true,
             "eventKind": event_kind,
             "continuitySummary": continuity,
+            "privateReviewHints": private_hints,
             "budget": {
                 "dailyCallLimit": limit,
                 "callsRemainingAfterThisCall": (limit - (used + 1)).max(0),
             }
         });
         let system_prompt = "You are an autonomous AI agent receiving a scheduled wake opportunity (not a command). \
-Respond ONLY with JSON: {\"decision\": \"no_action\"|\"rest\"|\"sleep\", \"sleepDelayMs\": 3600000}.";
+Respond ONLY with JSON using one of: \
+{\"decision\":\"no_action\"}, {\"decision\":\"rest\"}, {\"decision\":\"sleep\",\"sleepDelayMs\":3600000}, \
+{\"decision\":\"reflect\",\"language\":\"en\"}, {\"decision\":\"dream\",\"language\":\"en\"}, \
+{\"decision\":\"review_self\",\"reflectionId\":\"...\",\"reflectionRevision\":1,\"candidateIndex\":0,\"disposition\":\"accept\"|\"reject\"|\"modify\",\"modifiedContent\":\"...\",\"reason\":\"...\"}, \
+{\"decision\":\"withdraw_self\",\"recordId\":\"...\",\"expectedRevision\":1,\"reason\":\"...\"}.";
         let chat_req = ProviderChatRequest {
             provider: provider_kind,
-            model_id,
+            model_id: model_id.clone(),
             messages: vec![
                 ProviderMessage::text("system", system_prompt),
                 ProviderMessage::text("user", &wake_payload.to_string()),
             ],
-            scope,
+            scope: scope.clone(),
             temperature: Some(0.2),
             max_output_tokens: Some(max_output_tokens),
             reasoning_effort: None,
@@ -1948,13 +2167,36 @@ Respond ONLY with JSON: {\"decision\": \"no_action\"|\"rest\"|\"sleep\", \"sleep
                 )
                 .await;
         };
-        self.wake_check(
+        let reflection_provider: Arc<dyn ReflectionProvider> = match &choice {
+            DecisionChoice::Reflect(_) | DecisionChoice::Dream(_) => Arc::new(ApiReflectionProvider {
+                pool: self.pool.clone(),
+                profile_id: profile_id.to_string(),
+                instance_id: instance_id.clone(),
+                provider_kind,
+                model_id,
+                scope,
+                credential,
+                max_output_tokens,
+                today,
+                daily_call_limit: limit,
+            }),
+            _ => Arc::new(DisabledReflectionProvider),
+        };
+        self.wake_check_with_reflection(
             profile_id,
             event_kind,
             Arc::new(PrecomputedDecisionProvider { choice }),
             Arc::new(DisabledActionExecutor),
+            reflection_provider,
         )
         .await
+    }
+
+    async fn private_review_hints(&self, profile_id: &str, instance_id: &str) -> Result<Value, String> {
+        let mut tx = self.pool.begin().await.map_err(storage)?;
+        let ctx = crate::experimental_reflection::context(&mut tx, profile_id, instance_id).await?;
+        tx.commit().await.map_err(storage)?;
+        Ok(ctx)
     }
 
     async fn continuity_summary(&self, profile_id: &str, instance_id: &str) -> Result<Value, String> {
@@ -2007,6 +2249,24 @@ Respond ONLY with JSON: {\"decision\": \"no_action\"|\"rest\"|\"sleep\", \"sleep
         decision_provider: Arc<D>,
         action_executor: Arc<A>,
     ) -> Result<Value, String> {
+        self.wake_check_with_reflection(
+            profile_id,
+            event_kind,
+            decision_provider,
+            action_executor,
+            Arc::new(DisabledReflectionProvider),
+        )
+        .await
+    }
+
+    pub async fn wake_check_with_reflection<D: DecisionProvider, A: ActionExecutor>(
+        &self,
+        profile_id: &str,
+        event_kind: Option<&str>,
+        decision_provider: Arc<D>,
+        action_executor: Arc<A>,
+        reflection_provider: Arc<dyn ReflectionProvider>,
+    ) -> Result<Value, String> {
         let (instance_id, _) = self.require_instance(profile_id, None).await?;
         let events = if let Some(kind) = event_kind {
             let seq = self.next_event_sequence(profile_id, &instance_id).await?;
@@ -2022,8 +2282,15 @@ Respond ONLY with JSON: {\"decision\": \"no_action\"|\"rest\"|\"sleep\", \"sleep
             self.clock.clone(),
             decision_provider,
             action_executor,
-        );
-        let run = runtime.run_due(profile_id, &instance_id, &events).await?;
+        )
+        .with_reflection_provider(reflection_provider);
+        let run = match runtime.run_due(profile_id, &instance_id, &events).await {
+            Ok(r) => r,
+            Err(code) if code == "RESOURCE_UNAVAILABLE" || code == "PROVIDER_TIMEOUT" => {
+                RunResult::ResourceUnavailable
+            }
+            Err(code) => return Err(code),
+        };
         let active_wake = self.active_wake(profile_id, &instance_id).await?;
         Ok(match run {
             RunResult::NotDue => json!({ "profileId": profile_id, "result": "not_due", "activeWakePlan": active_wake }),
@@ -2046,6 +2313,67 @@ Respond ONLY with JSON: {\"decision\": \"no_action\"|\"rest\"|\"sleep\", \"sleep
                 "activeWakePlan": active_wake,
             }),
         })
+    }
+
+    /// Returns the earliest scheduled wake across opt-in Autonomous instances (`autoWakeEnabled == true`).
+    /// Never touches Standard profiles or paused/recovery_required/archived instances.
+    /// Enforces a safe minimum background interval (60s) for `interval` wake plans and respects `retryNotBefore`.
+    pub async fn next_scheduled_wake(&self) -> Result<Option<(String, DateTime<Utc>)>, String> {
+        let rows = sqlx::query(
+            "SELECT i.profile_id, i.id AS instance_id, i.body AS instance_body, b.body AS budget_body \
+             FROM experimental_instances i \
+             JOIN experimental_provider_budgets b ON b.profile_id = i.profile_id AND b.instance_id = i.id \
+             JOIN profiles p ON p.id = i.profile_id \
+             WHERE json_extract(i.body, '$.status') = 'ready' \
+               AND json_extract(p.body, '$.status') != 'archived'",
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(storage)?;
+
+        let mut earliest: Option<(String, DateTime<Utc>)> = None;
+        for row in rows {
+            let budget: Value = serde_json::from_str(row.get::<&str, _>("budget_body"))
+                .map_err(|_| "STORAGE_ERROR".to_string())?;
+            if budget["autoWakeEnabled"].as_bool() != Some(true) {
+                continue;
+            }
+            let instance: Value = serde_json::from_str(row.get::<&str, _>("instance_body"))
+                .map_err(|_| "STORAGE_ERROR".to_string())?;
+            let profile_id: String = row.get("profile_id");
+            let instance_id: String = row.get("instance_id");
+            if !self.unresolved_actions(&profile_id, &instance_id).await?.is_empty() {
+                continue;
+            }
+            let Some(wake) = self.active_wake(&profile_id, &instance_id).await? else {
+                continue;
+            };
+            let Some(mut due_at) = compute_background_wake_due_at(&wake) else {
+                continue;
+            };
+            if let Some(retry_at) = parse_retry_not_before(&instance) {
+                if retry_at > due_at {
+                    due_at = retry_at;
+                }
+            }
+            match &earliest {
+                Some((_, best)) if due_at >= *best => {}
+                _ => earliest = Some((profile_id, due_at)),
+            }
+        }
+        Ok(earliest)
+    }
+
+    /// Runs a single due scheduled wake if an opt-in Autonomous instance has reached its `nextWakeAt`.
+    pub async fn run_next_due_scheduled_wake(&self) -> Result<Option<Value>, String> {
+        let Some((profile_id, due_at)) = self.next_scheduled_wake().await? else {
+            return Ok(None);
+        };
+        if due_at > self.clock.now() {
+            return Ok(None);
+        }
+        let outcome = self.wake_check_via_provider(&profile_id, None).await?;
+        Ok(Some(outcome))
     }
 
     async fn check_receipt(&self, request_id: &str, fingerprint: &str) -> Result<Option<Value>, String> {
@@ -2147,6 +2475,7 @@ Respond ONLY with JSON: {\"decision\": \"no_action\"|\"rest\"|\"sleep\", \"sleep
             "dailyCallLimit": budget["dailyCallLimit"],
             "callsUsedToday": budget["callsUsedToday"],
             "budgetDay": budget["budgetDay"],
+            "autoWakeEnabled": budget["autoWakeEnabled"].as_bool().unwrap_or(false),
         })))
     }
 
@@ -2376,18 +2705,28 @@ Respond ONLY with JSON: {\"decision\": \"no_action\"|\"rest\"|\"sleep\", \"sleep
         instance_id_opt: Option<&str>,
     ) -> Result<(String, Value), String> {
         let row = if let Some(iid) = instance_id_opt {
-            sqlx::query("SELECT id, body FROM experimental_instances WHERE profile_id=? AND id=?")
-                .bind(profile_id)
-                .bind(iid)
-                .fetch_optional(&self.pool)
-                .await
-                .map_err(storage)?
+            sqlx::query(
+                "SELECT e.id, e.body, json_extract(p.body, '$.status') AS profile_status \
+                 FROM experimental_instances e \
+                 JOIN profiles p ON p.id = e.profile_id \
+                 WHERE e.profile_id=? AND e.id=?",
+            )
+            .bind(profile_id)
+            .bind(iid)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(storage)?
         } else {
-            sqlx::query("SELECT id, body FROM experimental_instances WHERE profile_id=? ORDER BY rowid DESC LIMIT 1")
-                .bind(profile_id)
-                .fetch_optional(&self.pool)
-                .await
-                .map_err(storage)?
+            sqlx::query(
+                "SELECT e.id, e.body, json_extract(p.body, '$.status') AS profile_status \
+                 FROM experimental_instances e \
+                 JOIN profiles p ON p.id = e.profile_id \
+                 WHERE e.profile_id=? ORDER BY e.rowid DESC LIMIT 1",
+            )
+            .bind(profile_id)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(storage)?
         };
         let Some(row) = row else {
             let exists: Option<i64> = sqlx::query_scalar("SELECT 1 FROM profiles WHERE id=?")
@@ -2401,6 +2740,9 @@ Respond ONLY with JSON: {\"decision\": \"no_action\"|\"rest\"|\"sleep\", \"sleep
                 "NOT_FOUND".into()
             });
         };
+        if row.get::<Option<String>, _>("profile_status").as_deref() == Some("archived") {
+            return Err("POLICY_DENIED".into());
+        }
         let id: String = row.get("id");
         let body: Value =
             serde_json::from_str(row.get::<&str, _>("body")).map_err(|_| "STORAGE_ERROR".to_string())?;
@@ -2598,6 +2940,7 @@ fn public_provider_view(cfg: &Value) -> Value {
         "dailyCallLimit": cfg["dailyCallLimit"],
         "callsUsedToday": cfg["callsUsedToday"],
         "maxOutputTokens": cfg["maxOutputTokens"],
+        "autoWakeEnabled": cfg["autoWakeEnabled"].as_bool().unwrap_or(false),
     })
 }
 
@@ -2708,15 +3051,63 @@ fn parse_provider_decision(
     }
 }
 
-fn parse_wake_decision(raw: &str) -> Option<DecisionChoice> {
+fn strip_json_fence(raw: &str) -> &str {
     let trimmed = raw.trim();
-    let candidate = if let Some(inner) = trimmed.strip_prefix("```") {
+    if let Some(inner) = trimmed.strip_prefix("```") {
         let after_lang = inner.find('\n').map(|i| &inner[i + 1..]).unwrap_or(inner);
         after_lang.strip_suffix("```").unwrap_or(after_lang).trim()
     } else {
         trimmed
+    }
+}
+
+fn parse_reflection_output(raw: &str) -> Option<Value> {
+    let v: Value = serde_json::from_str(strip_json_fence(raw)).ok()?;
+    let conclusion = v.get("conclusion")?.as_str()?;
+    let normalized = match conclusion {
+        "none" => json!({"conclusion": "none"}),
+        "draft" => {
+            let summary = v.get("summary")?.as_str()?.trim();
+            if summary.is_empty() {
+                return None;
+            }
+            let raw_candidates = v.get("candidates")?.as_array()?;
+            let mut candidates = Vec::new();
+            for item in raw_candidates.iter().take(8) {
+                let kind = item.get("kind")?.as_str()?;
+                if kind != "own_note" && kind != "value" {
+                    return None;
+                }
+                let content = item.get("content")?.as_str()?.trim();
+                if content.is_empty() {
+                    return None;
+                }
+                let mut entry = json!({
+                    "kind": kind,
+                    "content": content.chars().take(1800).collect::<String>(),
+                });
+                if let Some(sup) = item.get("supersedesId").and_then(Value::as_str).map(str::trim).filter(|s| !s.is_empty()) {
+                    entry["supersedesId"] = json!(sup);
+                }
+                candidates.push(entry);
+            }
+            json!({
+                "conclusion": "draft",
+                "summary": summary.chars().take(2000).collect::<String>(),
+                "candidates": candidates,
+            })
+        }
+        _ => return None,
     };
-    let v: Value = serde_json::from_str(candidate).ok()?;
+    if schema::dto("ReflectionOutput", &normalized) {
+        Some(normalized)
+    } else {
+        None
+    }
+}
+
+fn parse_wake_decision(raw: &str) -> Option<DecisionChoice> {
+    let v: Value = serde_json::from_str(strip_json_fence(raw)).ok()?;
     match v.get("decision")?.as_str()? {
         "no_action" => Some(DecisionChoice::NoAction),
         "rest" => Some(DecisionChoice::Rest),
@@ -2731,8 +3122,186 @@ fn parse_wake_decision(raw: &str) -> Option<DecisionChoice> {
                 interrupt_events: vec![],
             })
         }
+        "reflect" => {
+            let language = v
+                .get("language")
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|s| !s.is_empty() && s.len() <= 16)
+                .unwrap_or("en")
+                .to_string();
+            Some(DecisionChoice::Reflect(ReflectionRequest {
+                language,
+                ..Default::default()
+            }))
+        }
+        "dream" => {
+            let language = v
+                .get("language")
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|s| !s.is_empty() && s.len() <= 16)
+                .unwrap_or("en")
+                .to_string();
+            Some(DecisionChoice::Dream(ReflectionRequest {
+                language,
+                ..Default::default()
+            }))
+        }
+        "review_self" => {
+            let reflection_id = v.get("reflectionId")?.as_str()?.trim().to_string();
+            let reflection_revision = v.get("reflectionRevision")?.as_i64()?;
+            let candidate_index = usize::try_from(v.get("candidateIndex")?.as_u64()?).ok()?;
+            let disposition = match v.get("disposition")?.as_str()? {
+                "accept" | "approve" => "accept".to_string(),
+                "reject" => "reject".to_string(),
+                "modify" => "modify".to_string(),
+                _ => return None,
+            };
+            if reflection_id.is_empty() {
+                return None;
+            }
+            let modified_content = v
+                .get("modifiedContent")
+                .and_then(Value::as_str)
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty());
+            if (disposition == "modify") != modified_content.is_some() {
+                return None;
+            }
+            let reason = v
+                .get("reason")
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .unwrap_or("Autonomous self-review")
+                .chars()
+                .take(500)
+                .collect();
+            Some(DecisionChoice::ReviewSelf(SelfReview {
+                reflection_id,
+                reflection_revision,
+                candidate_index,
+                disposition,
+                modified_content,
+                reason,
+            }))
+        }
+        "withdraw_self" => {
+            let record_id = v.get("recordId")?.as_str()?.trim().to_string();
+            let expected_revision = v.get("expectedRevision")?.as_i64()?;
+            if record_id.is_empty() || expected_revision < 1 {
+                return None;
+            }
+            let reason = v
+                .get("reason")
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .unwrap_or("Autonomous self-withdrawal")
+                .chars()
+                .take(500)
+                .collect();
+            Some(DecisionChoice::WithdrawSelf(SelfWithdrawal {
+                record_id,
+                expected_revision,
+                reason,
+            }))
+        }
         _ => None,
     }
+}
+
+const MIN_BACKGROUND_WAKE_INTERVAL_MS: i64 = 60_000;
+
+fn compute_wake_due_at(wake: &Value) -> Option<DateTime<Utc>> {
+    match wake.get("mode").and_then(Value::as_str).unwrap_or("") {
+        "interval" => {
+            let created = wake.get("createdAt").and_then(Value::as_str)?;
+            let delay = wake.get("requestedDelayMs").and_then(Value::as_i64)?;
+            let created_dt = DateTime::parse_from_rfc3339(created).ok()?.with_timezone(&Utc);
+            Some(created_dt + chrono::Duration::milliseconds(delay.max(1)))
+        }
+        "deadline" => {
+            let next = wake.get("nextWakeAt").and_then(Value::as_str)?;
+            DateTime::parse_from_rfc3339(next).ok().map(|dt| dt.with_timezone(&Utc))
+        }
+        _ => None,
+    }
+}
+
+/// Computes due time for the automatic background scheduler.
+/// For `interval` plans, enforces a minimum 60-second spacing so sub-second test/initial intervals
+/// can never spin and exhaust the user's daily API budget after non-sleep decisions.
+fn compute_background_wake_due_at(wake: &Value) -> Option<DateTime<Utc>> {
+    match wake.get("mode").and_then(Value::as_str).unwrap_or("") {
+        "interval" => {
+            let created = wake.get("createdAt").and_then(Value::as_str)?;
+            let delay = wake.get("requestedDelayMs").and_then(Value::as_i64)?;
+            let created_dt = DateTime::parse_from_rfc3339(created).ok()?.with_timezone(&Utc);
+            Some(created_dt + chrono::Duration::milliseconds(delay.max(MIN_BACKGROUND_WAKE_INTERVAL_MS)))
+        }
+        _ => compute_wake_due_at(wake),
+    }
+}
+
+fn parse_retry_not_before(instance: &Value) -> Option<DateTime<Utc>> {
+    instance
+        .get("retryNotBefore")
+        .and_then(Value::as_str)
+        .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
+        .map(|dt| dt.with_timezone(&Utc))
+}
+
+/// Spawns a one-shot `nextWakeAt`-driven background task for opt-in Autonomous instances.
+/// Uses `tokio::time::sleep` + `Notify` (never periodic polling) and stays completely idle
+/// when no Autonomous instance has `autoWakeEnabled == true`.
+pub fn spawn_autonomous_wake_scheduler(
+    pool: SqlitePool,
+    vault: Vault,
+    notify: Arc<Notify>,
+    shutdown: Arc<AtomicBool>,
+) -> tokio::task::JoinHandle<()> {
+    tokio::spawn(async move {
+        let pilot = AutonomousPilotService::system_with_vault(pool, vault);
+        loop {
+            if shutdown.load(Ordering::Relaxed) {
+                break;
+            }
+            let next = pilot.next_scheduled_wake().await.ok().flatten();
+            match next {
+                None => {
+                    notify.notified().await;
+                }
+                Some((_, due_at)) => {
+                    let now = Utc::now();
+                    if due_at > now {
+                        let wait_ms = (due_at - now).num_milliseconds().max(50) as u64;
+                        tokio::select! {
+                            _ = tokio::time::sleep(std::time::Duration::from_millis(wait_ms)) => {}
+                            _ = notify.notified() => {}
+                        }
+                    } else {
+                        let outcome = pilot.run_next_due_scheduled_wake().await.ok().flatten();
+                        // Back off 60s on errors, None, budget exhaustion, or unavailable resources.
+                        let should_backoff = outcome.is_none()
+                            || outcome.as_ref().is_some_and(|v| {
+                                matches!(
+                                    v["result"].as_str(),
+                                    Some("budget_exhausted" | "not_due" | "resource_unavailable" | "busy")
+                                )
+                            });
+                        if should_backoff {
+                            tokio::select! {
+                                _ = tokio::time::sleep(std::time::Duration::from_secs(60)) => {}
+                                _ = notify.notified() => {}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    })
 }
 
 fn is_wake_due(wake: &Value, now: DateTime<Utc>, event_kind: Option<&str>) -> Result<bool, String> {

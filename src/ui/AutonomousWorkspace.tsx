@@ -19,6 +19,7 @@ interface ProviderConfigView {
   dailyCallLimit: number;
   callsUsedToday: number;
   maxOutputTokens: number;
+  autoWakeEnabled?: boolean;
 }
 
 interface InstanceSummary {
@@ -29,6 +30,14 @@ interface InstanceSummary {
   activeWakePlan?: WakePlan | null;
   proposalCount: number;
   activeRefusalCount: number;
+}
+
+interface ArchivedInstanceSummary {
+  profileId: string;
+  instanceId: string;
+  displayName: string;
+  profileRevision: number;
+  status: string;
 }
 
 interface ProposalRound {
@@ -132,6 +141,7 @@ export function AutonomousWorkspace({client, locale, desktop, onBackToStandard}:
 }) {
   const text = (key: string) => t(locale, key);
   const [instances, setInstances] = useState<InstanceSummary[]>([]);
+  const [archivedInstances, setArchivedInstances] = useState<ArchivedInstanceSummary[]>([]);
   const [selectedProfileId, setSelectedProfileId] = useState('');
   const [status, setStatus] = useState<InstanceStatus>();
   const [loading, setLoading] = useState(false);
@@ -170,13 +180,17 @@ export function AutonomousWorkspace({client, locale, desktop, onBackToStandard}:
     setLoading(true);
     setError('');
     try {
-      const r = await client.call<{items: InstanceSummary[]}>('autonomous.instance.list', {});
+      const r = await client.call<{items: InstanceSummary[]; archivedItems?: ArchivedInstanceSummary[]}>('autonomous.instance.list', {});
       if (!r.ok) {
         setError(r.error.messageKey);
         return;
       }
       setInstances(r.result.items);
-      const nextId = preferredProfileId
+      setArchivedInstances(r.result.archivedItems ?? []);
+      const preferredValid = preferredProfileId && r.result.items.some(i => i.profileId === preferredProfileId)
+        ? preferredProfileId
+        : undefined;
+      const nextId = preferredValid
         ?? (r.result.items.some(i => i.profileId === selectedProfileId) ? selectedProfileId : r.result.items[0]?.profileId ?? '');
       setSelectedProfileId(nextId);
       if (nextId) {
@@ -227,7 +241,7 @@ export function AutonomousWorkspace({client, locale, desktop, onBackToStandard}:
     try {
       const r = await client.call<{profileId: string}>('autonomous.instance.create', {
         displayName: name,
-        initialIntervalMs: 1,
+        initialIntervalMs: 60000,
       });
       if (!r.ok) {
         setError(r.error.messageKey);
@@ -251,7 +265,23 @@ export function AutonomousWorkspace({client, locale, desktop, onBackToStandard}:
         return;
       }
       setNotice(action === 'archive' ? text('autonomous.pilot.archived') : `${text('autonomous.pilot.instances')}: ${r.result.status}`);
-      await loadInstances(selectedProfileId);
+      await loadInstances(action === 'archive' ? undefined : selectedProfileId);
+    } catch {
+      setError('error.transport');
+    }
+  }
+
+  async function deleteArchivedInstance(inst: ArchivedInstanceSummary) {
+    setError('');
+    setNotice('');
+    try {
+      const r = await client.call('profile.delete.permanent', {confirm: true}, inst.profileRevision, inst.profileId);
+      if (!r.ok) {
+        setError(r.error.messageKey);
+        return;
+      }
+      setNotice(text('autonomous.pilot.deletedPermanently'));
+      await loadInstances();
     } catch {
       setError('error.transport');
     }
@@ -430,6 +460,23 @@ export function AutonomousWorkspace({client, locale, desktop, onBackToStandard}:
     }
   }
 
+  async function toggleScheduler(next: boolean) {
+    if (!selectedProfileId) return;
+    setError('');
+    setNotice('');
+    try {
+      const r = await client.call<{autoWakeEnabled: boolean}>('autonomous.scheduler.set', {autoWakeEnabled: next}, undefined, selectedProfileId);
+      if (!r.ok) {
+        setError(r.error.messageKey);
+        return;
+      }
+      setNotice(text(r.result.autoWakeEnabled ? 'autonomous.pilot.schedulerEnabled' : 'autonomous.pilot.schedulerDisabled'));
+      await loadInstances(selectedProfileId);
+    } catch {
+      setError('error.transport');
+    }
+  }
+
   if (!desktop) {
     return <section className="setup autonomous-workspace" aria-labelledby="autonomous-title">
       <div className="eyebrow">{text('workspace.autonomous')}</div>
@@ -486,6 +533,17 @@ export function AutonomousWorkspace({client, locale, desktop, onBackToStandard}:
         </label>
         <button type="submit" disabled={!newInstanceName.trim()}>{text('autonomous.pilot.create')}</button>
       </form>
+      {archivedInstances.length > 0 && <details className="autonomous-card">
+        <summary>{text('autonomous.pilot.archivedInstances')} ({archivedInstances.length})</summary>
+        <ul className="autonomous-compact-list">
+          {archivedInstances.map(inst => <li key={inst.profileId}>
+            <strong>{inst.displayName}</strong>{' '}
+            <button type="button" onClick={() => void deleteArchivedInstance(inst)}>
+              {text('autonomous.pilot.deletePermanently')}
+            </button>
+          </li>)}
+        </ul>
+      </details>}
     </div>
 
     {status && <>
@@ -498,6 +556,13 @@ export function AutonomousWorkspace({client, locale, desktop, onBackToStandard}:
           </p>
           <div className="autonomous-actions">
             <button type="button" onClick={() => void checkWake()}>{text('autonomous.pilot.checkWake')}</button>
+            {status.providerConfig && <button
+              type="button"
+              aria-pressed={Boolean(status.providerConfig.autoWakeEnabled)}
+              onClick={() => void toggleScheduler(!status.providerConfig?.autoWakeEnabled)}
+            >
+              {text(status.providerConfig.autoWakeEnabled ? 'autonomous.pilot.schedulerOn' : 'autonomous.pilot.schedulerOff')}
+            </button>}
             {status.instance.status === 'inactive'
               ? <>
                   <button type="button" onClick={() => void toggleLifecycle('resume')}>{text('autonomous.pilot.resume')}</button>
@@ -523,6 +588,7 @@ export function AutonomousWorkspace({client, locale, desktop, onBackToStandard}:
             <li>{text('autonomous.pilot.continuityEpisodes')}: <strong>{status.continuitySummary.activeEpisodeCount}</strong></li>
             <li>{text('autonomous.pilot.continuityResume')}: <strong>{text(status.continuitySummary.hasResumePacket ? 'autonomous.pilot.continuityResumeReady' : 'autonomous.pilot.continuityResumeNone')}</strong></li>
             <li>{text('autonomous.pilot.continuityReflections')}: <strong>{status.continuitySummary.privateReflectionCount}</strong></li>
+            <li>{text('autonomous.pilot.continuitySelfRecords')}: <strong>{status.continuitySummary.approvedSelfRecordCount}</strong></li>
           </ul>
           <details>
             <summary>{text('autonomous.pilot.recentDecisions')} ({status.recentDecisions.length})</summary>

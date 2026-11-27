@@ -10,6 +10,7 @@ function readyStandardDesktop(locale: 'en' | 'pl' = 'en') {
   const profile = {id: 'p1', displayName: 'Ada', revision: 1, status: 'ready', mode: 'standard', primaryRouteId: 'r1'};
   const conversation = {id: 'c1', profileId: 'p1', revision: 1, language: locale, title: 'Main chat', draftText: '', status: 'open'};
   const autonomousInstances: Array<{profileId: string; instanceId: string; displayName: string; status: string; activeWakePlan: Record<string, unknown>; proposalCount: number; activeRefusalCount: number}> = [];
+  const archivedInstances: Array<{profileId: string; instanceId: string; displayName: string; profileRevision: number; status: string}> = [];
   const proposals: Array<{id: string; version: number; title: string; terms: string; status: string; scopeKey: string; rounds: Array<Record<string, unknown>>}> = [];
   const refusals: Array<{id: string; scopeFingerprint: string; status: string; reconsiderationConditions: string[]; createdAt: string}> = [];
   const unresolvedActions: Array<{id: string; state: string; actionKind: string}> = [];
@@ -37,7 +38,7 @@ function readyStandardDesktop(locale: 'en' | 'pl' = 'en') {
         case 'chat.vision.get': result = {support: 'unknown'}; break;
         case 'memory.working.get': result = {record: {id: 'w1', revision: 1, state: 'empty'}, primary: {contextTokens: 8192, verified: true}, attempts: [], proposals: [], decisions: [], profileRevision: 1, capacityPolicy: {kind: 'bounded', tokens: 300}, scopeId: 'a'.repeat(64), scribeMode: 'disabled', formatRepairCount: 0}; break;
         case 'autonomous.instance.list':
-          result = {items: autonomousInstances};
+          result = {items: autonomousInstances, archivedItems: archivedInstances};
           break;
         case 'autonomous.instance.create': {
           const created = {
@@ -45,7 +46,7 @@ function readyStandardDesktop(locale: 'en' | 'pl' = 'en') {
             instanceId: 'auto-i1',
             displayName: String(r.payload.displayName),
             status: 'ready',
-            activeWakePlan: {mode: 'interval', origin: 'initial_configuration', requestedDelayMs: 1},
+            activeWakePlan: {mode: 'interval', origin: 'initial_configuration', requestedDelayMs: Number(r.payload.initialIntervalMs ?? 60000)},
             proposalCount: 0,
             activeRefusalCount: 0,
           };
@@ -54,7 +55,8 @@ function readyStandardDesktop(locale: 'en' | 'pl' = 'en') {
           break;
         }
         case 'autonomous.instance.status': {
-          const inst = autonomousInstances.find(i => i.profileId === r.profileId) ?? autonomousInstances[0];
+          const inst = autonomousInstances.find(i => i.profileId === r.profileId);
+          if (!inst) throw Error('Status requested for missing or archived profile: ' + r.profileId);
           result = {
             profileId: inst.profileId,
             displayName: inst.displayName,
@@ -83,11 +85,24 @@ function readyStandardDesktop(locale: 'en' | 'pl' = 'en') {
             inst.status = 'inactive';
             const idx = autonomousInstances.findIndex(i => i.profileId === inst.profileId);
             if (idx >= 0) autonomousInstances.splice(idx, 1);
+            archivedInstances.push({
+              profileId: inst.profileId,
+              instanceId: inst.instanceId,
+              displayName: inst.displayName,
+              profileRevision: 2,
+              status: 'archived',
+            });
             result = {profileId: inst.profileId, instanceId: inst.instanceId, status: 'archived', profileRevision: 2};
           } else {
             inst.status = action === 'pause' ? 'inactive' : 'ready';
             result = {profileId: inst.profileId, instanceId: inst.instanceId, status: inst.status};
           }
+          break;
+        }
+        case 'profile.delete.permanent': {
+          const idx = archivedInstances.findIndex(i => i.profileId === r.profileId);
+          if (idx >= 0) archivedInstances.splice(idx, 1);
+          result = {deleted: true};
           break;
         }
         case 'autonomous.provider.configure': {
@@ -99,8 +114,15 @@ function readyStandardDesktop(locale: 'en' | 'pl' = 'en') {
             dailyCallLimit: Number(r.payload.dailyCallLimit ?? 20),
             callsUsedToday: 0,
             maxOutputTokens: 512,
+            autoWakeEnabled: Boolean(r.payload.autoWakeEnabled ?? false),
           };
           result = providerConfig;
+          break;
+        }
+        case 'autonomous.scheduler.set': {
+          const enabled = Boolean(r.payload.autoWakeEnabled);
+          if (providerConfig) providerConfig.autoWakeEnabled = enabled;
+          result = {profileId: autonomousInstances[0].profileId, instanceId: autonomousInstances[0].instanceId, autoWakeEnabled: enabled, nextWakeAt: null};
           break;
         }
         case 'autonomous.action.reconcile': {
@@ -280,6 +302,12 @@ it('supports API provider configuration, pause/resume lifecycle, and uncertain a
   expect(host.textContent).toContain('Work continuity & private reflection');
   expect(host.textContent).toContain('Active work episodes: 1');
   expect(host.textContent).toContain('Private reflections (private, content not shown): 2');
+  expect(host.textContent).toContain('Approved self-records (private, content not shown): 1');
+
+  // Opt-in background wake scheduler toggle (off by default -> on).
+  await act(async () => button('Background wake (nextWakeAt): Off').click());
+  expect(requests.some(r => r.command === 'autonomous.scheduler.set')).toBe(true);
+  expect(button('Background wake (nextWakeAt): On').getAttribute('aria-pressed')).toBe('true');
 
   // Pause & resume instance; Archive button appears only while paused.
   await act(async () => button('Pause instance').click());
@@ -305,6 +333,16 @@ it('supports API provider configuration, pause/resume lifecycle, and uncertain a
   await act(async () => button('Confirm executed').click());
   expect(requests.some(r => r.command === 'autonomous.action.reconcile')).toBe(true);
   expect(host.textContent).not.toContain('act-uncertain-1');
+
+  // Full UI lifecycle: Pause -> Archive -> Delete permanently (without calling status on archived profile).
+  await act(async () => button('Pause instance').click());
+  await act(async () => button('Archive instance').click());
+  expect(host.textContent).toContain('Archived Autonomous instances (1)');
+  await act(async () => button('Delete permanently').click());
+  const delReq = requests.find(r => r.command === 'profile.delete.permanent');
+  expect(delReq?.profileId).toBe('auto-p1');
+  expect(delReq?.expectedRevision).toBe(2);
+  expect(host.textContent).not.toContain('Archived Autonomous instances (1)');
 });
 
 it('displays Polish Autonomiczny labels and honest browser-preview unavailability without autonomous IPC', async () => {

@@ -1,9 +1,10 @@
 use serde_json::{json,Value};
 use sha2::{Digest,Sha256};
 use sqlx::Row;
-use tokio::sync::Mutex;
+use std::sync::{atomic::{AtomicBool,Ordering},Arc};
+use tokio::sync::{Mutex,Notify};
 use crate::{domain::schema,kernel::Kernel,persistence::Store};
-pub struct Application {store:Store,kernel:Kernel,gate:Mutex<()>,connections:crate::connections::Connections,vault:crate::vault::Vault}
+pub struct Application {store:Store,kernel:Kernel,gate:Mutex<()>,connections:crate::connections::Connections,vault:crate::vault::Vault,wake_notify:Arc<Notify>,wake_shutdown:Arc<AtomicBool>}
 pub struct Dispatch {pub response:Value,pub event:Option<Value>}
 fn error(r:&Value,code:&str)->Value{json!({"contractVersion":1,"requestId":r["requestId"].as_str().filter(|s|!s.is_empty()&&s.len()<=128).unwrap_or("invalid-request"),"ok":false,"error":{"code":code,"messageKey":format!("error.{}",code.to_lowercase()),"retryable":false}})}
 fn success(r:&Value,result:Value)->Value{json!({"contractVersion":1,"requestId":r["requestId"],"ok":true,"result":result})}
@@ -21,14 +22,23 @@ impl Application {
     /// Native Community adapter only; caller must retain the managed host gate.
     pub(crate) fn community_pool(&self)->&sqlx::SqlitePool { &self.store.pool }
     pub fn new(store:Store)->Self{Self::with_vault(store,crate::vault::Vault::os())}
-    pub fn with_vault(store:Store,vault:crate::vault::Vault)->Self{let mut kernel=Kernel::new();kernel.ready();let connections=crate::connections::Connections::new(store.pool.clone(),vault.clone());Self{store,kernel,gate:Mutex::new(()),connections,vault}}
-    pub fn with_file_picker(store:Store,vault:crate::vault::Vault,picker:std::sync::Arc<dyn crate::imports::FilePicker>)->Self{let mut kernel=Kernel::new();kernel.ready();let connections=crate::connections::Connections::with_picker(store.pool.clone(),vault.clone(),picker);Self{store,kernel,gate:Mutex::new(()),connections,vault}}
+    pub fn with_vault(store:Store,vault:crate::vault::Vault)->Self{let mut kernel=Kernel::new();kernel.ready();let connections=crate::connections::Connections::new(store.pool.clone(),vault.clone());Self{store,kernel,gate:Mutex::new(()),connections,vault,wake_notify:Arc::new(Notify::new()),wake_shutdown:Arc::new(AtomicBool::new(false))}}
+    pub fn with_file_picker(store:Store,vault:crate::vault::Vault,picker:std::sync::Arc<dyn crate::imports::FilePicker>)->Self{let mut kernel=Kernel::new();kernel.ready();let connections=crate::connections::Connections::with_picker(store.pool.clone(),vault.clone(),picker);Self{store,kernel,gate:Mutex::new(()),connections,vault,wake_notify:Arc::new(Notify::new()),wake_shutdown:Arc::new(AtomicBool::new(false))}}
     /// Native integration seam only. Registration/UI and coordinated backup
     /// are not enabled by this builder. The desktop host does not call it yet.
     pub fn with_community_lifecycle(mut self,service:crate::community_host::CommunityLifecycle)->Self{
         self.connections=self.connections.clone().with_community_lifecycle(service);self
     }
-    pub fn stop(&mut self){self.kernel.stop();}
+    /// Starts the one-shot `nextWakeAt` Autonomous wake scheduler for desktop runtime.
+    pub fn start_autonomous_wake_scheduler(&self)->tokio::task::JoinHandle<()>{
+        crate::experimental_pilot::spawn_autonomous_wake_scheduler(
+            self.store.pool.clone(),
+            self.vault.clone(),
+            self.wake_notify.clone(),
+            self.wake_shutdown.clone(),
+        )
+    }
+    pub fn stop(&mut self){self.wake_shutdown.store(true,Ordering::Relaxed);self.wake_notify.notify_waiters();self.kernel.stop();}
     /// Consumed only by the native host after its dispatch gate has drained.
     /// Closing the pool also closes connection clones; OS ownership is released
     /// only after every clone has actually been dropped.
@@ -107,13 +117,19 @@ impl Application {
                 | "autonomous.proposal.consider"
                 | "autonomous.action.reconcile"
                 | "autonomous.wake.check"
+                | "autonomous.scheduler.set"
         ) {
             let pilot = crate::experimental_pilot::AutonomousPilotService::system_with_vault(
                 self.store.pool.clone(),
                 self.vault.clone(),
             );
             return Ok(match pilot.dispatch(r).await {
-                Ok(result) => Dispatch { response: success(r, result), event: None },
+                Ok(result) => {
+                    if crate::experimental_pilot::mutates(command) {
+                        self.wake_notify.notify_one();
+                    }
+                    Dispatch { response: success(r, result), event: None }
+                }
                 Err(code) => reject(&code),
             });
         }
@@ -169,4 +185,4 @@ impl Application {
     }
 }
 
-impl Drop for Application { fn drop(&mut self) { self.kernel.stop(); } }
+impl Drop for Application { fn drop(&mut self) { self.wake_shutdown.store(true,Ordering::Relaxed); self.wake_notify.notify_waiters(); self.kernel.stop(); } }

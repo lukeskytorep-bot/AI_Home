@@ -8,7 +8,8 @@
       "result": {
         "type": "object",
         "properties": {
-          "items": {"type": "array"}
+          "items": {"type": "array"},
+          "archivedItems": {"type": "array"}
         },
         "required": ["items"],
         "additionalProperties": false
@@ -110,7 +111,8 @@
           "modelId": {"type": "string", "minLength": 1, "maxLength": 512},
           "apiKey": {"type": "string", "minLength": 1, "maxLength": 8192},
           "dailyCallLimit": {"type": "integer", "minimum": 1, "maximum": 1000},
-          "maxOutputTokens": {"type": "integer", "minimum": 64, "maximum": 8192}
+          "maxOutputTokens": {"type": "integer", "minimum": 64, "maximum": 8192},
+          "autoWakeEnabled": {"type": "boolean"}
         },
         "required": ["provider", "modelId"],
         "additionalProperties": false
@@ -125,7 +127,8 @@
           "hasCredential": {"type": "boolean"},
           "dailyCallLimit": {"type": "integer", "minimum": 1},
           "callsUsedToday": {"type": "integer", "minimum": 0},
-          "maxOutputTokens": {"type": "integer", "minimum": 64}
+          "maxOutputTokens": {"type": "integer", "minimum": 64},
+          "autoWakeEnabled": {"type": "boolean"}
         },
         "required": ["profileId", "provider", "normalizedEndpoint", "modelId", "hasCredential", "dailyCallLimit", "callsUsedToday", "maxOutputTokens"],
         "additionalProperties": false
@@ -292,6 +295,28 @@
           "activeWakePlan": {}
         },
         "required": ["profileId", "result", "activeWakePlan"],
+        "additionalProperties": false
+      }
+    },
+    "autonomous.scheduler.set": {
+      "mutates": true,
+      "payload": {
+        "type": "object",
+        "properties": {
+          "autoWakeEnabled": {"type": "boolean"}
+        },
+        "required": ["autoWakeEnabled"],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "profileId": {"type": "string", "minLength": 1},
+          "instanceId": {"type": "string", "minLength": 1},
+          "autoWakeEnabled": {"type": "boolean"},
+          "nextWakeAt": {"type": ["string", "null"]}
+        },
+        "required": ["profileId", "instanceId", "autoWakeEnabled"],
         "additionalProperties": false
       }
     }

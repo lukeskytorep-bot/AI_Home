@@ -1179,11 +1179,439 @@ async fn archive_lifecycle_requires_inactive_and_enables_permanent_delete() {
     assert_eq!(archived["result"]["status"], "archived");
     let rev = archived["result"]["profileRevision"].as_i64().unwrap();
 
+    // Archived instance must NOT appear in live items, MUST appear in archivedItems, and cannot be resumed.
+    let listed = app
+        .dispatch(req("autonomous.instance.list", None, json!({})))
+        .await
+        .response;
+    assert_eq!(listed["ok"], true, "{listed}");
+    assert_eq!(listed["result"]["items"].as_array().unwrap().len(), 0);
+    assert_eq!(listed["result"]["archivedItems"].as_array().unwrap().len(), 1);
+    assert_eq!(listed["result"]["archivedItems"][0]["profileId"], profile_id);
+    assert_eq!(listed["result"]["archivedItems"][0]["profileRevision"], rev);
+
+    let resume_denied = app
+        .dispatch(req(
+            "autonomous.instance.lifecycle",
+            Some(&profile_id),
+            json!({"action": "resume"}),
+        ))
+        .await
+        .response;
+    assert_eq!(resume_denied["ok"], false, "{resume_denied}");
+    assert_eq!(resume_denied["error"]["code"], "POLICY_DENIED");
+
     let mut del = req("profile.delete.permanent", Some(&profile_id), json!({"confirm": true}));
     del["expectedRevision"] = json!(rev);
     let deleted = app.dispatch(del).await.response;
     assert_eq!(deleted["ok"], true, "{deleted}");
+
+    let listed_after = app
+        .dispatch(req("autonomous.instance.list", None, json!({})))
+        .await
+        .response;
+    assert_eq!(listed_after["result"]["archivedItems"].as_array().unwrap().len(), 0);
 }
+
+#[tokio::test]
+async fn wake_check_runs_api_reflection_and_self_review_without_leaking_private_content() {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    let hits = Arc::new(AtomicUsize::new(0));
+    let hits_server = hits.clone();
+    let reflection_id_holder = Arc::new(std::sync::Mutex::new(String::new()));
+    let refl_server = reflection_id_holder.clone();
+
+    let server = tokio::spawn(async move {
+        for step in 0..3 {
+            if let Ok((mut stream, _)) = listener.accept().await {
+                hits_server.fetch_add(1, Ordering::SeqCst);
+                let mut buf = [0u8; 16384];
+                let n = stream.read(&mut buf).await.unwrap_or(0);
+                let req_text = String::from_utf8_lossy(&buf[..n]);
+                let content = match step {
+                    0 => "{\"decision\":\"reflect\",\"language\":\"en\"}".to_string(),
+                    1 => "{\"conclusion\":\"draft\",\"summary\":\"PRIVATE-SUMMARY-SECRET-99\",\"candidates\":[{\"kind\":\"own_note\",\"content\":\"PRIVATE-NOTE-SECRET-99\"}]}".to_string(),
+                    _ => {
+                        // Model receives privateReviewHints in its own prompt; verify candidate is present.
+                        assert!(req_text.contains("PRIVATE-NOTE-SECRET-99"), "model prompt should include pending candidate");
+                        let rid = refl_server.lock().unwrap().clone();
+                        json!({
+                            "decision": "review_self",
+                            "reflectionId": rid,
+                            "reflectionRevision": 1,
+                            "candidateIndex": 0,
+                            "disposition": "accept",
+                            "reason": "Keep this self-authored note"
+                        })
+                        .to_string()
+                    }
+                };
+                let body = json!({
+                    "id": format!("chatcmpl-refl-{step}"),
+                    "choices": [{
+                        "index": 0,
+                        "finish_reason": "stop",
+                        "message": { "role": "assistant", "content": content }
+                    }]
+                })
+                .to_string();
+                let resp = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                    body.len(),
+                    body
+                );
+                let _ = stream.write_all(resp.as_bytes()).await;
+                let _ = stream.shutdown().await;
+            }
+        }
+    });
+
+    let store = Store::memory().await.unwrap();
+    let pool = store.pool.clone();
+    let vault = ai_home::vault::Vault::with_backend(Arc::new(TestSecretStore::default()));
+    let app = Application::with_vault(store, vault);
+
+    let created = app
+        .dispatch(req(
+            "autonomous.instance.create",
+            None,
+            json!({"displayName": "Reflect API Pilot", "initialIntervalMs": 1}),
+        ))
+        .await
+        .response;
+    let profile_id = created["result"]["profileId"].as_str().unwrap().to_string();
+
+    let cfg = app
+        .dispatch(req(
+            "autonomous.provider.configure",
+            Some(&profile_id),
+            json!({
+                "provider": "custom_openai",
+                "endpoint": format!("http://127.0.0.1:{}/v1", addr.port()),
+                "modelId": "gpt-reflect-test",
+                "apiKey": "sk-reflect-secret",
+                "dailyCallLimit": 10,
+                "maxOutputTokens": 256
+            }),
+        ))
+        .await
+        .response;
+    assert_eq!(cfg["ok"], true, "{cfg}");
+
+    tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+    let wake1 = app
+        .dispatch(req("autonomous.wake.check", Some(&profile_id), json!({})))
+        .await
+        .response;
+    assert_eq!(wake1["ok"], true, "{wake1}");
+    assert_eq!(wake1["result"]["result"], "completed");
+    assert_eq!(wake1["result"]["outcome"], "reflection");
+    assert_eq!(hits.load(Ordering::SeqCst), 2);
+
+    // Fetch reflection ID directly from DB so step 2 can simulate model approving its own candidate.
+    let refl_id: String = sqlx::query_scalar(
+        "SELECT id FROM experimental_private_reflections WHERE profile_id=? ORDER BY rowid DESC LIMIT 1",
+    )
+    .bind(&profile_id)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    *reflection_id_holder.lock().unwrap() = refl_id;
+
+    // Status exposes counts ONLY — zero private reflection content may leak to IPC/UI.
+    let status1 = app
+        .dispatch(req("autonomous.instance.status", Some(&profile_id), json!({})))
+        .await
+        .response;
+    assert_eq!(status1["ok"], true, "{status1}");
+    assert_eq!(status1["result"]["continuitySummary"]["privateReflectionCount"], 1);
+    assert_eq!(status1["result"]["continuitySummary"]["approvedSelfRecordCount"], 0);
+    assert_eq!(status1["result"]["continuitySummary"]["privateContentIncluded"], false);
+    let status1_text = status1.to_string();
+    assert!(!status1_text.contains("PRIVATE-SUMMARY-SECRET-99"));
+    assert!(!status1_text.contains("PRIVATE-NOTE-SECRET-99"));
+
+    // Second wake: model reviews and approves its own candidate into experimental_self_records.
+    tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+    let wake2 = app
+        .dispatch(req("autonomous.wake.check", Some(&profile_id), json!({})))
+        .await
+        .response;
+    assert_eq!(wake2["ok"], true, "{wake2}");
+    assert_eq!(wake2["result"]["result"], "completed");
+    assert_eq!(wake2["result"]["outcome"], "self_review");
+    assert_eq!(hits.load(Ordering::SeqCst), 3);
+
+    let status2 = app
+        .dispatch(req("autonomous.instance.status", Some(&profile_id), json!({})))
+        .await
+        .response;
+    assert_eq!(status2["ok"], true, "{status2}");
+    assert_eq!(status2["result"]["continuitySummary"]["privateReflectionCount"], 1);
+    assert_eq!(status2["result"]["continuitySummary"]["approvedSelfRecordCount"], 1);
+    let status2_text = status2.to_string();
+    assert!(!status2_text.contains("PRIVATE-SUMMARY-SECRET-99"));
+    assert!(!status2_text.contains("PRIVATE-NOTE-SECRET-99"));
+
+    server.abort();
+}
+
+#[tokio::test]
+async fn autonomous_scheduler_opt_in_fires_only_when_enabled_and_due_and_respects_pause_and_sleep() {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    let hits = Arc::new(AtomicUsize::new(0));
+    let hits_server = hits.clone();
+
+    let server = tokio::spawn(async move {
+        let body = json!({
+            "id": "chatcmpl-sched-1",
+            "choices": [{
+                "index": 0,
+                "finish_reason": "stop",
+                "message": {
+                    "role": "assistant",
+                    "content": "{\"decision\":\"sleep\",\"sleepDelayMs\":7200000}"
+                }
+            }]
+        })
+        .to_string();
+        if let Ok((mut stream, _)) = listener.accept().await {
+            hits_server.fetch_add(1, Ordering::SeqCst);
+            let mut buf = [0u8; 8192];
+            let _ = stream.read(&mut buf).await;
+            let resp = format!(
+                "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            let _ = stream.write_all(resp.as_bytes()).await;
+            let _ = stream.shutdown().await;
+        }
+    });
+
+    let store = Store::memory().await.unwrap();
+    let pool = store.pool.clone();
+    let vault = ai_home::vault::Vault::with_backend(Arc::new(TestSecretStore::default()));
+    let app = Application::with_vault(store, vault.clone());
+
+    let created = app
+        .dispatch(req(
+            "autonomous.instance.create",
+            None,
+            json!({"displayName": "Scheduled Pilot", "initialIntervalMs": 1}),
+        ))
+        .await
+        .response;
+    let profile_id = created["result"]["profileId"].as_str().unwrap().to_string();
+
+    let cfg = app
+        .dispatch(req(
+            "autonomous.provider.configure",
+            Some(&profile_id),
+            json!({
+                "provider": "custom_openai",
+                "endpoint": format!("http://127.0.0.1:{}/v1", addr.port()),
+                "modelId": "gpt-sched-test",
+                "apiKey": "sk-sched-secret",
+                "dailyCallLimit": 5,
+                "maxOutputTokens": 128
+            }),
+        ))
+        .await
+        .response;
+    assert_eq!(cfg["ok"], true, "{cfg}");
+    assert_eq!(cfg["result"]["autoWakeEnabled"], false);
+
+    // By default (opt-in off), scheduler must see no scheduled wakes and make zero calls.
+    let pilot = AutonomousPilotService::system_with_vault(pool.clone(), vault.clone());
+    assert!(pilot.next_scheduled_wake().await.unwrap().is_none());
+    assert!(pilot.run_next_due_scheduled_wake().await.unwrap().is_none());
+    assert_eq!(hits.load(Ordering::SeqCst), 0);
+
+    // Enable opt-in scheduler via IPC (with idempotency receipt).
+    let sched_req = json!({
+        "contractVersion": 1,
+        "requestId": "req-sched-enable-1",
+        "profileId": profile_id,
+        "command": "autonomous.scheduler.set",
+        "payload": {"autoWakeEnabled": true}
+    });
+    let enabled = app.dispatch(sched_req.clone()).await.response;
+    assert_eq!(enabled["ok"], true, "{enabled}");
+    assert_eq!(enabled["result"]["autoWakeEnabled"], true);
+    let replayed = app.dispatch(sched_req).await.response;
+    assert_eq!(replayed, enabled);
+
+    // Background scheduler enforces a safe 60s minimum for interval wake plans (prevents 1ms budget burn).
+    let (_, due_at) = pilot.next_scheduled_wake().await.unwrap().expect("scheduled wake present");
+    assert!(due_at >= Utc::now() + chrono::Duration::seconds(50), "expected >=60s floor, got {due_at}");
+    assert!(pilot.run_next_due_scheduled_wake().await.unwrap().is_none());
+    assert_eq!(hits.load(Ordering::SeqCst), 0);
+
+    // Advance clock past the 60s floor -> scheduled wake fires once and AI chooses 2h sleep.
+    let future_clock = Arc::new(FakeClock(Mutex::new(Utc::now() + chrono::Duration::seconds(65))));
+    let future_pilot = AutonomousPilotService::new_with_vault(pool.clone(), future_clock, vault.clone());
+    let fired = future_pilot.run_next_due_scheduled_wake().await.unwrap().expect("should fire once due");
+    assert_eq!(fired["result"], "completed");
+    assert_eq!(fired["outcome"], "sleep");
+    assert_eq!(hits.load(Ordering::SeqCst), 1);
+
+    // AI chose 2h sleep -> immediate re-check must NOT fire and must NOT call HTTP.
+    assert!(future_pilot.run_next_due_scheduled_wake().await.unwrap().is_none());
+    assert_eq!(hits.load(Ordering::SeqCst), 1);
+
+    // Pausing instance hides it from next_scheduled_wake completely.
+    let paused = app
+        .dispatch(req(
+            "autonomous.instance.lifecycle",
+            Some(&profile_id),
+            json!({"action": "pause"}),
+        ))
+        .await
+        .response;
+    assert_eq!(paused["ok"], true, "{paused}");
+    assert!(future_pilot.next_scheduled_wake().await.unwrap().is_none());
+
+    server.abort();
+}
+
+#[tokio::test]
+async fn retry_not_before_blocks_http_and_budget_and_second_step_reflection_failure_returns_resource_unavailable() {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    let hits = Arc::new(AtomicUsize::new(0));
+    let hits_server = hits.clone();
+
+    let server = tokio::spawn(async move {
+        for step in 0..2 {
+            if let Ok((mut stream, _)) = listener.accept().await {
+                hits_server.fetch_add(1, Ordering::SeqCst);
+                let mut buf = [0u8; 8192];
+                let _ = stream.read(&mut buf).await;
+                let resp = if step == 0 {
+                    let body = json!({
+                        "id": "chatcmpl-p3-1",
+                        "choices": [{
+                            "index": 0,
+                            "finish_reason": "stop",
+                            "message": { "role": "assistant", "content": "{\"decision\":\"reflect\",\"language\":\"en\"}" }
+                        }]
+                    })
+                    .to_string();
+                    format!(
+                        "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                        body.len(),
+                        body
+                    )
+                } else {
+                    // Second step (ApiReflectionProvider) returns invalid JSON -> must map to resource_unavailable.
+                    let body = json!({
+                        "id": "chatcmpl-p3-2",
+                        "choices": [{
+                            "index": 0,
+                            "finish_reason": "stop",
+                            "message": { "role": "assistant", "content": "NOT-VALID-REFLECTION-JSON" }
+                        }]
+                    })
+                    .to_string();
+                    format!(
+                        "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                        body.len(),
+                        body
+                    )
+                };
+                let _ = stream.write_all(resp.as_bytes()).await;
+                let _ = stream.shutdown().await;
+            }
+        }
+    });
+
+    let store = Store::memory().await.unwrap();
+    let pool = store.pool.clone();
+    let vault = ai_home::vault::Vault::with_backend(Arc::new(TestSecretStore::default()));
+    let app = Application::with_vault(store, vault.clone());
+
+    let created = app
+        .dispatch(req(
+            "autonomous.instance.create",
+            None,
+            json!({"displayName": "Backoff Pilot", "initialIntervalMs": 1}),
+        ))
+        .await
+        .response;
+    let profile_id = created["result"]["profileId"].as_str().unwrap().to_string();
+
+    let cfg = app
+        .dispatch(req(
+            "autonomous.provider.configure",
+            Some(&profile_id),
+            json!({
+                "provider": "custom_openai",
+                "endpoint": format!("http://127.0.0.1:{}/v1", addr.port()),
+                "modelId": "gpt-backoff-test",
+                "apiKey": "sk-backoff-secret",
+                "dailyCallLimit": 10,
+                "maxOutputTokens": 128
+            }),
+        ))
+        .await
+        .response;
+    assert_eq!(cfg["ok"], true, "{cfg}");
+
+    tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+    // Step 1 succeeds ("reflect"), step 2 returns invalid JSON -> normalized ok:true, result:"resource_unavailable" (P3-1).
+    let wake1 = app
+        .dispatch(req("autonomous.wake.check", Some(&profile_id), json!({})))
+        .await
+        .response;
+    assert_eq!(wake1["ok"], true, "{wake1}");
+    assert_eq!(wake1["result"]["result"], "resource_unavailable");
+    assert_eq!(hits.load(Ordering::SeqCst), 2);
+
+    // Instance now has retryNotBefore in the future; immediate wake_check must return not_due WITHOUT calling HTTP or spending budget (F2/P2).
+    let status_before = app
+        .dispatch(req("autonomous.instance.status", Some(&profile_id), json!({})))
+        .await
+        .response;
+    let used_before = status_before["result"]["providerConfig"]["callsUsedToday"].as_i64().unwrap();
+    assert_eq!(used_before, 2);
+
+    let wake2 = app
+        .dispatch(req("autonomous.wake.check", Some(&profile_id), json!({})))
+        .await
+        .response;
+    assert_eq!(wake2["ok"], true, "{wake2}");
+    assert_eq!(wake2["result"]["result"], "not_due");
+    assert_eq!(hits.load(Ordering::SeqCst), 2);
+
+    let status_after = app
+        .dispatch(req("autonomous.instance.status", Some(&profile_id), json!({})))
+        .await
+        .response;
+    assert_eq!(status_after["result"]["providerConfig"]["callsUsedToday"].as_i64().unwrap(), 2);
+
+    // Next scheduled wake also respects retryNotBefore.
+    let _ = app
+        .dispatch(req(
+            "autonomous.scheduler.set",
+            Some(&profile_id),
+            json!({"autoWakeEnabled": true}),
+        ))
+        .await
+        .response;
+    let pilot = AutonomousPilotService::system_with_vault(pool, vault);
+    let (_, due_at) = pilot.next_scheduled_wake().await.unwrap().expect("due_at present");
+    assert!(due_at > Utc::now());
+
+    server.abort();
+}
+
+
 
 
 
