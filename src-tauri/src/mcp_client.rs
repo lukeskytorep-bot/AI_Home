@@ -778,6 +778,21 @@ impl McpService {
                 .unwrap_or_default()
         };
 
+        let pending_reconciliation = if payload
+            .get("reconcileReceiptRef")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .is_some_and(|s| !s.is_empty())
+        {
+            Value::Null
+        } else {
+            old_body
+                .as_ref()
+                .and_then(|b| b.get("pendingReconciliation"))
+                .cloned()
+                .unwrap_or(Value::Null)
+        };
+
         let next_rev = old_rev + 1;
         let now = Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true);
         let body = json!({
@@ -791,6 +806,7 @@ impl McpService {
             "allowMutating": allow_mutating,
             "allowedTools": allowed_tools,
             "enabled": enabled,
+            "pendingReconciliation": pending_reconciliation,
             "lastTestedAt": old_body.as_ref().and_then(|b| b.get("lastTestedAt")).cloned().unwrap_or(Value::Null),
             "lastServerName": old_body.as_ref().and_then(|b| b.get("lastServerName")).cloned().unwrap_or(Value::Null),
             "discoveredTools": old_body.as_ref().and_then(|b| b.get("discoveredTools")).cloned().unwrap_or_else(|| json!([])),
@@ -902,7 +918,7 @@ impl McpService {
     ) -> Result<Value, String> {
         let server_id = payload["serverId"].as_str().ok_or("VALIDATION_ERROR")?;
         let tool_name = payload["toolName"].as_str().ok_or("VALIDATION_ERROR")?;
-        let Some((_, body)) = self.load_server_raw(profile_id, server_id).await? else {
+        let Some((server_rev, body)) = self.load_server_raw(profile_id, server_id).await? else {
             return Err("NOT_FOUND".into());
         };
         if body["enabled"].as_bool() != Some(true) {
@@ -914,8 +930,17 @@ impl McpService {
                 "reason": "MCP server is disabled",
             }));
         }
+        if !body.get("pendingReconciliation").is_none_or(Value::is_null) {
+            return Ok(json!({
+                "profileId": profile_id,
+                "serverId": server_id,
+                "toolName": tool_name,
+                "status": "policy_denied",
+                "reason": "reconciliation_required",
+            }));
+        }
 
-        // If this profile owns an Autonomous instance, respect pause and reconciliation_required fences.
+        // If this profile owns an Autonomous instance, respect pause, sleep, and reconciliation_required fences.
         if let Some(block_reason) = self.autonomous_execution_fence(profile_id).await? {
             return Ok(json!({
                 "profileId": profile_id,
@@ -935,7 +960,13 @@ impl McpService {
             }
         }
         let arguments = payload.get("arguments").cloned().unwrap_or_else(|| json!({}));
-        let mutating = payload.get("mutating").and_then(Value::as_bool).unwrap_or(false);
+        let discovered_mutating = body["discoveredTools"]
+            .as_array()
+            .and_then(|arr| arr.iter().find(|t| t["name"].as_str() == Some(tool_name)))
+            .and_then(|t| t["declaredMutating"].as_bool())
+            .unwrap_or(false);
+        let mutating =
+            payload.get("mutating").and_then(Value::as_bool).unwrap_or(false) || discovered_mutating;
         let source_tags: Vec<String> = payload
             .get("sourceTags")
             .and_then(Value::as_array)
@@ -947,6 +978,11 @@ impl McpService {
             })
             .unwrap_or_default();
 
+        let idempotency_key = if request_id.is_empty() {
+            uuid::Uuid::new_v4().to_string()
+        } else {
+            request_id.to_string()
+        };
         let client = StreamableHttpMcpClient::new(self.vault.clone())
             .map_err(|_| "TRANSPORT_ERROR".to_string())?;
         let outcome = client
@@ -957,11 +993,7 @@ impl McpService {
                     tool_name: tool_name.to_string(),
                     arguments,
                     mutating,
-                    idempotency_key: if request_id.is_empty() {
-                        uuid::Uuid::new_v4().to_string()
-                    } else {
-                        request_id.to_string()
-                    },
+                    idempotency_key: idempotency_key.clone(),
                     source_tags,
                 },
             )
@@ -990,31 +1022,106 @@ impl McpService {
                 "status": "policy_denied",
                 "reason": reason,
             }),
-            McpToolCallOutcome::Uncertain { reason } => json!({
-                "profileId": profile_id,
-                "serverId": server_id,
-                "toolName": tool_name,
-                "status": "uncertain",
-                "reason": reason,
-            }),
+            McpToolCallOutcome::Uncertain { reason } => {
+                // Persist a durable reconciliation fence so blind retries are blocked even across restarts.
+                self.record_uncertain_reconciliation(
+                    profile_id,
+                    server_id,
+                    server_rev,
+                    body,
+                    tool_name,
+                    &idempotency_key,
+                    &reason,
+                )
+                .await?;
+                json!({
+                    "profileId": profile_id,
+                    "serverId": server_id,
+                    "toolName": tool_name,
+                    "status": "uncertain",
+                    "reason": reason,
+                })
+            }
         })
     }
 
-    async fn autonomous_execution_fence(&self, profile_id: &str) -> Result<Option<String>, String> {
-        let inst_status: Option<String> = sqlx::query_scalar(
-            "SELECT json_extract(body, '$.status') FROM experimental_instances WHERE profile_id=? ORDER BY rowid DESC LIMIT 1",
+    #[allow(clippy::too_many_arguments)]
+    async fn record_uncertain_reconciliation(
+        &self,
+        profile_id: &str,
+        server_id: &str,
+        server_rev: i64,
+        mut body: Value,
+        tool_name: &str,
+        idempotency_key: &str,
+        reason: &str,
+    ) -> Result<(), String> {
+        let now = Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true);
+        let next_rev = server_rev + 1;
+        body["revision"] = json!(next_rev);
+        body["pendingReconciliation"] = json!({
+            "toolName": tool_name,
+            "idempotencyKey": idempotency_key,
+            "reason": reason,
+            "recordedAt": now,
+        });
+        body["updatedAt"] = json!(now);
+        sqlx::query("UPDATE mcp_servers SET revision=?, body=? WHERE profile_id=? AND id=?")
+            .bind(next_rev)
+            .bind(body.to_string())
+            .bind(profile_id)
+            .bind(server_id)
+            .execute(&self.pool)
+            .await
+            .map_err(storage)?;
+
+        // Also mark Autonomous instance recovery_required if this profile owns one.
+        let inst_row = sqlx::query(
+            "SELECT id, revision, body FROM experimental_instances WHERE profile_id=? ORDER BY rowid DESC LIMIT 1",
         )
         .bind(profile_id)
         .fetch_optional(&self.pool)
         .await
         .map_err(storage)?;
-        let Some(status) = inst_status else {
+        if let Some(row) = inst_row {
+            let inst_id: String = row.get("id");
+            let inst_rev: i64 = row.get("revision");
+            let mut inst_body: Value = serde_json::from_str(row.get::<&str, _>("body"))
+                .map_err(|_| "STORAGE_ERROR".to_string())?;
+            inst_body["revision"] = json!(inst_rev + 1);
+            inst_body["status"] = json!("recovery_required");
+            inst_body["updatedAt"] = json!(now);
+            sqlx::query(
+                "UPDATE experimental_instances SET revision=?, body=? WHERE profile_id=? AND id=?",
+            )
+            .bind(inst_rev + 1)
+            .bind(inst_body.to_string())
+            .bind(profile_id)
+            .bind(&inst_id)
+            .execute(&self.pool)
+            .await
+            .map_err(storage)?;
+        }
+        Ok(())
+    }
+
+    async fn autonomous_execution_fence(&self, profile_id: &str) -> Result<Option<String>, String> {
+        let inst_row = sqlx::query(
+            "SELECT id, json_extract(body, '$.status') AS status FROM experimental_instances WHERE profile_id=? ORDER BY rowid DESC LIMIT 1",
+        )
+        .bind(profile_id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(storage)?;
+        let Some(row) = inst_row else {
             return Ok(None);
         };
-        if status == "inactive" {
+        let instance_id: String = row.get("id");
+        let status: Option<String> = row.get("status");
+        if status.as_deref() == Some("inactive") {
             return Ok(Some("autonomous instance is paused".into()));
         }
-        if status == "recovery_required" {
+        if status.as_deref() == Some("recovery_required") {
             return Ok(Some("reconciliation_required".into()));
         }
         let unresolved: i64 = sqlx::query_scalar(
@@ -1026,6 +1133,36 @@ impl McpService {
         .map_err(storage)?;
         if unresolved > 0 {
             return Ok(Some("reconciliation_required".into()));
+        }
+        // Respect AI-chosen sleep / event_only WakePlan.
+        let wake_row: Option<String> = sqlx::query_scalar(
+            "SELECT body FROM experimental_wake_plans WHERE profile_id=? AND instance_id=? AND json_extract(body,'$.status')='active' ORDER BY rowid DESC LIMIT 1",
+        )
+        .bind(profile_id)
+        .bind(&instance_id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(storage)?;
+        if let Some(raw_wake) = wake_row {
+            let wake: Value =
+                serde_json::from_str(&raw_wake).map_err(|_| "STORAGE_ERROR".to_string())?;
+            if wake.get("origin").and_then(Value::as_str) == Some("ai_decision") {
+                match wake.get("mode").and_then(Value::as_str) {
+                    Some("event_only") => {
+                        return Ok(Some("autonomous instance is sleeping".into()));
+                    }
+                    Some("deadline") => {
+                        if let Some(next_str) = wake.get("nextWakeAt").and_then(Value::as_str) {
+                            if let Ok(deadline) = chrono::DateTime::parse_from_rfc3339(next_str) {
+                                if Utc::now() < deadline.with_timezone(&Utc) {
+                                    return Ok(Some("autonomous instance is sleeping".into()));
+                                }
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+            }
         }
         Ok(None)
     }
@@ -1111,6 +1248,7 @@ fn public_server_view(body: &Value) -> Value {
         "allowMutating": body["allowMutating"].as_bool().unwrap_or(false),
         "allowedTools": body["allowedTools"],
         "enabled": body["enabled"].as_bool().unwrap_or(true),
+        "pendingReconciliation": body.get("pendingReconciliation").cloned().unwrap_or(Value::Null),
         "lastTestedAt": body["lastTestedAt"],
         "lastServerName": body["lastServerName"],
         "discoveredTools": body["discoveredTools"],

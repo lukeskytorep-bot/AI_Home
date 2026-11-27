@@ -23,6 +23,7 @@ interface McpServerView {
   allowMutating: boolean;
   allowedTools: string[];
   enabled: boolean;
+  pendingReconciliation?: {toolName: string; idempotencyKey: string; reason: string; recordedAt: string} | null;
   lastTestedAt?: string | null;
   lastServerName?: string | null;
   discoveredTools?: DiscoveredTool[];
@@ -241,13 +242,30 @@ export function McpPanel({client, locale, desktop, initialProfileId}: {
               </div>
               <div className="autonomous-actions">
                 <button type="button" disabled={busy} onClick={() => void discover(srv.id)}>{text('mcp.discover')}</button>
+                {srv.pendingReconciliation && <button type="button" disabled={busy} onClick={async () => {
+                  const r = await client.call('mcp.server.save', {
+                    serverId: srv.id,
+                    name: srv.name,
+                    endpoint: srv.normalizedEndpoint,
+                    allowMutating: srv.allowMutating,
+                    allowedTools: srv.allowedTools,
+                    reconcileReceiptRef: `ui-reconciled:${srv.pendingReconciliation?.idempotencyKey}`,
+                  }, undefined, profileId);
+                  if (r.ok) { setNotice(text('mcp.reconciled')); await loadServers(profileId); }
+                  else setError(r.error.messageKey);
+                }}>{text('mcp.confirmReconciled')}</button>}
                 <button type="button" disabled={busy} onClick={() => void removeServer(srv.id)}>{text('mcp.remove')}</button>
               </div>
+              {srv.pendingReconciliation && <p role="alert" className="error">
+                {text('mcp.reconciliationRequired')}: <code>{srv.pendingReconciliation.toolName}</code>
+              </p>}
               {(srv.discoveredTools?.length ?? 0) > 0 && <ul className="autonomous-compact-list">
                 {srv.discoveredTools!.map(tool => {
                   const allowed = srv.allowedTools.includes(tool.name);
                   return <li key={tool.name}>
-                    <code>{tool.name}</code>{tool.description ? ` — ${tool.description}` : ''}{' '}
+                    <code>{tool.name}</code>{' '}
+                    <small>({text(tool.declaredMutating ? 'mcp.toolMutating' : 'mcp.toolReadOnly')})</small>
+                    {tool.description ? ` — ${tool.description}` : ''}{' '}
                     <button type="button" onClick={() => void toggleAllowedTool(srv, tool.name)}>
                       {text(allowed ? 'mcp.revokeTool' : 'mcp.allowTool')}
                     </button>

@@ -113,6 +113,7 @@ it('manages per-profile MCP servers, clears token input, discovers tools, toggle
 
   await act(async () => button('Discover tools').click());
   expect(host.textContent).toContain('kb.search');
+  expect(host.textContent).toContain('(read-only)');
   expect(button('Allow tool')).toBeTruthy();
 
   await act(async () => button('Allow tool').click());

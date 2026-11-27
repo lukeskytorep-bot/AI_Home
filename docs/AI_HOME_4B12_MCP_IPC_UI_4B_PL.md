@@ -24,7 +24,16 @@ Tryb weryfikacji: Linux headless (`npm test`, `npm run build`, `check_contracts.
 
 ## 2. Testy i weryfikacja
 
-- Rust (`src-tauri/tests/mcp_client.rs`): **9/9 PASS** (w tym 2 nowe testy end-to-end IPC i trwałego usuwania profilu).
+- Rust (`src-tauri/tests/mcp_client.rs`): **11/11 PASS** (w tym 2 nowe testy regresyjne Fix 1: trwała blokada `pendingReconciliation` po restarcie + egzekwowanie `declaredMutating` oraz blokada `mcp.tool.call` podczas snu AI).
 - Frontend (`tests/mcp-panel.test.tsx` + pełne `npm test`): **27/27 plików, 253/253 testów PASS**, `npm run build` PASS.
-- Kontrakty i strażniki: `check_contracts.py` (193/193), `verify-boundaries.mjs` (41/41 + 14 asercji v18), `verify-command-parity.py` (**80/80**), `verify-mcp-client.py` (9/9), wszystkie pozostałe skrypty `verify-*` oraz `scripts/verify-source.py`.
+- Kontrakty i strażniki: `check_contracts.py` (193/193), `verify-boundaries.mjs` (42/42 + 14 asercji v18), `verify-command-parity.py` (**80/80**), `verify-mcp-client.py` (9/9), wszystkie pozostałe skrypty `verify-*` oraz `scripts/verify-source.py`.
 - Zamrożone kontrakty P2 (`contracts/p2-frozen.sha256.json`), `src-tauri/capabilities/main.json` oraz `Cargo.toml`/`Cargo.lock` pozostały **nienaruszone**.
+
+## 3. Poprawki po audycie Paczki 4B (Fix 1)
+
+- **`F1 / P2` (trwała blokada po `Uncertain`, `declaredMutating` oraz sen AI w `mcp.tool.call`):**
+  - `call_tool_ipc` wylicza `mutating = payload.mutating || discovered.declaredMutating`, uniemożliwiając ominięcie polityki `allowMutating: false`.
+  - Wynik `McpToolCallOutcome::Uncertain` trwale zapisuje `pendingReconciliation` w `mcp_servers` (a dla profilu Autonomous także `recovery_required` w `experimental_instances`), blokując kolejne wywołania z nowym `requestId` także po restarcie SQLite — do czasu jawnego uzgodnienia (`reconcileReceiptRef` w `mcp.server.save`).
+  - `autonomous_execution_fence` sprawdza aktywny `WakePlan` z `origin == "ai_decision"` (`deadline` w przyszłości lub `event_only`) i blokuje `mcp.tool.call` podczas snu AI.
+- **`P3-1` (UX w `McpPanel.tsx`):**
+  - Lista wykrytych narzędzi wyświetla etykietę `(read-only)` / `(mutating)` obok nazwy narzędzia oraz baner uzgodnienia, gdy `pendingReconciliation` jest aktywne.

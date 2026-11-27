@@ -874,4 +874,239 @@ async fn mcp_ipc_permanent_profile_delete_removes_mcp_servers_and_tombstones_rec
     assert_eq!(replayed["error"]["code"], "POLICY_DENIED");
 }
 
+#[tokio::test]
+async fn mcp_ipc_uncertain_persists_reconciliation_fence_across_restart_and_enforces_declared_mutating() {
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    let call_hits = Arc::new(AtomicUsize::new(0));
+    let call_hits_srv = call_hits.clone();
+
+    let server = tokio::spawn(async move {
+        for _ in 0..4 {
+            if let Ok((mut stream, _)) = listener.accept().await {
+                let mut buf = [0u8; 16384];
+                let n = stream.read(&mut buf).await.unwrap_or(0);
+                let text = String::from_utf8_lossy(&buf[..n]);
+                let body_part = text.split("\r\n\r\n").nth(1).unwrap_or("{}");
+                let rpc: Value = serde_json::from_str(body_part).unwrap();
+                let id = rpc["id"].clone();
+                let method = rpc["method"].as_str().unwrap_or("");
+                match method {
+                    "initialize" => {
+                        let resp = http_json(
+                            "200 OK",
+                            &json!({"jsonrpc": "2.0", "id": id, "result": {
+                                "protocolVersion": MCP_PROTOCOL_VERSION,
+                                "serverInfo": {"name": "mut-fake-mcp", "version": "1.0.0"},
+                                "capabilities": {"tools": {}}
+                            }}),
+                        );
+                        let _ = stream.write_all(resp.as_bytes()).await;
+                    }
+                    "tools/list" => {
+                        let resp = http_json(
+                            "200 OK",
+                            &json!({"jsonrpc": "2.0", "id": id, "result": {
+                                "tools": [{
+                                    "name": "issue.create",
+                                    "description": "Mutating tool",
+                                    "inputSchema": {"type": "object"},
+                                    "annotations": {"readOnlyHint": false}
+                                }]
+                            }}),
+                        );
+                        let _ = stream.write_all(resp.as_bytes()).await;
+                    }
+                    "tools/call" => {
+                        // Drop connection immediately to produce Uncertain outcome.
+                        call_hits_srv.fetch_add(1, Ordering::SeqCst);
+                    }
+                    _ => {}
+                }
+                let _ = stream.shutdown().await;
+            }
+        }
+    });
+
+    let db_path = std::env::temp_dir().join(format!("ai-home-mcp-4b-fix1-{}.sqlite3", uuid::Uuid::new_v4()));
+    let vault = Vault::with_backend(Arc::new(MemorySecretStore::default()));
+    let store1 = Store::open(&db_path).await.unwrap();
+    let app1 = Application::with_vault(store1, vault.clone());
+
+    let prof = app1
+        .dispatch(req("profile.create", None, json!({"displayName": "MCP Mutating User"})))
+        .await
+        .response;
+    let profile_id = prof["result"]["id"].as_str().unwrap().to_string();
+
+    let saved = app1
+        .dispatch(req(
+            "mcp.server.save",
+            Some(&profile_id),
+            json!({
+                "name": "Mutating Server",
+                "endpoint": format!("http://127.0.0.1:{}/mcp", addr.port()),
+                "allowMutating": false,
+                "allowedTools": ["issue.create"]
+            }),
+        ))
+        .await
+        .response;
+    let server_id = saved["result"]["server"]["id"].as_str().unwrap().to_string();
+
+    // Discover marks issue.create as declaredMutating=true.
+    let disc = app1
+        .dispatch(req("mcp.server.discover", Some(&profile_id), json!({"serverId": server_id})))
+        .await
+        .response;
+    assert_eq!(disc["ok"], true, "{disc}");
+    assert_eq!(disc["result"]["tools"][0]["declaredMutating"], true);
+
+    // Calling without `mutating` flag while allowMutating=false MUST still be denied via discovered declaredMutating!
+    let denied_ro = app1
+        .dispatch(req(
+            "mcp.tool.call",
+            Some(&profile_id),
+            json!({"serverId": server_id, "toolName": "issue.create", "arguments": {"title": "x"}}),
+        ))
+        .await
+        .response;
+    assert_eq!(denied_ro["ok"], true, "{denied_ro}");
+    assert_eq!(denied_ro["result"]["status"], "policy_denied");
+    assert_eq!(call_hits.load(Ordering::SeqCst), 0);
+
+    // Enable allowMutating=true -> server drops connection -> Uncertain + durable pendingReconciliation fence.
+    let _ = app1
+        .dispatch(req(
+            "mcp.server.save",
+            Some(&profile_id),
+            json!({
+                "serverId": server_id,
+                "name": "Mutating Server",
+                "endpoint": format!("http://127.0.0.1:{}/mcp", addr.port()),
+                "allowMutating": true,
+                "allowedTools": ["issue.create"]
+            }),
+        ))
+        .await
+        .response;
+    let unc = app1
+        .dispatch(req(
+            "mcp.tool.call",
+            Some(&profile_id),
+            json!({"serverId": server_id, "toolName": "issue.create", "arguments": {"title": "x"}}),
+        ))
+        .await
+        .response;
+    assert_eq!(unc["ok"], true, "{unc}");
+    assert_eq!(unc["result"]["status"], "uncertain");
+    assert_eq!(call_hits.load(Ordering::SeqCst), 1);
+
+    // Restart SQLite -> new call with a fresh requestId MUST be blocked (zero blind retry!).
+    drop(app1);
+    let store2 = Store::open(&db_path).await.unwrap();
+    let app2 = Application::with_vault(store2, vault);
+    let blocked = app2
+        .dispatch(req(
+            "mcp.tool.call",
+            Some(&profile_id),
+            json!({"serverId": server_id, "toolName": "issue.create", "arguments": {"title": "retry"}}),
+        ))
+        .await
+        .response;
+    assert_eq!(blocked["ok"], true, "{blocked}");
+    assert_eq!(blocked["result"]["status"], "policy_denied");
+    assert_eq!(blocked["result"]["reason"], "reconciliation_required");
+    assert_eq!(call_hits.load(Ordering::SeqCst), 1);
+
+    // Explicit reconciliation clears the fence cleanly.
+    let cleared = app2
+        .dispatch(req(
+            "mcp.server.save",
+            Some(&profile_id),
+            json!({
+                "serverId": server_id,
+                "name": "Mutating Server",
+                "endpoint": format!("http://127.0.0.1:{}/mcp", addr.port()),
+                "allowMutating": true,
+                "allowedTools": ["issue.create"],
+                "reconcileReceiptRef": "verified-no-duplicate"
+            }),
+        ))
+        .await
+        .response;
+    assert_eq!(cleared["ok"], true, "{cleared}");
+    assert!(cleared["result"]["server"]["pendingReconciliation"].is_null());
+
+    let _ = std::fs::remove_file(&db_path);
+    server.abort();
+}
+
+#[tokio::test]
+async fn mcp_ipc_blocks_tool_call_while_autonomous_instance_is_sleeping() {
+    let store = Store::memory().await.unwrap();
+    let vault = Vault::with_backend(Arc::new(MemorySecretStore::default()));
+    let app = Application::with_vault(store, vault);
+
+    let created = app
+        .dispatch(req(
+            "autonomous.instance.create",
+            None,
+            json!({"displayName": "Sleeping MCP Agent", "initialIntervalMs": 1}),
+        ))
+        .await
+        .response;
+    let profile_id = created["result"]["profileId"].as_str().unwrap().to_string();
+
+    // Put Autonomous instance to AI-chosen sleep (1h).
+    let prop = app
+        .dispatch(req(
+            "autonomous.proposal.submit",
+            Some(&profile_id),
+            json!({"title": "Sleep now", "terms": "Rest for 1h"}),
+        ))
+        .await
+        .response;
+    let proposal_id = prop["result"]["proposal"]["id"].as_str().unwrap().to_string();
+    tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+    let slept = app
+        .dispatch(req(
+            "autonomous.proposal.consider",
+            Some(&profile_id),
+            json!({"proposalId": proposal_id, "simulationOutcome": "sleep", "sleepDelayMs": 3600000}),
+        ))
+        .await
+        .response;
+    assert_eq!(slept["ok"], true, "{slept}");
+    assert_eq!(slept["result"]["decisionOutcome"], "sleep");
+
+    // Configure an MCP server on the sleeping Autonomous profile and attempt mcp.tool.call -> blocked!
+    let saved = app
+        .dispatch(req(
+            "mcp.server.save",
+            Some(&profile_id),
+            json!({
+                "name": "Sleep Guard MCP",
+                "endpoint": "https://example.com/mcp",
+                "allowedTools": ["notes.read"]
+            }),
+        ))
+        .await
+        .response;
+    let server_id = saved["result"]["server"]["id"].as_str().unwrap().to_string();
+
+    let blocked = app
+        .dispatch(req(
+            "mcp.tool.call",
+            Some(&profile_id),
+            json!({"serverId": server_id, "toolName": "notes.read", "arguments": {}}),
+        ))
+        .await
+        .response;
+    assert_eq!(blocked["ok"], true, "{blocked}");
+    assert_eq!(blocked["result"]["status"], "policy_denied");
+    assert_eq!(blocked["result"]["reason"], "autonomous instance is sleeping");
+}
+
+
 

@@ -35,7 +35,8 @@
             "maxItems": 128,
             "items": {"type": "string", "minLength": 1, "maxLength": 128}
           },
-          "enabled": {"type": "boolean"}
+          "enabled": {"type": "boolean"},
+          "reconcileReceiptRef": {"type": "string", "minLength": 1, "maxLength": 256}
         },
         "required": ["name", "endpoint"],
         "additionalProperties": false
