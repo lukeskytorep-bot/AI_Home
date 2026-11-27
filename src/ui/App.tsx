@@ -118,7 +118,7 @@ export function App({transport}:{transport:Transport}){
       {page==='settings'&&<div className="center settings-page">
         <div className="settings-header">
           <h1>{text('nav.settings')}</h1>
-          <a className="settings-jump" href="#diagnostics" onClick={()=>setSettingsTab('system')}>{text('nav.diagnostics')}</a>
+          <a className="settings-jump" href="#diagnostics" onClick={e=>{e.preventDefault();setSettingsTab('system');requestAnimationFrame(()=>document.getElementById('diagnostics')?.scrollIntoView?.());}}>{text('nav.diagnostics')}</a>
         </div>
         <div className="settings-tabs" role="tablist" aria-label={text('nav.settings')}>
           {(['appearance','residents','senses','skills','system'] as SettingsTab[]).map(tab=><button

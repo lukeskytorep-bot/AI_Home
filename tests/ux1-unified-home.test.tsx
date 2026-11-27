@@ -52,4 +52,8 @@ it('renders InnateSensesBar in Polish and English and exposes tabbed Settings wi
 
   await act(async () => tabs[2].click());
   expect(host.textContent).toContain('Innate senses');
+
+  const diagLink = host.querySelector<HTMLAnchorElement>('a.settings-jump')!;
+  await act(async () => diagLink.click());
+  expect(tabs[4].getAttribute('aria-selected')).toBe('true');
 });

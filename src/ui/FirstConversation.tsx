@@ -182,7 +182,14 @@ export function FirstConversation({client, locale, initial, onOpen, onCancel, on
         {models && <>
           <p role="status" className="autonomous-status-banner">{text('onboarding.modelsLoaded')}</p>
           {models.length > 5 && <label>{text('onboarding.filterModels')}
-            <input type="search" value={modelFilter} onChange={e => setModelFilter(e.target.value)} placeholder="gpt-4o, claude, gemini…" />
+            <input type="search" value={modelFilter} onChange={e => {
+              const nextFilter = e.target.value;
+              setModelFilter(nextFilter);
+              const q = nextFilter.trim().toLowerCase();
+              if (model && q && !models.some(m => m.id === model && (m.label.toLowerCase().includes(q) || m.id.toLowerCase().includes(q)))) {
+                setModel('');
+              }
+            }} placeholder="gpt-4o, claude, gemini…" />
           </label>}
           <label>{text('onboarding.chooseModel')}
             <select value={model} onChange={e => setModel(e.target.value)} required>

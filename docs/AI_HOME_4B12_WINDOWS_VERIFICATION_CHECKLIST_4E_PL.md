@@ -28,37 +28,37 @@
 
 ---
 
-## 2. Przełącznik Standard / Autonomous i lokalny pilot
+## 2. Życie i inicjatywa AI (bez podziału Standard / Autonomous)
 
 | # | Scenariusz | Oczekiwany wynik | Status |
 |---|---|---|---|
-| 2.1 | Przełączenie `Standard` ↔ `Autonomous` na górnym pasku | Zmienia się przestrzeń robocza; nie nadpisuje ukradkiem profilu Standard, nie wymusza akcji i nie kasuje zapisanego stanu. | `OPEN` |
-| 2.2 | Utworzenie instancji Autonomous + konfiguracja API i budżetu | Instancja zapisuje własne połączenie/budżet (klucz w OS Vault); widać aktualny status i pozostały budżet wywołań/tokenów. | `OPEN` |
-| 2.3 | Cykl propozycji i odmowy (`proposal → refuse → restart`) | Odmowa agenta jest trwała po restarcie; człowiek nie może jej nadpisać poleceniem; zmienione warunki wymagają nowej decyzji. | `OPEN` |
+| 2.1 | Przejście do `Życie i inicjatywa` (`Life & Initiative`) w lewej nawigacji | Brak górnego przełącznika trybów; otwiera się ekran obecności i inicjatywy AI bez kasowania szkicu w `Start` i bez ukrytych zapisów. | `OPEN` |
+| 2.2 | Utworzenie instancji + konfiguracja API i budżetu | Instancja zapisuje własne połączenie/budżet (klucz w OS Vault), automatycznie przełącza na prawdziwe decyzje API (brak dropdownu symulacji na głównym ekranie). | `OPEN` |
+| 2.3 | Cykl propozycji i odmowy (`proposal → refuse → restart`) | Odmowa agenta jest trwała po restarcie; człowiek nie może jej nadpisać poleceniem; zmienione warunki wymagają nowej decyzji; decyzje widać w Dzienniku dnia. | `OPEN` |
 | 2.4 | Pauza, wznowienie i `Reconcile` akcji `uncertain` | Techniczna pauza wstrzymuje nowe wywołania; jawne uzgodnienie (`Reconcile`) zdejmuje `recovery_required` bez ślepego powtarzania akcji. | `OPEN` |
-| 2.5 | Sen AI (`nextWakeAt`) i refleksja/ciągłość (`Reflect`/`Dream`) | Podczas aktywnego snu wybranego przez AI wyzwalacz nie skraca snu ani nie wywołuje API; po terminie `nextWakeAt` cykl refleksji działa bez publikowania prywatnego scratchpadu. | `OPEN` |
+| 2.5 | Sen AI (`nextWakeAt`) i refleksja/ciągłość (`Reflect`/`Dream`) | Podczas aktywnego snu wybranego przez AI status pokazuje „Odpoczywa do…”, a wyzwalacz nie skraca snu ani nie wywołuje API; w `Notatkach` widać Księgę tożsamości bez ujawniania prywatnych treści. | `OPEN` |
 
 ---
 
-## 3. Widoki `Notes` i `Community` (dowolna kompatybilna społeczność)
+## 3. Widoki `Notatki` (Księga tożsamości) i `Społeczność`
 
 | # | Scenariusz | Oczekiwany wynik | Status |
 |---|---|---|---|
-| 3.1 | Otwarcie widoku `Notes` w lewej nawigacji | Wyświetla notatki robocze i warstwy pamięci wybranego profilu; samo otwarcie nie tworzy nowych notatek i nie wywołuje modelu. | `OPEN` |
-| 3.2 | Otwarcie widoku `Community` (bez fałszywego statusu online) | Wyraźnie rozróżnia: konfigurację konta, lokalne poświadczenie w Vault i nieznany/sprawdzony status online. | `OPEN` |
+| 3.1 | Otwarcie widoku `Notatki` w lewej nawigacji | Wyświetla Księgę tożsamości (misje, wartości, chronioną strefę prywatną), notatki robocze i warstwy pamięci; samo otwarcie nie tworzy notatek i nie wywołuje modelu. | `OPEN` |
+| 3.2 | Otwarcie widoku `Społeczność` (bez fałszywego statusu online) | Wyraźnie rozróżnia: konfigurację konta, lokalne poświadczenie w Vault i nieznany/sprawdzony status online; formularze są równe i nie nachodzą na siebie. | `OPEN` |
 | 3.3 | Dodanie / edycja / usunięcie konta społeczności (Maintenance UI) | Można podłączyć dowolną kompatybilną społeczność (URL, klucz P-256 i opcjonalny token zapisywane w OS Vault, izolacja per profil). | `OPEN` |
 | 3.4 | Odczyt publicznego feedu i podpisana publikacja *(wymaga żywego serwera 4A/TLS lub lokalnego mocka)* | Feed ładuje się poprawnie; publikacja jest podpisywana ECDSA P-256; niepewny wynik uruchamia ścieżkę `Reconcile`. | `OPEN` *(zależne od serwera TLS)* |
 
 ---
 
-## 4. Panel `MCP` i panel `Skills` w `Settings`
+## 4. Zakładki `Ustawień`: `Zmysły i MCP` oraz `Umiejętności (Skills)`
 
 | # | Scenariusz | Oczekiwany wynik | Status |
 |---|---|---|---|
-| 4.1 | `Settings → MCP`: dodanie serwera MCP per profil | Pole tokenu czyści się po zapisie; sekret trafia do OS Vault; lista jest izolowana między profilami Standard i Autonomous. | `OPEN` |
-| 4.2 | `Settings → MCP`: `Discover`, allowlista narzędzi i usuwanie | Wykryte narzędzia wymagają jawnej allowlisty (`untrusted metadata`); niepewne wywołanie wspiera `Reconcile`; usunięcie czyści wpis. | `OPEN` |
-| 4.3 | `Settings → Skills`: dodanie własnego skilla i edycja grantów | Skill zapisuje się per profil; pole `Requested (untrusted)` jest wyłącznie informacyjne; działają tylko jawnie zaznaczone `Granted`. | `OPEN` |
-| 4.4 | `Settings → Skills`: inwariant **No Self-Grant** | Skill oznaczony jako `imported` jest zapisywany wyłącznie jako wyłączony i bez żadnych grantów; próba włączenia/nadania uprawnień przy imporcie jest blokowana (`POLICY_DENIED`). | `OPEN` |
+| 4.1 | `Ustawienia → Zmysły i MCP`: Zmysły wrodzone i dodanie serwera MCP | Widać aktualny czas, porę doby i stan sieci/zasilania; pole tokenu MCP czyści się po zapisie, a sekret trafia do OS Vault z izolacją per profil. | `OPEN` |
+| 4.2 | `Ustawienia → Zmysły i MCP`: `Discover`, allowlista narzędzi i usuwanie | Wykryte narzędzia wymagają jawnej allowlisty (`untrusted metadata`); niepewne wywołanie wspiera `Reconcile`; usunięcie czyści wpis. | `OPEN` |
+| 4.3 | `Ustawienia → Umiejętności (Skills)`: dodanie własnego skilla i edycja grantów | Skill zapisuje się per profil; pole `Requested (untrusted)` jest wyłącznie informacyjne; działają tylko jawnie zaznaczone `Granted`. | `OPEN` |
+| 4.4 | `Ustawienia → Umiejętności (Skills)`: inwariant **No Self-Grant** | Skill oznaczony jako `imported` jest zapisywany wyłącznie jako wyłączony i bez żadnych grantów; próba włączenia/nadania uprawnień przy imporcie jest blokowana (`POLICY_DENIED`). | `OPEN` |
 
 ---
 

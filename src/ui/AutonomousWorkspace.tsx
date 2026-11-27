@@ -173,6 +173,7 @@ export function AutonomousWorkspace({client, locale, desktop, onBackToStandard}:
     setProviderEndpoint(cfg.provider === 'custom_openai' ? cfg.normalizedEndpoint : '');
     setProviderModel(cfg.modelId);
     setDailyLimit(String(cfg.dailyCallLimit));
+    setSimChoice('provider');
   }, []);
 
   const loadInstances = useCallback(async (preferredProfileId?: string) => {
@@ -547,6 +548,20 @@ export function AutonomousWorkspace({client, locale, desktop, onBackToStandard}:
     </div>
 
     {status && <>
+      {(() => {
+        const presence = status.instance.status === 'inactive'
+          ? text('ux2.presence.paused')
+          : status.instance.status === 'recovery_required'
+            ? text('ux2.presence.recovery')
+            : status.activeWakePlan?.origin === 'ai_decision' && status.activeWakePlan?.nextWakeAt
+              ? `${text('ux2.presence.sleeping')} ${status.activeWakePlan.nextWakeAt}`
+              : text('ux2.presence.ready');
+        return <div className="presence-banner" role="status">
+          <span className={'presence-dot ' + status.instance.status} aria-hidden="true"/>
+          <strong>{status.displayName}</strong> · <span>{presence}</span>
+        </div>;
+      })()}
+
       <div className="autonomous-grid">
         <div className="autonomous-card">
           <h3>{text('autonomous.pilot.wakePlan')}</h3>
@@ -572,6 +587,14 @@ export function AutonomousWorkspace({client, locale, desktop, onBackToStandard}:
           </div>
         </div>
         <div className="autonomous-card">
+          <h3>{text('ux2.diaryTitle')} ({status.recentDecisions.length})</h3>
+          {status.recentDecisions.length === 0
+            ? <p className="muted">{text('ux2.diaryEmpty')}</p>
+            : <ul className="autonomous-compact-list">
+                {status.recentDecisions.map(d => <li key={d.id}><strong>{d.outcome}</strong> · <span className="muted">{d.createdAt}</span></li>)}
+              </ul>}
+        </div>
+        <div className="autonomous-card">
           <h3>{text('autonomous.pilot.refusals')} ({status.activeRefusals.length})</h3>
           {status.activeRefusals.length === 0
             ? <p className="muted">{text('autonomous.pilot.noRefusals')}</p>
@@ -590,14 +613,6 @@ export function AutonomousWorkspace({client, locale, desktop, onBackToStandard}:
             <li>{text('autonomous.pilot.continuityReflections')}: <strong>{status.continuitySummary.privateReflectionCount}</strong></li>
             <li>{text('autonomous.pilot.continuitySelfRecords')}: <strong>{status.continuitySummary.approvedSelfRecordCount}</strong></li>
           </ul>
-          <details>
-            <summary>{text('autonomous.pilot.recentDecisions')} ({status.recentDecisions.length})</summary>
-            {status.recentDecisions.length === 0
-              ? <p className="muted">{text('autonomous.pilot.noDecisions')}</p>
-              : <ul className="autonomous-compact-list">
-                  {status.recentDecisions.map(d => <li key={d.id}><strong>{d.outcome}</strong> · {d.createdAt}</li>)}
-                </ul>}
-          </details>
         </div>}
       </div>
 
@@ -677,11 +692,6 @@ export function AutonomousWorkspace({client, locale, desktop, onBackToStandard}:
       <div className="autonomous-section">
         <div className="autonomous-header">
           <h2>{text('autonomous.pilot.proposals')} ({status.proposals.length})</h2>
-          <label className="autonomous-sim-select">{text('autonomous.pilot.simulationMode')}
-            <select aria-label={text('autonomous.pilot.simulationMode')} value={simChoice} onChange={e => setSimChoice(e.target.value)}>
-              {SIMULATION_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{text(opt.key)}</option>)}
-            </select>
-          </label>
         </div>
 
         {status.proposals.length === 0
@@ -743,6 +753,16 @@ export function AutonomousWorkspace({client, locale, desktop, onBackToStandard}:
               </article>)}
             </div>}
       </div>
+
+      <details className="autonomous-card autonomous-section dev-sim-panel">
+        <summary>{text('ux2.devSimSummary')}</summary>
+        <p className="muted">{text('ux2.devSimNotice')}</p>
+        <label className="autonomous-sim-select">{text('autonomous.pilot.simulationMode')}
+          <select aria-label={text('autonomous.pilot.simulationMode')} value={simChoice} onChange={e => setSimChoice(e.target.value)}>
+            {SIMULATION_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{text(opt.key)}</option>)}
+          </select>
+        </label>
+      </details>
     </>}
   </section>;
 }
