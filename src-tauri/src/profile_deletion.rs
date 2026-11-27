@@ -250,6 +250,7 @@ async fn save_receipt(
 
 pub(crate) async fn delete_rows(tx: &mut Tx<'_>, profile: &str) -> Result<(), Failure> {
     for table in [
+        "profile_skills",
         "community_accounts",
         "mcp_servers",
         "experimental_provider_budgets",

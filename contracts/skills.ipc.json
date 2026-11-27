@@ -1,0 +1,131 @@
+{
+  "contractVersion": 1,
+  "scope": "skills",
+  "commands": {
+    "skills.list": {
+      "mutates": false,
+      "payload": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "profileId": {"type": "string", "minLength": 1},
+          "items": {"type": "array"}
+        },
+        "required": ["profileId", "items"],
+        "additionalProperties": false
+      }
+    },
+    "skills.save": {
+      "mutates": true,
+      "payload": {
+        "type": "object",
+        "properties": {
+          "skillId": {"type": "string", "minLength": 1, "maxLength": 128},
+          "name": {"type": "string", "minLength": 1, "maxLength": 128},
+          "description": {"type": "string", "maxLength": 512},
+          "instructions": {"type": "string", "minLength": 1, "maxLength": 32768},
+          "source": {"enum": ["user", "imported"]},
+          "requestedCapabilities": {
+            "type": "array",
+            "maxItems": 16,
+            "items": {"type": "string", "minLength": 1, "maxLength": 64}
+          },
+          "grantedCapabilities": {
+            "type": "array",
+            "maxItems": 16,
+            "items": {
+              "enum": [
+                "read_context",
+                "draft_only",
+                "mcp_read_only",
+                "community_read_only",
+                "mcp_mutating",
+                "community_publish"
+              ]
+            }
+          },
+          "enabled": {"type": "boolean"}
+        },
+        "required": ["name", "instructions"],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "profileId": {"type": "string", "minLength": 1},
+          "skill": {"type": "object"}
+        },
+        "required": ["profileId", "skill"],
+        "additionalProperties": false
+      }
+    },
+    "skills.delete": {
+      "mutates": true,
+      "payload": {
+        "type": "object",
+        "properties": {
+          "skillId": {"type": "string", "minLength": 1, "maxLength": 128}
+        },
+        "required": ["skillId"],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "profileId": {"type": "string", "minLength": 1},
+          "skillId": {"type": "string", "minLength": 1},
+          "deleted": {"type": "boolean"}
+        },
+        "required": ["profileId", "skillId", "deleted"],
+        "additionalProperties": false
+      }
+    },
+    "skills.policy.check": {
+      "mutates": false,
+      "payload": {
+        "type": "object",
+        "properties": {
+          "skillId": {"type": "string", "minLength": 1, "maxLength": 128},
+          "capability": {
+            "enum": [
+              "read_context",
+              "draft_only",
+              "mcp_read_only",
+              "community_read_only",
+              "mcp_mutating",
+              "community_publish"
+            ]
+          },
+          "sourceTags": {
+            "type": "array",
+            "maxItems": 32,
+            "items": {"type": "string", "minLength": 1, "maxLength": 128}
+          }
+        },
+        "required": ["skillId", "capability"],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "profileId": {"type": "string", "minLength": 1},
+          "skillId": {"type": "string", "minLength": 1},
+          "capability": {"type": "string", "minLength": 1},
+          "allowed": {"type": "boolean"},
+          "reason": {"type": "string"},
+          "effectiveCapabilities": {
+            "type": "array",
+            "items": {"type": "string"}
+          }
+        },
+        "required": ["profileId", "skillId", "capability", "allowed", "reason", "effectiveCapabilities"],
+        "additionalProperties": false
+      }
+    }
+  }
+}

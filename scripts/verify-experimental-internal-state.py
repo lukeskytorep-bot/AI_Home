@@ -14,7 +14,7 @@ ok('One transition receives the whole elapsed interval' in mod,'restart must not
 ok('NeutralEventDraft' in mod and 'WakeCandidateDraft' in mod,'neutral event/wake candidate outputs missing')
 ok('experimental_internal_state_snapshots' in p and 'experimental_internal_state_blobs' in p,'versioned internal state storage missing')
 ok('experimental_internal_state_events' in p and 'experimental_wake_candidates' in p,'event/candidate storage missing')
-ok('if version>CURRENT_SCHEMA' in p and 'pub const CURRENT_SCHEMA:i64=19' in p and 'PRAGMA user_version=19' in p,'storage target must be v19')
+ok('if version>CURRENT_SCHEMA' in p and 'pub const CURRENT_SCHEMA:i64=20' in p and 'PRAGMA user_version=20' in p,'storage target must be v19')
 ok('internal_state:Option<Value>' in rt and 'internal_state_events:Vec<Value>' in rt and 'wake_candidates:Vec<Value>' in rt,'OpportunityPacket internal state fields missing')
 ok('internal_wake_reason' in rt and 'origin=="initial_configuration"' in rt,'wake candidate scheduler boundary missing')
 ok('interruptEvents' in rt and 'internal_state:' in rt,'AI-selected sleep must control internal wake interrupts')

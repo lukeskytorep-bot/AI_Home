@@ -1309,7 +1309,7 @@ impl<C: Clock> AutonomousPilotService<C> {
             .map_err(storage)?;
         }
 
-        let remaining: i64 = sqlx::query_scalar(
+        let remaining_actions: i64 = sqlx::query_scalar(
             "SELECT COUNT(*) FROM experimental_actions WHERE profile_id=? AND instance_id=? AND json_extract(body,'$.state') IN ('sent','uncertain')",
         )
         .bind(profile_id)
@@ -1317,6 +1317,21 @@ impl<C: Clock> AutonomousPilotService<C> {
         .fetch_one(&mut *tx)
         .await
         .map_err(storage)?;
+        let remaining_mcp: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM mcp_servers WHERE profile_id=? AND json_extract(body,'$.pendingReconciliation') IS NOT NULL",
+        )
+        .bind(profile_id)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(storage)?;
+        let remaining_community: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM community_accounts WHERE profile_id=? AND json_extract(body,'$.pendingReconciliation') IS NOT NULL",
+        )
+        .bind(profile_id)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(storage)?;
+        let remaining = remaining_actions + remaining_mcp + remaining_community;
 
         let mut instance_status = instance["status"].as_str().unwrap_or("ready").to_string();
         if remaining == 0 && instance_status == "recovery_required" {

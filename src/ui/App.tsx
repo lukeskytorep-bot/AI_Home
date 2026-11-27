@@ -12,6 +12,7 @@ import {ConnectionsSetup} from './ConnectionsSetup';
 import {ActivityPanel} from './ActivityPanel';
 import {DiagnosticsPanel} from './DiagnosticsPanel';
 import {McpPanel} from './McpPanel';
+import {SkillsPanel} from './SkillsPanel';
 import {useEffect,useState,useMemo,useRef} from 'react';import type {Preferences,Transport,KernelStatus,AppEvent} from '../domain/types';import {Client} from '../ipc/client';import {locales,themes,t,applyTheme} from '../domain/packs';
 export function App({transport}:{transport:Transport}){
  const client=useMemo(()=>new Client(transport),[transport]);const [prefs,setPrefs]=useState<Preferences>();const [draft,setDraft]=useState({locale:'en',themeId:'orbital',themeVariant:'light' as Preferences['themeVariant']});const [error,setError]=useState('');const [busy,setBusy]=useState(false);const [saved,setSaved]=useState(false);const [ready,setReady]=useState(false);const [retry,setRetry]=useState(0);const revision=useRef(0);const sequence=useRef(0);// Draft ownership is independent of the last committed revision.
@@ -114,6 +115,7 @@ export function App({transport}:{transport:Transport}){
         <ConnectionsSetup client={client} locale={locale} desktop={desktop} initialProfileId={selection?.profileId}/>
         <WorkspaceMemorySettings client={client} locale={locale} desktop={desktop} initialProfileId={selection?.profileId}/>
         <McpPanel client={client} locale={locale} desktop={desktop} initialProfileId={selection?.profileId}/>
+        <SkillsPanel client={client} locale={locale} desktop={desktop} initialProfileId={selection?.profileId}/>
         <BackupPanel client={client} locale={locale} desktop={desktop}/>
         <ExportPanel client={client} locale={locale} desktop={desktop}/>
         <DiagnosticsPanel client={client} locale={locale} desktop={desktop}/>

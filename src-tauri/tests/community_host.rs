@@ -564,7 +564,7 @@ async fn attached_host_refuses_incomplete_backups_but_standard_v16_backup_still_
             .unwrap(),
     );
     let backup = ok(&app, req("backup.create", None, None, json!({}))).await;
-    assert_eq!(backup["schemaVersion"], 19);
+    assert_eq!(backup["schemaVersion"], 20);
     assert!(ai_home::domain::schema::dto(
         "Error",
         &json!({"code":"POLICY_DENIED","messageKey":"error.policy_denied","retryable":false})
@@ -623,7 +623,7 @@ async fn v15_migrates_to_v16_without_altering_existing_records_or_preferences() 
             .fetch_one(&upgraded.pool)
             .await
             .unwrap(),
-        19
+        20
     );
     assert_eq!(upgraded.preferences().await.unwrap(), preferences);
     let after: String = sqlx::query_scalar("SELECT body FROM profiles WHERE id=?")

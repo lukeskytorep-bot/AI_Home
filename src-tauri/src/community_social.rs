@@ -270,14 +270,18 @@ impl CommunitySocialService {
     }
 
     async fn require_active_profile(&self, profile_id: &str) -> Result<(), String> {
-        let exists: Option<i64> =
-            sqlx::query_scalar("SELECT 1 FROM profiles WHERE id=?")
-                .bind(profile_id)
-                .fetch_optional(&self.pool)
-                .await
-                .map_err(storage)?;
-        if exists.is_none() {
+        let status: Option<Option<String>> = sqlx::query_scalar(
+            "SELECT json_extract(body, '$.status') FROM profiles WHERE id=?",
+        )
+        .bind(profile_id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(storage)?;
+        let Some(status_val) = status else {
             return Err("NOT_FOUND".into());
+        };
+        if status_val.as_deref() == Some("archived") {
+            return Err("POLICY_DENIED".into());
         }
         let pending_delete: Option<i64> =
             sqlx::query_scalar("SELECT 1 FROM profile_deletion_jobs WHERE profile_id=?")

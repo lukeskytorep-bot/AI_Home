@@ -19,6 +19,7 @@ pub mod experimental_reflection;
 pub mod experimental_pilot;
 pub mod mcp_client;
 pub mod community_social;
+pub mod skills;
 mod export;
 mod deletion;
 pub mod memory;
