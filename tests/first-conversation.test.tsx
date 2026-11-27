@@ -214,6 +214,7 @@ it('opens a send-ready first conversation from a clean install and keeps advance
   await finishPoll();
   expect(host.textContent).toContain('Hello from the provider');
   await click('Settings');
+  await click('Residents & models');
   expect(host.querySelector('.connection-setup')).not.toBeNull();
   expect(host.querySelector('.memory-settings')).not.toBeNull();
   expect(host.querySelector('.center[hidden] .chat-panel')).not.toBeNull();
@@ -227,6 +228,7 @@ it('reuses the profile and connection after a bad key and a restart, then asks f
   await click('Connect and start');
   await finishPoll();
   expect(host.querySelector('[role=alert]')?.textContent).toContain('Checking the provider connection');
+  expect(host.querySelector<HTMLInputElement>('input[type=password]')?.value).toBe('bad-key');
   expect(localStorage.getItem(setupStorageKey)).not.toContain('bad-key');
   await restart(transport);
   await fill('input[type=password]','test-key');

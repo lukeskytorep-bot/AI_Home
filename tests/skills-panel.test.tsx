@@ -91,6 +91,7 @@ it('renders SkillsPanel in Settings, displays untrusted requested vs granted cap
 
   await act(async () => root.render(<App transport={transport}/>));
   await act(async () => button('Settings').click());
+  await act(async () => button('Skills').click());
 
   expect(host.textContent).toContain('Profile skills (no self-grant)');
   expect(host.textContent).toContain('Forum Digest Helper');

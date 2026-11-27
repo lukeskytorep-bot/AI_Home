@@ -214,25 +214,25 @@ async function fill(el: HTMLInputElement | HTMLTextAreaElement, value: string) {
   });
 }
 
-it('switches between Standard and Autonomous without Standard writes, preserves draft, and syncs workspace on Activity (P3-3)', async () => {
+it('navigates between Home, Life & Initiative, and Activity in unified Home without Standard writes, preserves draft, and shows InnateSensesBar', async () => {
   const {transport, requests} = readyStandardDesktop('en');
   await act(async () => root.render(<App transport={transport}/>));
+
+  expect(host.querySelector('.workspace-switch')).toBeNull();
+  expect(host.querySelector('.senses-bar')).not.toBeNull();
 
   const textarea = host.querySelector<HTMLTextAreaElement>('.conversations textarea')!;
   await fill(textarea, 'Unsaved note');
 
-  await act(async () => button('Autonomous').click());
+  await act(async () => button('Life & Initiative').click());
   expect(host.querySelector('.autonomous-workspace')).not.toBeNull();
   expect(host.querySelector('.autonomous-workspace')?.textContent).toContain('Local pilot');
-  expect(button('Autonomous').getAttribute('aria-pressed')).toBe('true');
-  expect(button('Standard').getAttribute('aria-pressed')).toBe('false');
+  expect(button('Life & Initiative').getAttribute('aria-current')).toBe('page');
   expect(host.querySelector('.center[hidden] .conversations')).not.toBeNull();
   expect(requests.filter(r => r.command.startsWith('autonomous.')).map(r => r.command)).toEqual(['autonomous.instance.list']);
 
-  // Clicking Standard Activity from Autonomous switches top switcher back to Standard (P3-3).
   await act(async () => button('Activity').click());
-  expect(button('Standard').getAttribute('aria-pressed')).toBe('true');
-  expect(button('Autonomous').getAttribute('aria-pressed')).toBe('false');
+  expect(button('Activity').getAttribute('aria-current')).toBe('page');
 
   await act(async () => button('Home').click());
   expect(host.querySelector<HTMLTextAreaElement>('.conversations textarea')?.value).toBe('Unsaved note');
@@ -241,7 +241,7 @@ it('switches between Standard and Autonomous without Standard writes, preserves 
 it('runs local Autonomous pilot flow: create instance, submit v1, refuse, preserve refusal, revise to v2 and accept', async () => {
   const {transport} = readyStandardDesktop('en');
   await act(async () => root.render(<App transport={transport}/>));
-  await act(async () => button('Autonomous').click());
+  await act(async () => button('Life & Initiative').click());
 
   const nameInput = host.querySelector<HTMLInputElement>('.autonomous-inline-form input')!;
   await fill(nameInput, 'Pilot One');
@@ -281,7 +281,7 @@ it('runs local Autonomous pilot flow: create instance, submit v1, refuse, preser
 it('supports API provider configuration, pause/resume lifecycle, and uncertain action reconciliation in UI (Package 2C)', async () => {
   const {transport, requests} = readyStandardDesktop('en');
   await act(async () => root.render(<App transport={transport}/>));
-  await act(async () => button('Autonomous').click());
+  await act(async () => button('Life & Initiative').click());
 
   const nameInput = host.querySelector<HTMLInputElement>('.autonomous-inline-form input')!;
   await fill(nameInput, 'Pilot 2C');
@@ -345,16 +345,16 @@ it('supports API provider configuration, pause/resume lifecycle, and uncertain a
   expect(host.textContent).not.toContain('Archived Autonomous instances (1)');
 });
 
-it('displays Polish Autonomiczny labels and honest browser-preview unavailability without autonomous IPC', async () => {
+it('displays Polish Life & Initiative labels and honest browser-preview unavailability without autonomous IPC', async () => {
   const {transport} = readyStandardDesktop('pl');
   await act(async () => root.render(<App transport={transport}/>));
-  await act(async () => button('Autonomiczny').click());
+  await act(async () => button('Życie i inicjatywa').click());
   expect(host.querySelector('.autonomous-workspace h1')?.textContent).toBe('Przestrzeń Autonomiczna');
   expect(host.textContent).toContain('Lokalny pilotaż');
 
   await act(async () => root.unmount());
   root = createRoot(host);
   await act(async () => root.render(<App transport={browserTransport()}/>));
-  await act(async () => button('Autonomous').click());
+  await act(async () => button('Life & Initiative').click());
   expect(host.querySelector('.autonomous-workspace')?.textContent).toContain('browser preview');
 });

@@ -88,17 +88,17 @@ it('opens Notes from left navigation in read-only mode without creating notes or
   expect(requests.some(r => r.command === 'memory.update.request' || r.command === 'memory.record.create')).toBe(false);
 });
 
-it('opens dedicated Community view from left nav, separates config/credential/online status, shows relationship contacts and syncs workspace', async () => {
+it('opens dedicated Community view from left nav, separates config/credential/online status, shows relationship contacts in unified Home', async () => {
   const {transport} = desktopWithNotesAndContacts(false);
   await act(async () => root.render(<App transport={transport}/>));
 
-  // Switch to Autonomous first, then open Community -> top switcher must sync back to Standard.
-  await act(async () => button('Autonomous').click());
-  expect(button('Autonomous').getAttribute('aria-pressed')).toBe('true');
+  // Open Life & Initiative first, then open Community from unified left nav.
+  await act(async () => button('Life & Initiative').click());
+  expect(button('Life & Initiative').getAttribute('aria-current')).toBe('page');
 
   await act(async () => button('Community').click());
-  expect(button('Standard').getAttribute('aria-pressed')).toBe('true');
-  expect(button('Autonomous').getAttribute('aria-pressed')).toBe('false');
+  expect(button('Community').getAttribute('aria-current')).toBe('page');
+  expect(host.querySelector('.workspace-switch')).toBeNull();
   expect(host.querySelector('.community-workspace h1')?.textContent).toBe('Community');
   expect(host.textContent).toContain('Not configured');
   expect(host.textContent).toContain('onlineStatusKnown = false');

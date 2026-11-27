@@ -4,12 +4,13 @@ import type {Client} from '../ipc/client';
 import {firstConversation, readSetupDraft, providers, setupStorageKey,
   type Model, type SetupDraft, type SetupStep, type WorkspaceSelection} from './firstConversation';
 
-export function FirstConversation({client, locale, initial, onOpen, onCancel}: {
+export function FirstConversation({client, locale, initial, onOpen, onCancel, onResetDraft}: {
   client: Client;
   locale: string;
   initial?: SetupDraft;
   onOpen: (selection: WorkspaceSelection) => void;
   onCancel?: () => void;
+  onResetDraft?: () => void;
 }) {
   const text = (key: string) => t(locale, key);
   const saved = useRef(initial);
@@ -18,6 +19,7 @@ export function FirstConversation({client, locale, initial, onOpen, onCancel}: {
   const [provider, setProvider] = useState(initial?.provider ?? 'openrouter');
   const [endpoint, setEndpoint] = useState(initial?.endpoint ?? '');
   const [models, setModels] = useState<Model[]>();
+  const [modelFilter, setModelFilter] = useState('');
   const [model, setModel] = useState('');
   const [step, setStep] = useState<SetupStep>();
   const [error, setError] = useState('');
@@ -29,7 +31,43 @@ export function FirstConversation({client, locale, initial, onOpen, onCancel}: {
   useEffect(() => () => {
     task.current?.abort();
     task.current = undefined;
+    if (password.current) password.current.value = '';
   }, [client]);
+
+  const filteredModels = models
+    ? models.filter(m => {
+        const q = modelFilter.trim().toLowerCase();
+        return !q || m.label.toLowerCase().includes(q) || m.id.toLowerCase().includes(q);
+      })
+    : undefined;
+
+  async function discardDraft() {
+    if (task.current) return;
+    setError('');
+    const targetId = saved.current?.profileId ?? initial?.profileId;
+    if (targetId) {
+      try {
+        const snap = await client.call<{profile: {revision: number; status: string}}>('profile.snapshot', {}, undefined, targetId);
+        if (snap.ok && snap.result.profile.status === 'draft') {
+          await client.call('profile.archive', {}, snap.result.profile.revision, targetId);
+        }
+      } catch {
+        // If archiving fails, still clear local UI draft so the user is never trapped.
+      }
+    }
+    localStorage.removeItem(setupStorageKey);
+    if (password.current) password.current.value = '';
+    saved.current = undefined;
+    setStarted(false);
+    setName('');
+    setProvider('openrouter');
+    setEndpoint('');
+    setModels(undefined);
+    setModel('');
+    setModelFilter('');
+    setFailedStep(undefined);
+    onResetDraft?.();
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -63,7 +101,6 @@ export function FirstConversation({client, locale, initial, onOpen, onCancel}: {
       setError('onboarding.keyRequired');
       return;
     }
-    if (password.current) password.current.value = '';
     const controller = new AbortController();
     task.current = controller;
     const saveDraft = (draft: SetupDraft) => {
@@ -80,9 +117,11 @@ export function FirstConversation({client, locale, initial, onOpen, onCancel}: {
         currentStep = next;
         setStep(next);
       }, saveDraft, controller.signal);
+      if (password.current) password.current.value = '';
       setCheckedEndpoint(url);
       if ('models' in result) {
         setModels(result.models);
+        setModelFilter('');
         setModel('');
       } else {
         localStorage.removeItem(setupStorageKey);
@@ -102,7 +141,14 @@ export function FirstConversation({client, locale, initial, onOpen, onCancel}: {
     }
   }
 
+  const activeStep = models ? 2 : 1;
+
   return <section className="setup first-conversation" aria-labelledby="first-conversation-title">
+    <ol className="wizard-steps" aria-label="Setup steps">
+      <li className={activeStep === 1 ? 'active' : 'done'}>{text('onboarding.step1')}</li>
+      <li className={activeStep === 2 ? 'active' : undefined}>{text('onboarding.step2')}</li>
+      <li>{text('onboarding.step3')}</li>
+    </ol>
     <h1 id="first-conversation-title">{text('onboarding.title')}</h1>
     <p className="muted">{text('onboarding.body')}</p>
     <form onSubmit={event => void submit(event)}>
@@ -127,17 +173,27 @@ export function FirstConversation({client, locale, initial, onOpen, onCancel}: {
               setModel('');
             }} />
         </label>}
-        {!models && <label>{text('config.key')}
-          <input ref={password} type="password" autoComplete="off" spellCheck={false} maxLength={8192} required={(!started&&!initial?.existingConnectionId)||(Boolean(checkedEndpoint)&&endpoint.replace(/\/+$/,'')!==checkedEndpoint)} />
-        </label>}
-        {models && <label>{text('onboarding.chooseModel')}
-          <select value={model} onChange={e => setModel(e.target.value)} required>
-            <option value="">{text('config.choose')}</option>
-            {models.map(m => <option key={m.id} value={m.id}>{m.label} ({m.id})</option>)}
-          </select>
-        </label>}
+        {!models && <>
+          <label>{text('config.key')}
+            <input ref={password} type="password" autoComplete="off" spellCheck={false} maxLength={8192} required={(!started&&!initial?.existingConnectionId)||(Boolean(checkedEndpoint)&&endpoint.replace(/\/+$/,'')!==checkedEndpoint)} />
+          </label>
+          <p className="muted field-hint">{text('onboarding.keyHint')}</p>
+        </>}
+        {models && <>
+          <p role="status" className="autonomous-status-banner">{text('onboarding.modelsLoaded')}</p>
+          {models.length > 5 && <label>{text('onboarding.filterModels')}
+            <input type="search" value={modelFilter} onChange={e => setModelFilter(e.target.value)} placeholder="gpt-4o, claude, gemini…" />
+          </label>}
+          <label>{text('onboarding.chooseModel')}
+            <select value={model} onChange={e => setModel(e.target.value)} required>
+              <option value="">{text('config.choose')}</option>
+              {(filteredModels ?? models).map(m => <option key={m.id} value={m.id}>{m.label} ({m.id})</option>)}
+            </select>
+          </label>
+        </>}
         <div className="first-conversation-actions">
           <button className="primary" disabled={!name.trim() || Boolean(models && !model)}>{text('onboarding.start')}</button>
+          {(started || Boolean(initial?.profileId)) && <button type="button" onClick={() => void discardDraft()}>{text('onboarding.resetDraft')}</button>}
           {onCancel && <button type="button" onClick={() => { localStorage.removeItem(setupStorageKey); onCancel(); }}>{text('onboarding.cancel')}</button>}
         </div>
       </fieldset>
