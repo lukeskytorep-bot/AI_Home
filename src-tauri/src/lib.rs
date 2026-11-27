@@ -18,6 +18,7 @@ pub mod experimental_internal_state;
 pub mod experimental_reflection;
 pub mod experimental_pilot;
 pub mod mcp_client;
+pub mod community_social;
 mod export;
 mod deletion;
 pub mod memory;

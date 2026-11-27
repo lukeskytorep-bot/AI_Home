@@ -2,7 +2,7 @@ use serde_json::{json,Value};
 use sqlx::{sqlite::{SqliteConnectOptions,SqlitePoolOptions},Row,SqlitePool};
 use std::path::{Path,PathBuf};
 use crate::domain::schema;
-pub const CURRENT_SCHEMA:i64=18;
+pub const CURRENT_SCHEMA:i64=19;
 pub struct Store {pub pool:SqlitePool,path:Option<PathBuf>}
 impl Store {
     pub async fn open(path:&Path)->Result<Self,sqlx::Error>{
@@ -146,7 +146,9 @@ impl Store {
         ] {sqlx::query(statement).execute(&mut *tx).await?;}
         // 4B-12/13 MCP client: per-profile isolated MCP server bindings and allowlists (credentials stay in Vault).
         sqlx::query("CREATE TABLE IF NOT EXISTS mcp_servers (profile_id TEXT NOT NULL REFERENCES profiles(id), id TEXT NOT NULL, revision INTEGER NOT NULL CHECK(revision>=1), body TEXT NOT NULL, PRIMARY KEY(profile_id,id))").execute(&mut *tx).await?;
-        sqlx::query("PRAGMA user_version=18").execute(&mut *tx).await?;tx.commit().await?;
+        // 4B-12 Community social: per-profile community endpoints, maintenance state, and signed-write settings (tokens stay in Vault).
+        sqlx::query("CREATE TABLE IF NOT EXISTS community_accounts (profile_id TEXT NOT NULL REFERENCES profiles(id), id TEXT NOT NULL, revision INTEGER NOT NULL CHECK(revision>=1), body TEXT NOT NULL, PRIMARY KEY(profile_id,id))").execute(&mut *tx).await?;
+        sqlx::query("PRAGMA user_version=19").execute(&mut *tx).await?;tx.commit().await?;
         let store=Self{pool,path};store.preferences().await?;Ok(store)
     }
 

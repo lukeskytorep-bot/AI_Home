@@ -833,10 +833,73 @@ impl McpService {
                 .map_err(storage)?;
         }
 
+        if payload
+            .get("reconcileReceiptRef")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .is_some_and(|s| !s.is_empty())
+        {
+            self.maybe_clear_autonomous_recovery(profile_id, &now).await?;
+        }
+
         Ok(json!({
             "profileId": profile_id,
             "server": public_server_view(&body),
         }))
+    }
+
+    async fn maybe_clear_autonomous_recovery(&self, profile_id: &str, now: &str) -> Result<(), String> {
+        let unresolved_actions: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM experimental_actions WHERE profile_id=? AND json_extract(body,'$.state') IN ('sent','uncertain')",
+        )
+        .bind(profile_id)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(storage)?;
+        let unresolved_mcp: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM mcp_servers WHERE profile_id=? AND json_extract(body,'$.pendingReconciliation') IS NOT NULL",
+        )
+        .bind(profile_id)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(storage)?;
+        let unresolved_community: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM community_accounts WHERE profile_id=? AND json_extract(body,'$.pendingReconciliation') IS NOT NULL",
+        )
+        .bind(profile_id)
+        .fetch_one(&self.pool)
+        .await
+        .unwrap_or(0);
+        if unresolved_actions > 0 || unresolved_mcp > 0 || unresolved_community > 0 {
+            return Ok(());
+        }
+        let inst_row = sqlx::query(
+            "SELECT id, revision, body FROM experimental_instances WHERE profile_id=? AND json_extract(body,'$.status')='recovery_required' ORDER BY rowid DESC LIMIT 1",
+        )
+        .bind(profile_id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(storage)?;
+        if let Some(row) = inst_row {
+            let inst_id: String = row.get("id");
+            let inst_rev: i64 = row.get("revision");
+            let mut inst_body: Value = serde_json::from_str(row.get::<&str, _>("body"))
+                .map_err(|_| "STORAGE_ERROR".to_string())?;
+            inst_body["revision"] = json!(inst_rev + 1);
+            inst_body["status"] = json!("ready");
+            inst_body["updatedAt"] = json!(now);
+            sqlx::query(
+                "UPDATE experimental_instances SET revision=?, body=? WHERE profile_id=? AND id=?",
+            )
+            .bind(inst_rev + 1)
+            .bind(inst_body.to_string())
+            .bind(profile_id)
+            .bind(&inst_id)
+            .execute(&self.pool)
+            .await
+            .map_err(storage)?;
+        }
+        Ok(())
     }
 
     async fn delete_server(&self, profile_id: &str, server_id: &str) -> Result<Value, String> {

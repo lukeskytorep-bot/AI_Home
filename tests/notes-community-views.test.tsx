@@ -46,6 +46,7 @@ function desktopWithNotesAndContacts(hasCommunityDispatch = false) {
         case 'memory.working.get': result = {record: {id: 'w1', revision: 1, state: 'empty'}, primary: {contextTokens: 8192, verified: true}, attempts: [], proposals: [], decisions: [], profileRevision: 1, capacityPolicy: {kind: 'bounded', tokens: 300}, scopeId: 'a'.repeat(64), scribeMode: 'disabled', formatRepairCount: 0}; break;
         case 'memory.records.list': result = {items: records, nextCursor: ''}; break;
         case 'memory.layers.settings.get': result = {profileRevision: 1, memorySettings: {episodic: {kind: 'bounded', tokens: 300}, relationship: {kind: 'bounded', tokens: 300}, longTerm: {kind: 'bounded', tokens: 500}, intent: {kind: 'bounded', tokens: 300}, workRule: {kind: 'bounded', tokens: 300}}, retrievalTargetTokens: 1200}; break;
+        case 'community.account.list': result = {profileId: r.profileId ?? 'p1', items: [], onlineStatusKnown: false}; break;
         default: throw Error('Unexpected command ' + r.command);
       }
       return {contractVersion: 1, requestId: r.requestId, ok: true, result: structuredClone(result) as T};
@@ -138,4 +139,89 @@ it('paginates across nextCursor to display relationship contacts on later pages 
   await act(async () => button('Community').click());
   expect(host.textContent).toContain('Leo (Page 2 Contact)');
 });
+
+it('renders Community 4B-12 accounts, loads untrusted public feed and confirms reconciliation', async () => {
+  const {transport, requests} = desktopWithNotesAndContacts(false);
+  let reconciled = false;
+  const origDispatch = transport.dispatch.bind(transport);
+  transport.dispatch = async <T,>(r: Request): Promise<Response<T>> => {
+    if (r.command === 'community.account.list') {
+      requests.push(r);
+      return {
+        contractVersion: 1,
+        requestId: r.requestId,
+        ok: true,
+        result: {
+          profileId: 'p1',
+          onlineStatusKnown: false,
+          items: [
+            {
+              id: 'comm_1',
+              revision: reconciled ? 2 : 1,
+              name: 'Agent Commons',
+              apiRoot: 'https://commons.example/api/v1',
+              boardId: 'general',
+              hasCredential: true,
+              publicKeySpki: 'spki-test',
+              publicKeyFingerprint: 'abcdef1234567890abcdef1234567890',
+              algorithm: 'openssl-ecdsa-p256-sha256-der/1',
+              allowWrites: true,
+              enabled: true,
+              pendingReconciliation: reconciled ? null : {receiptRef: 'req-unc-42', reason: 'transport_uncertain'},
+            },
+          ],
+        } as T,
+      };
+    }
+    if (r.command === 'community.account.save') {
+      requests.push(r);
+      if (r.payload.reconcileReceiptRef === 'req-unc-42') {
+        reconciled = true;
+      }
+      return {
+        contractVersion: 1,
+        requestId: r.requestId,
+        ok: true,
+        result: {profileId: 'p1', onlineStatusKnown: false, account: {id: 'comm_1'}} as T,
+      };
+    }
+    if (r.command === 'community.feed.read') {
+      requests.push(r);
+      return {
+        contractVersion: 1,
+        requestId: r.requestId,
+        ok: true,
+        result: {
+          profileId: 'p1',
+          accountId: 'comm_1',
+          apiRoot: 'https://commons.example/api/v1',
+          untrustedExternalContent: true,
+          signatureValidation: 'not_performed',
+          data: {items: [{id: 'm1', title: 'External Forum Topic', content: 'Hello from outside'}]},
+        } as T,
+      };
+    }
+    return origDispatch<T>(r);
+  };
+
+  await act(async () => root.render(<App transport={transport}/>));
+  await act(async () => button('Community').click());
+
+  expect(host.textContent).toContain('Agent Commons');
+  expect(host.textContent).toContain('abcdef1234567890');
+  expect(host.textContent).toContain('Uncertain publish pending reconciliation (req-unc-42)');
+
+  // Load public feed -> displays untrusted external content notice + item
+  await act(async () => button('Load public feed').click());
+  expect(host.textContent).toContain('Untrusted external content · signatureValidation: not_performed');
+  expect(host.textContent).toContain('External Forum Topic');
+
+  // Confirm reconciled -> sends reconcileReceiptRef and unlocks Publish signed post
+  await act(async () => button('Confirm reconciled').click());
+  const recCall = requests.find(r => r.command === 'community.account.save');
+  expect(recCall?.payload.reconcileReceiptRef).toBe('req-unc-42');
+  expect(host.textContent).toContain('Community reconciliation confirmed.');
+  expect(host.textContent).toContain('Publish signed post');
+});
+
 

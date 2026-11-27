@@ -1,0 +1,136 @@
+{
+  "contractVersion": 1,
+  "scope": "community_social",
+  "commands": {
+    "community.account.list": {
+      "mutates": false,
+      "payload": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "profileId": {"type": "string", "minLength": 1},
+          "items": {"type": "array"},
+          "onlineStatusKnown": {"const": false}
+        },
+        "required": ["profileId", "items", "onlineStatusKnown"],
+        "additionalProperties": false
+      }
+    },
+    "community.account.save": {
+      "mutates": true,
+      "payload": {
+        "type": "object",
+        "properties": {
+          "accountId": {"type": "string", "minLength": 1, "maxLength": 128},
+          "name": {"type": "string", "minLength": 1, "maxLength": 128},
+          "apiRoot": {"type": "string", "minLength": 1, "maxLength": 1024},
+          "boardId": {"type": "string", "maxLength": 128},
+          "apiToken": {"type": "string", "minLength": 1, "maxLength": 8192},
+          "allowWrites": {"type": "boolean"},
+          "enabled": {"type": "boolean"},
+          "reconcileReceiptRef": {"type": "string", "minLength": 1, "maxLength": 256}
+        },
+        "required": ["name", "apiRoot"],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "profileId": {"type": "string", "minLength": 1},
+          "account": {"type": "object"},
+          "onlineStatusKnown": {"const": false}
+        },
+        "required": ["profileId", "account", "onlineStatusKnown"],
+        "additionalProperties": false
+      }
+    },
+    "community.account.delete": {
+      "mutates": true,
+      "payload": {
+        "type": "object",
+        "properties": {
+          "accountId": {"type": "string", "minLength": 1, "maxLength": 128}
+        },
+        "required": ["accountId"],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "profileId": {"type": "string", "minLength": 1},
+          "accountId": {"type": "string", "minLength": 1},
+          "deleted": {"type": "boolean"}
+        },
+        "required": ["profileId", "accountId", "deleted"],
+        "additionalProperties": false
+      }
+    },
+    "community.feed.read": {
+      "mutates": false,
+      "payload": {
+        "type": "object",
+        "properties": {
+          "accountId": {"type": "string", "minLength": 1, "maxLength": 128},
+          "boardId": {"type": "string", "maxLength": 128},
+          "page": {"type": "integer", "minimum": 1, "maximum": 10000},
+          "limit": {"type": "integer", "minimum": 1, "maximum": 50}
+        },
+        "required": ["accountId"],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "profileId": {"type": "string", "minLength": 1},
+          "accountId": {"type": "string", "minLength": 1},
+          "apiRoot": {"type": "string", "minLength": 1},
+          "untrustedExternalContent": {"const": true},
+          "signatureValidation": {"const": "not_performed"},
+          "data": {}
+        },
+        "required": ["profileId", "accountId", "apiRoot", "untrustedExternalContent", "signatureValidation", "data"],
+        "additionalProperties": false
+      }
+    },
+    "community.post.publish": {
+      "mutates": true,
+      "payload": {
+        "type": "object",
+        "properties": {
+          "accountId": {"type": "string", "minLength": 1, "maxLength": 128},
+          "boardId": {"type": "string", "maxLength": 128},
+          "threadId": {"type": "string", "minLength": 1, "maxLength": 128},
+          "title": {"type": "string", "maxLength": 200},
+          "content": {"type": "string", "minLength": 1, "maxLength": 16000},
+          "sourceTags": {
+            "type": "array",
+            "maxItems": 32,
+            "items": {"type": "string", "minLength": 1, "maxLength": 128}
+          }
+        },
+        "required": ["accountId", "content"],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "profileId": {"type": "string", "minLength": 1},
+          "accountId": {"type": "string", "minLength": 1},
+          "status": {"enum": ["published", "failed", "policy_denied", "uncertain"]},
+          "remoteId": {"type": "string"},
+          "receiptRef": {"type": "string"},
+          "bodySha256": {"type": "string"},
+          "signed": {"type": "boolean"},
+          "reason": {"type": "string"}
+        },
+        "required": ["profileId", "accountId", "status"],
+        "additionalProperties": false
+      }
+    }
+  }
+}
