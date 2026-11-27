@@ -604,3 +604,58 @@ async fn mcp_respects_autonomous_refusal_and_sleep_and_blocks_private_reflection
     assert_eq!(r3["status"], "sleeping");
     assert_eq!(exec_count.load(Ordering::SeqCst), 0);
 }
+
+#[tokio::test]
+async fn mcp_enforces_endpoint_canonicalization_and_jsonrpc_id_matching() {
+    // P3-2: trailing slash canonicalizes identically for Vault ScopeStamp; query, fragment, and port 0 are rejected.
+    let base = McpServerBinding {
+        profile_id: "p1".into(),
+        service_id: "svc1".into(),
+        endpoint: "https://example.com/mcp".into(),
+        credential_ref: None,
+        credential_revision: 1,
+        timeout_ms: 1_000,
+    };
+    let with_slash = McpServerBinding {
+        endpoint: "https://example.com/mcp/".into(),
+        ..base.clone()
+    };
+    assert_eq!(base.normalized_endpoint().unwrap(), with_slash.normalized_endpoint().unwrap());
+    assert_eq!(base.vault_scope().unwrap().normalized_endpoint, with_slash.vault_scope().unwrap().normalized_endpoint);
+
+    for bad in [
+        "https://example.com/mcp?foo=bar",
+        "https://example.com/mcp#frag",
+        "http://127.0.0.1:0/mcp",
+    ] {
+        let b = McpServerBinding { endpoint: bad.into(), ..base.clone() };
+        assert!(matches!(b.normalized_endpoint(), Err(McpError::InvalidEndpoint(_))), "expected reject for {bad}");
+    }
+
+    // P3-1: mismatched JSON-RPC response id must be rejected as Protocol error.
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    let server = tokio::spawn(async move {
+        if let Ok((mut stream, _)) = listener.accept().await {
+            let mut buf = [0u8; 8192];
+            let _ = stream.read(&mut buf).await;
+            let resp = http_json(
+                "200 OK",
+                &json!({"jsonrpc": "2.0", "id": "wrong-id-999", "result": {"protocolVersion": MCP_PROTOCOL_VERSION}}),
+            );
+            let _ = stream.write_all(resp.as_bytes()).await;
+            let _ = stream.shutdown().await;
+        }
+    });
+
+    let vault = Vault::with_backend(Arc::new(MemorySecretStore::default()));
+    let client = StreamableHttpMcpClient::new(vault).unwrap();
+    let binding = McpServerBinding {
+        endpoint: format!("http://127.0.0.1:{}/mcp", addr.port()),
+        ..base
+    };
+    let err = client.initialize(&binding).await.unwrap_err();
+    assert!(matches!(err, McpError::Protocol(ref msg) if msg.contains("id mismatch")), "got {err:?}");
+    server.abort();
+}
+

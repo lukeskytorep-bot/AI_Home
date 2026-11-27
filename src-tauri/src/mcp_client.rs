@@ -45,8 +45,9 @@ pub struct McpServerBinding {
 }
 
 impl McpServerBinding {
-    /// Validates endpoint URL: HTTPS only (or explicit loopback HTTP for local fake/dev servers),
-    /// no userinfo, no control characters, no empty query/fragment traps.
+    /// Validates and canonicalizes endpoint URL (aligned with `providers::normalize_endpoint`):
+    /// HTTPS only (or explicit loopback HTTP), no userinfo, no control characters,
+    /// no query/fragment, no port 0, trailing slash trimmed for stable Vault `ScopeStamp`.
     pub fn normalized_endpoint(&self) -> Result<String, McpError> {
         if self.endpoint.chars().any(|c| c.is_control()) {
             return Err(McpError::InvalidEndpoint("control characters not allowed".into()));
@@ -57,16 +58,24 @@ impl McpServerBinding {
         if !parsed.username().is_empty() || parsed.password().is_some() {
             return Err(McpError::InvalidEndpoint("userinfo not allowed".into()));
         }
-        if trimmed.ends_with('?') || trimmed.ends_with('#') {
-            return Err(McpError::InvalidEndpoint("trailing empty query/fragment".into()));
+        if trimmed.ends_with('?')
+            || trimmed.ends_with('#')
+            || parsed.query().is_some()
+            || parsed.fragment().is_some()
+        {
+            return Err(McpError::InvalidEndpoint("query/fragment not allowed".into()));
+        }
+        if parsed.port() == Some(0) {
+            return Err(McpError::InvalidEndpoint("port 0 not allowed".into()));
         }
         let host = parsed
             .host_str()
             .ok_or_else(|| McpError::InvalidEndpoint("missing host".into()))?;
         let loopback = matches!(host, "127.0.0.1" | "localhost" | "[::1]");
+        let canonical = parsed.to_string().trim_end_matches('/').to_string();
         match parsed.scheme() {
-            "https" => Ok(parsed.to_string()),
-            "http" if loopback => Ok(parsed.to_string()),
+            "https" => Ok(canonical),
+            "http" if loopback => Ok(canonical),
             _ => Err(McpError::InvalidEndpoint("only https or loopback http allowed".into())),
         }
     }
@@ -270,12 +279,15 @@ impl StreamableHttpMcpClient {
             .header("MCP-Protocol-Version", MCP_PROTOCOL_VERSION)
             .json(&body);
         if let Some(token) = bearer {
-            req = req.header("Authorization", format!("Bearer {token}"));
+            let mut hv = reqwest::header::HeaderValue::from_str(&format!("Bearer {token}"))
+                .map_err(|_| McpError::CredentialUnavailable)?;
+            hv.set_sensitive(true);
+            req = req.header(reqwest::header::AUTHORIZATION, hv);
         }
         if let Some(key) = idempotency_key.filter(|k| !k.is_empty()) {
             req = req.header("Idempotency-Key", key);
         }
-        let resp = req
+        let mut resp = req
             .send()
             .await
             .map_err(|e| McpError::Transport(e.to_string()))?;
@@ -286,12 +298,25 @@ impl StreamableHttpMcpClient {
         if !status.is_success() {
             return Err(McpError::Transport(format!("HTTP {}", status.as_u16())));
         }
-        let parsed: Value = resp
-            .json()
+        const MAX_MCP_RESPONSE_BYTES: usize = 2 * 1024 * 1024;
+        let mut raw = Vec::new();
+        while let Some(chunk) = resp
+            .chunk()
             .await
+            .map_err(|e| McpError::Transport(e.to_string()))?
+        {
+            if raw.len().saturating_add(chunk.len()) > MAX_MCP_RESPONSE_BYTES {
+                return Err(McpError::Protocol("MCP response exceeds 2 MiB size limit".into()));
+            }
+            raw.extend_from_slice(&chunk);
+        }
+        let parsed: Value = serde_json::from_slice(&raw)
             .map_err(|_| McpError::Protocol("invalid JSON-RPC response".into()))?;
         if parsed.get("jsonrpc").and_then(Value::as_str) != Some("2.0") {
             return Err(McpError::Protocol("missing jsonrpc 2.0 envelope".into()));
+        }
+        if parsed.get("id").and_then(Value::as_str) != Some(req_id.as_str()) {
+            return Err(McpError::Protocol("jsonrpc response id mismatch".into()));
         }
         if let Some(err) = parsed.get("error") {
             let msg = err

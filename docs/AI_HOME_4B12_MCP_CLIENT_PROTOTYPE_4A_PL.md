@@ -16,7 +16,7 @@ Zgodnie z przeglądem OSS ([`docs/AI_HOME_4B12_MCP_CLIENT_OSS_REVIEW_PL.md`](AI_
   5. **Obsługa niepewnego skutku (`Uncertain`)** — przerwanie połączenia/timeout na narzędziu mutującym zwraca `McpToolCallOutcome::Uncertain` -> `ActionOutcome::Uncertain`, aktywując blokadę `recovery_required` / `reconciliation_required` w `ExperimentalRuntime` bez ślepego ponowienia.
   6. **Brak procesów `stdio` / shell** w tej fazie (zero `std::process` / `tokio::process`).
 
-## 2. Testy odbioru prototypu (`src-tauri/tests/mcp_client.rs` — 6/6 PASS)
+## 2. Testy odbioru prototypu (`src-tauri/tests/mcp_client.rs` — 7/7 PASS)
 
 1. `mcp_streamable_http_initialize_list_and_call_tool_succeeds_against_local_fake_server` — pełny przebieg `initialize` -> `tools/list` -> `tools/call` przeciwko lokalnemu fake serwerowi MCP na `127.0.0.1:0`.
 2. `mcp_isolates_vault_credentials_between_two_profiles_and_two_services` — brak możliwości użycia poświadczenia innego profilu lub innej usługi.
@@ -24,6 +24,7 @@ Zgodnie z przeglądem OSS ([`docs/AI_HOME_4B12_MCP_CLIENT_OSS_REVIEW_PL.md`](AI_
 4. `mcp_blocks_http_redirect_so_secret_never_leaks_to_foreign_host` — HTTP 302 na obcy serwer zablokowany (`RedirectBlocked`), obcy host otrzymuje 0 żądań.
 5. `mcp_mutating_disconnect_records_uncertain_and_blocks_restart_until_reconciled` — zerwanie połączenia na narzędziu mutującym zapisuje `uncertain`, utrzymuje `reconciliation_required` po restarcie bazy SQLite i odblokowuje dopiero po jawnym `autonomous.action.reconcile`.
 6. `mcp_respects_autonomous_refusal_and_sleep_and_blocks_private_reflection_publication` — aktywna odmowa i sen AI blokują wykonanie narzędzia, a źródła prywatnej refleksji są odrzucane przez politykę.
+7. `mcp_enforces_endpoint_canonicalization_and_jsonrpc_id_matching` (utwardzenie `P3-1` + `P3-2` po audycie 4A) — limit rozmiaru odpowiedzi 2 MiB (strumieniowe `resp.chunk()`), weryfikacja zgodności `id` JSON-RPC, `HeaderValue::set_sensitive(true)` dla `Authorization`, odrzucanie query/fragment/portu `0` i przycinanie końcowego `/` dla stabilnego `ScopeStamp`.
 
 Dodano także statyczny strażnik [`scripts/verify-mcp-client.py`](../scripts/verify-mcp-client.py) (9/9 kontroli).
 
