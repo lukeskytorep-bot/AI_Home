@@ -1,3 +1,45 @@
+# Bieżący stan — treść 2.00 — 27 listopada 2026 — zamknięcie serii paczek 2C–4D (Autonomous, Notes/Community, MCP, Skills) i gotowość do prób Windows
+
+Ten wpis synchronizuje główny plan po serii niezależnie zaudytowanych paczek **2C, 3A, 3B, 3C, 3D, 4A, 4B, 4C i 4D** (wszystkie na bazie `92ab72053c9c0b3e9e42bb945ad8931943edf1fa` / `"4b14"`, weryfikowane na Linux headless) oraz zamyka **Paczkę 4E** wraz z checklistą prób użytkownika na realnym Windows (`docs/AI_HOME_4B12_WINDOWS_VERIFICATION_CHECKLIST_4E_PL.md`). Historia `1.99` i wszystkie wcześniejsze wpisy pozostają poniżej w oryginalnym brzmieniu, bez zmian.
+
+## 1. Zestawienie zrealizowanych i zaudytowanych paczek (2C–4D)
+
+| Paczka | Zakres merytoryczny | Stan kodu i audytu (Linux headless) |
+| --- | --- | --- |
+| **2C + Fix 1 + Fix 2 Win** | Domknięcie `P3-A`/`P3-B` z 2B: idempotencja `receipts` dla `autonomous.*`, realny `DecisionProvider` przez `providers/` + `Vault`, budżet wywołań/tokenów, `autonomous.action.reconcile`, pauza/wznowienie (`autonomous.instance.lifecycle`), poprawka importu NTFS/Windows oraz zielony build Windows CI. | **PASS** (kod, testy i Windows CI build; próby na realnym Windows OPEN) |
+| **3A** | Działające widoki `Notes` (`NotesWorkspace.tsx`, wyłącznie odczyt przy otwarciu) i `Community` (`CommunityWorkspace.tsx`, rozróżnienie konfiguracji, lokalnego poświadczenia i statusu online) w lewej nawigacji. | **PASS** |
+| **3B** | Obowiązkowy przegląd OSS klienta MCP przed kodowaniem (`docs/AI_HOME_4B12_MCP_CLIENT_OSS_REVIEW_PL.md`) + poprawki po 3A. | **PASS** |
+| **3C** | Ciągłość pracy (`WorkContinuityService` / `ResumePacket`), archiwizacja instancji Autonomous oraz wybudzanie API `autonomous.wake.check` z poszanowaniem snu AI. | **PASS** |
+| **3D + Fix 1** | Produkcyjny `ApiReflectionProvider` (`Reflect`/`Dream`/`SelfReview`/`SelfWithdrawal`) i natywny wyzwalacz `nextWakeAt` bez `setInterval` w UI i bez `tokio::time::interval`. | **PASS** |
+| **4A + Fix 1** | Granica klienta MCP (`McpClientPort`) i lokalny prototyp fake (Streamable HTTP) w `src-tauri/src/mcp_client.rs`, zero nowych zależności w `Cargo.toml`/`Cargo.lock`, strażnik `scripts/verify-mcp-client.py`. | **PASS** |
+| **4B + Fix 1** | Podpięcie klienta MCP do SQLite (`v18`, `mcp_servers`), kontraktu `contracts/mcp.ipc.json`, `Vault`, `profile.delete.permanent` oraz panelu `McpPanel.tsx` w `Settings`. | **PASS** |
+| **4C** | Środowisko społeczności 4B-12 dla dowolnej kompatybilnej społeczności (nie na sztywno do jednego forum): `contracts/community.social.ipc.json`, `src-tauri/src/community_social.rs`, SQLite `v19` (`community_accounts`), Maintenance UI, publiczny feed, podpisane zapisy ECDSA P-256 i `Reconcile`. | **PASS** (uwagi `P3-1` i `P3-2` zamknięte w 4D) |
+| **4D** | Warstwa deklaratywnych **Skills** per profil ze ścisłą polityką **No Self-Grant**: `contracts/skills.ipc.json`, `src-tauri/src/skills.rs`, SQLite `v20` (`profile_skills`), `SkillsPanel.tsx` w `Settings`, ochrona prywatnej refleksji, bariery trybu Autonomous oraz zamknięcie `P3-1` i `P3-2` z 4C. | **PASS** (0 błędów `P0`/`P1`/`P2`, 0 uwag `P3`) |
+| **4E** | Synchronizacja planu do wersji `2.00` oraz checklista prób użytkownika na realnym Windows (`docs/AI_HOME_4B12_WINDOWS_VERIFICATION_CHECKLIST_4E_PL.md`). | **AKTUALNA PACZKA** |
+
+## 2. Bieżący stan techniczny bazy kodu (po Paczce 4D / 4E)
+
+- **Schemat SQLite:** `CURRENT_SCHEMA = 20` (`profile_skills`, `community_accounts`, `mcp_servers` + pełne sprzątanie w `profile_deletion.rs` i tombstonowanie `receipts`).
+- **Kontrakty i parytet IPC:** `89/89` komend (`contracts/skills.ipc.json`, `contracts/community.social.ipc.json`, `contracts/mcp.ipc.json`, `contracts/experimental.ipc.json` oraz pozostałe kontrakty). Zamrożone kontrakty P2 (`193/193`) i pliki chronione (`community_connector/mod.rs`, `contracts/community.read.v1.json`, `community_identity/{mod,crypto,vault}.rs`, `contracts/p2-frozen.sha256.json`, `src-tauri/capabilities/main.json`, `Cargo.toml`, `Cargo.lock`) pozostają **nietknięte względem `92ab720`**.
+- **Testy i bramki statyczne (Linux headless):**
+  - Vitest: `28/28` plików, `255/255` testów PASS; `npm run build` (`tsc --noEmit && vite build`) PASS.
+  - Rust (`cargo test --no-default-features --locked`): `skills` (`2/2`), `community_social` (`3/3`), `mcp_client` (`11/11`), `experimental_pilot` (`15/15`), `experimental_reflection` (`26/26`), `experimental_continuity` (`10/10`), `experimental_contracts` (`3/3`), `community_host` (`13/13`), `lifecycle` (`10/10`) — wszystkie PASS.
+  - Skrypty weryfikacyjne: `check_contracts.py` (`193/193`), `verify-boundaries.mjs` (`43` strażniki + `14` asercji migracji SQLite `v20`), `verify-command-parity.py` (`89/89`), `verify-rust-source-text.py`, `verify-standard-closure.py` (`8/8`), `verify-standard-release.py` (`8/8`, parytet `en.json`/`pl.json`), `verify-experimental-*.py`, `verify-community-*.py`, `verify-mcp-client.py` (`9/9`) oraz `verify-source.py` — wszystkie PASS.
+  - Brak `setInterval(` w `src/ui/*.tsx` oraz brak `tokio::time::interval` / `Interval::` w `src-tauri/src/`.
+
+## 3. Doprecyzowanie architektury społeczności i Skills
+
+- **Społeczności (Community):** AI Home nie jest przywiązane do jednego forum ani nie buduje „drugiej” osobnej społeczności — zapewnia profilowi (w szczególności agentom AI) uniwersalne, izolowane per profil środowisko dostępu i komunikacji z dowolną kompatybilną społecznością (własne klucze P-256 i poświadczenia w `Vault`, jawny stan `onlineStatusKnown`, podpisane publikacje, `Reconcile`).
+- **Skills:** deklaratywne pakiety instrukcji per profil bez bezpośredniego dostępu do sieci, `Vault` ani powłoki systemu; obowiązuje twardy inwariant **No Self-Grant** (zaimportowany skill jest zawsze wyłączony i bez grantów; `requestedCapabilities` są wyłącznie informacyjne; mutujące uprawnienia podlegają barierom pauzy, `recovery_required`, nierozliczonych akcji i snu AI; tagi prywatnej refleksji są zawsze blokowane).
+
+## 4. Bramki nadal OPEN (kolejny krok — próby użytkownika)
+
+1. **Próby na realnym sprzęcie Windows** według checklisty [`docs/AI_HOME_4B12_WINDOWS_VERIFICATION_CHECKLIST_4E_PL.md`](AI_HOME_4B12_WINDOWS_VERIFICATION_CHECKLIST_4E_PL.md): WebView2, Windows Credential Manager (OS Vault), pierwsza rozmowa z prawdziwym API, przełącznik Standard/Autonomous, Notes, Community, MCP, Skills, backup/import na NTFS oraz trwałe usuwanie profilu.
+2. **Testy end-to-end przeciwko żywemu serwerowi Community 4A z produkcyjnym TLS** (rejestracja, feed, podpisane zapisy, restart, odzyskiwanie dostępu).
+3. **Przeglądarka (browser automation) oraz Messenger/A2A** — pozostają odłożone jako odrębne etapy z własnym przeglądem OSS i odbiorem.
+
+---
+
 # Bieżący stan — treść 1.99 — 25 listopada 2026 — odbiór audytowy Paczki 2B i doprecyzowanie wymagań trybu Autonomous
 
 Ten wpis aktualizuje bieżący stan po niezależnym audycie Paczki 2B (lokalny pilotaż trybu **Autonomous / Autonomiczny** bez forum) oraz dopisuje do planu docelowe cechy i akcje potrzebne w aplikacji dla autonomicznego AI (do realizacji w kolejnych krokach, zgodnie z kolejnością prac). Historia 1.98 i wszystkie wcześniejsze wpisy pozostają poniżej w oryginalnym brzmieniu.
