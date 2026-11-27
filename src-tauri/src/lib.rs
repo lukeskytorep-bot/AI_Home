@@ -17,6 +17,7 @@ pub mod experimental_continuity;
 pub mod experimental_internal_state;
 pub mod experimental_reflection;
 pub mod experimental_pilot;
+pub mod mcp_client;
 mod export;
 mod deletion;
 pub mod memory;
